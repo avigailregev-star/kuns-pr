@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//usr/local/**)",
+      "Read(//usr/**)",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Users/HP/AppData/Roaming/**)",
+      "Read(//c/Users/HP/**)",
+      "WebSearch"
+    ]
+  }
+}
