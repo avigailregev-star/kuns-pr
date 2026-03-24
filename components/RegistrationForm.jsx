@@ -272,7 +272,7 @@ export default function RegistrationForm() {
 
           {step < STEPS.length - 1 ? (
             <button type="button" onClick={nextStep} className="btn-primary flex-1">
-              המשך →
+              ← המשך
             </button>
           ) : (
             <button
