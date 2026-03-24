@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSupabaseClient } from '../../../lib/supabase';
 import { appendRegistrationRow } from '../../../lib/googleSheets';
 import { sendToMake } from '../../../lib/makeWebhook';
+import { sendConfirmationEmail } from '../../../lib/email';
 
 export async function POST(request) {
   try {
@@ -49,14 +50,21 @@ export async function POST(request) {
 
     const registrationId = data?.id;
 
-    // 2. Save to Google Sheets (non-blocking – log error but don't fail)
+    // 2. Send confirmation email
+    try {
+      await sendConfirmationEmail({ parentName, studentName, parentEmail, instruments, preferredSlot });
+    } catch (emailError) {
+      console.error('Email error:', emailError.message);
+    }
+
+    // 4. Save to Google Sheets (non-blocking – log error but don't fail)
     try {
       await appendRegistrationRow(body);
     } catch (sheetsError) {
       console.error('Google Sheets error:', sheetsError.message);
     }
 
-    // 3. Notify Make webhook
+    // 5. Notify Make webhook
     await sendToMake('new_registration', {
       registrationId,
       studentName,
