@@ -6,7 +6,9 @@
       "Read(//c/Program Files/**)",
       "Read(//c/Users/HP/AppData/Roaming/**)",
       "Read(//c/Users/HP/**)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(curl -s \"https://www.hugim.org.il/rest/courses?KodMatnas=904\")",
+      "WebFetch(domain:www.matnas-dimona.org.il)"
     ]
   }
 }

@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import InstrumentPicker from './InstrumentPicker';
 import DaysPicker from './DaysPicker';
 import AgreementScroll from './AgreementScroll';
+import { getPaymentLink, getCourseNames } from '../lib/paymentLinks';
+
+const COURSE_NAMES = getCourseNames();
 
 const REGISTRATION_TYPES = [
   { value: 'new', label: 'תלמיד/ה חדש/ה', desc: 'מתחיל/ה ללמוד כלי נגינה' },
@@ -42,6 +45,7 @@ export default function RegistrationForm() {
     parentEmail: '',
     type: 'new',
     instruments: [],
+    selectedCourse: '',
     unavailableDays: [],
     preferredSlot: '',
     agreed: false,
@@ -61,6 +65,7 @@ export default function RegistrationForm() {
     }
     if (step === 1) {
       if (form.instruments.length === 0) return 'יש לבחור לפחות כלי נגינה אחד';
+      if (!form.selectedCourse) return 'יש לבחור קורס';
       if (!form.preferredSlot) return 'יש לבחור מועד רצוי';
     }
     if (step === 3 && !form.agreed) return 'יש לקרוא ולאשר את ההסכם';
@@ -93,7 +98,10 @@ export default function RegistrationForm() {
       });
       const json = await res.json();
       if (!res.ok) { setError(json.error || 'אירעה שגיאה. נסה שוב.'); return; }
-      router.push('/thank-you');
+      const paymentUrl = getPaymentLink(form.selectedCourse);
+      const params = new URLSearchParams();
+      if (paymentUrl) params.set('paymentUrl', paymentUrl);
+      router.push(`/thank-you?${params.toString()}`);
     } catch {
       setError('אירעה שגיאת רשת. בדוק את החיבור ונסה שוב.');
     } finally {
@@ -207,6 +215,20 @@ export default function RegistrationForm() {
                   נבחרו: {form.instruments.join(', ')}
                 </p>
               )}
+
+              <div>
+                <label className="field-label">קורס *</label>
+                <select
+                  className="form-input mt-1"
+                  value={form.selectedCourse}
+                  onChange={(e) => update('selectedCourse', e.target.value)}
+                >
+                  <option value="">— בחרו קורס —</option>
+                  {COURSE_NAMES.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
 
               <div>
                 <label className="field-label">מועד רצוי לשיחת התאמה *</label>
