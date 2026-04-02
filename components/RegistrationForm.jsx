@@ -8,12 +8,14 @@ import AgreementScroll from './AgreementScroll';
 import { getPaymentLink, getCourseNames } from '../lib/paymentLinks';
 
 const COURSE_NAMES = getCourseNames();
+const MELODIES_COURSE_NAMES = COURSE_NAMES.filter((name) => name.includes('מנגינות'));
 
 const REGISTRATION_TYPES = [
-  { value: 'new', label: 'תלמיד/ה חדש/ה', desc: 'מתחיל/ה ללמוד כלי נגינה' },
-  { value: 'continue', label: 'תלמיד/ה ממשיך/ה', desc: 'המשך לימודים מהשנה הקודמת' },
-  { value: 'adult', label: 'לומד/ת בוגר/ת', desc: 'מבוגרים המעוניינים ללמוד' },
-  { value: 'trial', label: 'שיעור ניסיון', desc: 'שיעור אחד לפני הרשמה' },
+  { value: 'new',      label: 'מתחיל/ה',       desc: 'תלמיד/ה חדש/ה ללימודי כלי נגינה' },
+  { value: 'continue', label: 'ממשיך/ה',        desc: 'המשך לימודים מהשנה הקודמת' },
+  { value: 'adult',    label: 'בוגר/ת',          desc: 'מבוגרים המעוניינים ללמוד' },
+  { value: 'trial',    label: 'שיעור ניסיון',    desc: 'שיעור אחד לפני הרשמה' },
+  { value: 'melodies', label: 'מנגינות',         desc: 'תוכנית שעות בית הספר' },
 ];
 
 const SLOT_OPTIONS = [
@@ -25,12 +27,21 @@ const SLOT_OPTIONS = [
   'ימי ו׳ בין 09:00–13:00',
 ];
 
-const STEPS = [
-  { label: 'פרטים', icon: '👤' },
-  { label: 'כלי נגינה', icon: '🎸' },
-  { label: 'זמינות', icon: '📅' },
-  { label: 'הסכם', icon: '📋' },
-];
+const STEP_DEFS = {
+  personal:   { label: 'פרטים',    icon: '👤' },
+  instrument: { label: 'כלי נגינה', icon: '🎸' },
+  course:     { label: 'קורס',     icon: '🎼' },
+  days:       { label: 'זמינות',   icon: '📅' },
+  agreement:  { label: 'הסכם',     icon: '📋' },
+};
+
+const FLOWS = {
+  trial:    ['personal', 'instrument'],
+  new:      ['personal', 'instrument', 'days', 'agreement'],
+  adult:    ['personal', 'instrument', 'days', 'agreement'],
+  continue: ['personal', 'course',     'days', 'agreement'],
+  melodies: ['personal', 'course',              'agreement'],
+};
 
 export default function RegistrationForm() {
   const router = useRouter();
@@ -51,24 +62,32 @@ export default function RegistrationForm() {
     agreed: false,
   });
 
+  const steps = FLOWS[form.type].map((id) => ({ id, ...STEP_DEFS[id] }));
+  const currentStepId = steps[step]?.id;
+
   function update(field, value) {
+    if (field === 'type') setStep(0);
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
   function validateStep() {
-    if (step === 0) {
+    if (currentStepId === 'personal') {
       if (!form.studentName.trim()) return 'יש להזין שם תלמיד/ה';
-      if (!form.parentName.trim()) return 'יש להזין שם הורה';
+      if (!form.parentName.trim())  return 'יש להזין שם הורה';
       if (!form.parentPhone.trim()) return 'יש להזין מספר טלפון';
       if (!form.parentEmail.trim() || !form.parentEmail.includes('@'))
         return 'יש להזין כתובת אימייל תקינה';
     }
-    if (step === 1) {
+    if (currentStepId === 'instrument') {
       if (form.instruments.length === 0) return 'יש לבחור לפחות כלי נגינה אחד';
-      if (!form.selectedCourse) return 'יש לבחור קורס';
-      if (!form.preferredSlot) return 'יש לבחור מועד רצוי';
+      if (form.type !== 'trial' && !form.preferredSlot) return 'יש לבחור מועד רצוי';
     }
-    if (step === 3 && !form.agreed) return 'יש לקרוא ולאשר את ההסכם';
+    if (currentStepId === 'course') {
+      if (!form.selectedCourse) return 'יש לבחור קורס';
+    }
+    if (currentStepId === 'agreement') {
+      if (!form.agreed) return 'יש לקרוא ולאשר את ההסכם';
+    }
     return '';
   }
 
@@ -98,9 +117,13 @@ export default function RegistrationForm() {
       });
       const json = await res.json();
       if (!res.ok) { setError(json.error || 'אירעה שגיאה. נסה שוב.'); return; }
-      const paymentUrl = getPaymentLink(form.selectedCourse);
+
       const params = new URLSearchParams();
-      if (paymentUrl) params.set('paymentUrl', paymentUrl);
+      params.set('type', form.type);
+      if (form.type !== 'trial') {
+        const paymentUrl = getPaymentLink(form.selectedCourse);
+        if (paymentUrl) params.set('paymentUrl', paymentUrl);
+      }
       router.push(`/thank-you?${params.toString()}`);
     } catch {
       setError('אירעה שגיאת רשת. בדוק את החיבור ונסה שוב.');
@@ -109,15 +132,15 @@ export default function RegistrationForm() {
     }
   }
 
-  const selectedType = REGISTRATION_TYPES.find((t) => t.value === form.type);
+  const courseList = form.type === 'melodies' ? MELODIES_COURSE_NAMES : COURSE_NAMES;
 
   return (
     <div className="max-w-lg mx-auto">
       {/* Step Indicator */}
       <div className="flex items-center justify-center gap-1 mb-8">
-        {STEPS.map((s, i) => (
-          <div key={i} className="flex items-center">
-            <div className={`flex flex-col items-center gap-1`}>
+        {steps.map((s, i) => (
+          <div key={s.id} className="flex items-center">
+            <div className="flex flex-col items-center gap-1">
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
                   i < step
@@ -133,7 +156,7 @@ export default function RegistrationForm() {
                 {s.label}
               </span>
             </div>
-            {i < STEPS.length - 1 && (
+            {i < steps.length - 1 && (
               <div className={`w-8 h-px mx-1 mb-4 transition-all ${i < step ? 'bg-purple-500' : 'bg-white/10'}`} />
             )}
           </div>
@@ -144,8 +167,8 @@ export default function RegistrationForm() {
       <form onSubmit={handleSubmit}>
         <div className="glass p-6 sm:p-8 step-enter">
 
-          {/* ── Step 0: Personal Details ── */}
-          {step === 0 && (
+          {/* ── Personal Details ── */}
+          {currentStepId === 'personal' && (
             <div className="space-y-5">
               <div className="mb-6">
                 <h2 className="text-xl font-bold text-white mb-1">פרטים אישיים</h2>
@@ -179,7 +202,7 @@ export default function RegistrationForm() {
 
               <div>
                 <label className="field-label">סוג הרשמה</label>
-                <div className="grid grid-cols-2 gap-2 mt-1">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1">
                   {REGISTRATION_TYPES.map((t) => (
                     <button
                       key={t.value}
@@ -200,21 +223,48 @@ export default function RegistrationForm() {
             </div>
           )}
 
-          {/* ── Step 1: Instruments + Slot ── */}
-          {step === 1 && (
+          {/* ── Instrument Picker ── */}
+          {currentStepId === 'instrument' && (
             <div className="space-y-6">
               <div className="mb-6">
                 <h2 className="text-xl font-bold text-white mb-1">כלי נגינה</h2>
-                <p className="text-slate-400 text-sm">בחרו את הכלים שמעניינים אתכם (ניתן לבחור מספר)</p>
+                <p className="text-slate-400 text-sm">בחרו את הכלים שמעניינים אתכם</p>
               </div>
 
               <InstrumentPicker value={form.instruments} onChange={(v) => update('instruments', v)} />
 
               {form.instruments.length > 0 && (
-                <p className="text-xs text-purple-300">
-                  נבחרו: {form.instruments.join(', ')}
-                </p>
+                <p className="text-xs text-purple-300">נבחרו: {form.instruments.join(', ')}</p>
               )}
+
+              {form.type !== 'trial' && (
+                <div>
+                  <label className="field-label">מועד רצוי לשיחת התאמה *</label>
+                  <select className="form-input mt-1" value={form.preferredSlot}
+                    onChange={(e) => update('preferredSlot', e.target.value)}>
+                    <option value="">— בחרו מועד מועדף —</option>
+                    {SLOT_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Course Picker ── */}
+          {currentStepId === 'course' && (
+            <div className="space-y-6">
+              <div className="mb-6">
+                <h2 className="text-xl font-bold text-white mb-1">
+                  {form.type === 'melodies' ? 'בחירת תוכנית מנגינות' : 'בחירת קורס'}
+                </h2>
+                <p className="text-slate-400 text-sm">
+                  {form.type === 'melodies'
+                    ? 'בחרו את תוכנית מנגינות המתאימה לבית הספר'
+                    : 'בחרו את הקורס שבו תרצו להמשיך'}
+                </p>
+              </div>
 
               <div>
                 <label className="field-label">קורס *</label>
@@ -224,27 +274,29 @@ export default function RegistrationForm() {
                   onChange={(e) => update('selectedCourse', e.target.value)}
                 >
                   <option value="">— בחרו קורס —</option>
-                  {COURSE_NAMES.map((name) => (
+                  {courseList.map((name) => (
                     <option key={name} value={name}>{name}</option>
                   ))}
                 </select>
               </div>
 
-              <div>
-                <label className="field-label">מועד רצוי לשיחת התאמה *</label>
-                <select className="form-input mt-1" value={form.preferredSlot}
-                  onChange={(e) => update('preferredSlot', e.target.value)}>
-                  <option value="">— בחרו מועד מועדף —</option>
-                  {SLOT_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-              </div>
+              {form.type === 'continue' && (
+                <div>
+                  <label className="field-label">מועד רצוי לשיחת התאמה *</label>
+                  <select className="form-input mt-1" value={form.preferredSlot}
+                    onChange={(e) => update('preferredSlot', e.target.value)}>
+                    <option value="">— בחרו מועד מועדף —</option>
+                    {SLOT_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           )}
 
-          {/* ── Step 2: Availability ── */}
-          {step === 2 && (
+          {/* ── Unavailable Days ── */}
+          {currentStepId === 'days' && (
             <div className="space-y-5">
               <div className="mb-6">
                 <h2 className="text-xl font-bold text-white mb-1">ימים לא זמינים</h2>
@@ -254,9 +306,7 @@ export default function RegistrationForm() {
               <DaysPicker value={form.unavailableDays} onChange={(v) => update('unavailableDays', v)} />
 
               {form.unavailableDays.length === 0 ? (
-                <p className="text-xs text-slate-500 text-center mt-4">
-                  לא נבחרו ימים — גמישות מלאה ✓
-                </p>
+                <p className="text-xs text-slate-500 text-center mt-4">לא נבחרו ימים — גמישות מלאה ✓</p>
               ) : (
                 <p className="text-xs text-red-400/80 text-center">
                   לא זמינים: {form.unavailableDays.map((d) => `יום ${d}`).join(', ')}
@@ -265,8 +315,8 @@ export default function RegistrationForm() {
             </div>
           )}
 
-          {/* ── Step 3: Agreement ── */}
-          {step === 3 && (
+          {/* ── Agreement ── */}
+          {currentStepId === 'agreement' && (
             <div className="space-y-5">
               <div className="mb-6">
                 <h2 className="text-xl font-bold text-white mb-1">תקנון ותנאי הרשמה</h2>
@@ -292,14 +342,14 @@ export default function RegistrationForm() {
             </button>
           )}
 
-          {step < STEPS.length - 1 ? (
+          {step < steps.length - 1 ? (
             <button type="button" onClick={nextStep} className="btn-primary flex-1">
-              ← המשך
+              המשך ←
             </button>
           ) : (
             <button
               type="submit"
-              disabled={loading || !form.agreed}
+              disabled={loading || (currentStepId === 'agreement' && !form.agreed)}
               className="btn-primary flex-1"
               style={{ background: 'linear-gradient(135deg, #059669 0%, #0891B2 100%)' }}
             >
@@ -309,7 +359,7 @@ export default function RegistrationForm() {
         </div>
 
         <p className="text-center text-xs text-slate-600 mt-4">
-          שלב {step + 1} מתוך {STEPS.length}
+          שלב {step + 1} מתוך {steps.length}
         </p>
       </form>
     </div>

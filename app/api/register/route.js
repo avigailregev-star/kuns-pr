@@ -14,6 +14,7 @@ export async function POST(request) {
       parentEmail,
       type,
       instruments,
+      selectedCourse,
       unavailableDays,
       preferredSlot,
     } = body;
@@ -35,6 +36,7 @@ export async function POST(request) {
           parent_email: parentEmail,
           type,
           instruments,
+          selected_course: selectedCourse || null,
           unavailable_days: unavailableDays,
           preferred_slot: preferredSlot,
           status: 'חדש',
