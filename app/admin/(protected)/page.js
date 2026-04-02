@@ -1,4 +1,4 @@
-import AdminTable from '../../components/AdminTable';
+import AdminTable from '../../../components/AdminTable';
 
 export const metadata = {
   title: 'לוח בקרה | ניהול קונסרבטוריון',
