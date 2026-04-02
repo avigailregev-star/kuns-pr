@@ -13,7 +13,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { id, newStatus, teacher, assignedDay, assignedTime, adminNotes } = body;
+    const { id, newStatus, teacher, assignedDay, assignedTime, adminNotes, groupId } = body;
 
     if (!id || !newStatus) {
       return NextResponse.json({ error: 'חסרים שדות' }, { status: 400 });
@@ -77,6 +77,17 @@ export async function POST(request) {
           .update({ status: 'sent', sent_at: new Date().toISOString() })
           .eq('registration_id', id)
           .eq('action', 'status_changed_to_שובץ');
+
+        // Auto-add to students table if group selected
+        if (groupId) {
+          await supabase.from('students').insert({
+            group_id: groupId,
+            name: reg.student_name,
+            instrument: Array.isArray(reg.instruments) ? reg.instruments[0] : reg.instruments || null,
+            parent_phone: reg.parent_phone,
+            is_active: true,
+          });
+        }
       }
     }
 

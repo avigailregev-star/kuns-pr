@@ -12,11 +12,13 @@ const TYPE_LABELS = {
 
 export default function AdminTable() {
   const [rows, setRows] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [updating, setUpdating] = useState(null);
   const [expandedRow, setExpandedRow] = useState(null);
+  const [selectedGroups, setSelectedGroups] = useState({});
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -31,7 +33,13 @@ export default function AdminTable() {
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+    fetch('/api/groups')
+      .then(r => r.json())
+      .then(j => setGroups(j.data || []))
+      .catch(() => {});
+  }, [fetchData]);
 
   async function updateStatus(id, newStatus) {
     setUpdating(id);
@@ -68,6 +76,7 @@ export default function AdminTable() {
           assignedDay: row.assigned_day,
           assignedTime: row.assigned_time,
           adminNotes: row.admin_notes,
+          groupId: selectedGroups[row.id] || null,
         }),
       });
     } finally {
@@ -250,6 +259,20 @@ export default function AdminTable() {
                                   onChange={(e) => updateAssignment(row.id, 'assigned_time', e.target.value)}
                                 />
                               </div>
+                              {groups.length > 0 && (
+                                <select
+                                  className="form-input text-sm"
+                                  value={selectedGroups[row.id] || ''}
+                                  onChange={(e) => setSelectedGroups(prev => ({ ...prev, [row.id]: e.target.value }))}
+                                >
+                                  <option value="">— הוסף לקבוצה בנוכחות —</option>
+                                  {groups.map(g => (
+                                    <option key={g.id} value={g.id}>
+                                      {g.name}{g.is_mangan_school && g.school_name ? ` (${g.school_name})` : ''}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
                             </div>
                           </div>
 
