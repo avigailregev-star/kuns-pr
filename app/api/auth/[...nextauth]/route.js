@@ -13,6 +13,12 @@ export const authOptions = {
         const validUser = process.env.ADMIN_USER;
         const validPass = process.env.ADMIN_PASS;
 
+        console.log('AUTH attempt:', {
+          receivedUser: credentials?.username,
+          expectedUser: validUser,
+          passMatch: credentials?.password === validPass,
+        });
+
         if (
           credentials?.username === validUser &&
           credentials?.password === validPass
