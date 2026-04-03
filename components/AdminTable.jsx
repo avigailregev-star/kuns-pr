@@ -10,6 +10,68 @@ const TYPE_LABELS = {
   trial: 'ניסיון',
 };
 
+function exportToCSV(rows) {
+  const headers = ['תאריך', 'תלמיד/ה', 'הורה', 'טלפון', 'אימייל', 'סוג', 'כלים', 'סטטוס', 'מורה', 'יום', 'שעה', 'הערות'];
+  const csvRows = rows.map(r => [
+    new Date(r.created_at).toLocaleDateString('he-IL'),
+    r.student_name || '',
+    r.parent_name || '',
+    r.parent_phone || '',
+    r.parent_email || '',
+    TYPE_LABELS[r.type] || r.type || '',
+    Array.isArray(r.instruments) ? r.instruments.join('; ') : r.instruments || '',
+    r.status || '',
+    r.teacher || '',
+    r.assigned_day || '',
+    r.assigned_time || '',
+    r.admin_notes || '',
+  ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+
+  const bom = '\uFEFF';
+  const csv = bom + [headers.join(','), ...csvRows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `רישומים_${new Date().toLocaleDateString('he-IL').replace(/\//g, '-')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function printTable(rows) {
+  const content = `
+    <html dir="rtl"><head><meta charset="utf-8">
+    <title>רישומים</title>
+    <style>
+      body { font-family: Arial, sans-serif; font-size: 12px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #ccc; padding: 4px 8px; text-align: right; }
+      th { background: #f0f0f0; font-weight: bold; }
+      tr:nth-child(even) { background: #f9f9f9; }
+    </style></head><body>
+    <h2>רישומים – קונסרבטוריון</h2>
+    <table>
+      <thead><tr><th>תאריך</th><th>תלמיד/ה</th><th>הורה</th><th>טלפון</th><th>סוג</th><th>כלים</th><th>סטטוס</th><th>מורה</th></tr></thead>
+      <tbody>
+        ${rows.map(r => `<tr>
+          <td>${new Date(r.created_at).toLocaleDateString('he-IL')}</td>
+          <td>${r.student_name || ''}</td>
+          <td>${r.parent_name || ''}</td>
+          <td>${r.parent_phone || ''}</td>
+          <td>${TYPE_LABELS[r.type] || r.type || ''}</td>
+          <td>${Array.isArray(r.instruments) ? r.instruments.join(', ') : r.instruments || ''}</td>
+          <td>${r.status || ''}</td>
+          <td>${r.teacher || ''}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    </body></html>`;
+  const win = window.open('', '_blank');
+  win.document.write(content);
+  win.document.close();
+  win.print();
+}
+
 export default function AdminTable() {
   const [rows, setRows] = useState([]);
   const [groups, setGroups] = useState([]);
@@ -152,6 +214,18 @@ export default function AdminTable() {
           className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
         >
           🔄 רענן
+        </button>
+        <button
+          onClick={() => exportToCSV(filtered)}
+          className="px-4 py-2 border border-green-300 text-green-700 rounded-lg hover:bg-green-50 text-sm"
+        >
+          📊 ייצוא Excel
+        </button>
+        <button
+          onClick={() => printTable(filtered)}
+          className="px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 text-sm"
+        >
+          🖨️ הדפסה
         </button>
       </div>
 
