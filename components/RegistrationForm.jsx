@@ -276,13 +276,12 @@ export default function RegistrationForm() {
                       <option key={name} value={name}>{name}</option>
                     ))
                   ) : (
-                    COURSE_GROUPS.map((group) => (
-                      <optgroup key={group.label} label={group.label}>
-                        {group.courses.map((name) => (
-                          <option key={name} value={name}>{name}</option>
-                        ))}
-                      </optgroup>
-                    ))
+                    COURSE_GROUPS.flatMap((group) => [
+                      <option key={`__header__${group.label}`} disabled>── {group.label} ──</option>,
+                      ...group.courses.map((name) => (
+                        <option key={name} value={name}>&nbsp;&nbsp;{name}</option>
+                      )),
+                    ])
                   )}
                 </select>
               </div>
