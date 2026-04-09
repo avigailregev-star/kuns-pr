@@ -86,8 +86,8 @@ export default function TeachersTab() {
                   <p className="font-semibold text-gray-800">{t.name}</p>
                   <p className="text-sm text-gray-500">
                     {t.instrument_type} ·{' '}
-                    {t.available_days.length > 0
-                      ? t.available_days.map((d) => `יום ${d}`).join(', ')
+                    {(t.available_days || []).length > 0
+                      ? (t.available_days || []).map((d) => `יום ${d}`).join(', ')
                       : 'אין ימים מוגדרים'}
                   </p>
                 </div>
