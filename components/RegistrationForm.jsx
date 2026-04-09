@@ -11,11 +11,11 @@ const COURSE_NAMES = getCourseNames();
 const MELODIES_COURSE_NAMES = COURSE_NAMES.filter((name) => name.includes('מנגינות'));
 
 const REGISTRATION_TYPES = [
-  { value: 'new',      label: 'מתחיל/ה',       desc: 'תלמיד/ה חדש/ה ללימודי כלי נגינה' },
-  { value: 'continue', label: 'ממשיך/ה',        desc: 'המשך לימודים מהשנה הקודמת' },
-  { value: 'adult',    label: 'בוגר/ת',          desc: 'מבוגרים המעוניינים ללמוד' },
-  { value: 'trial',    label: 'שיעור ניסיון',    desc: 'שיעור אחד לפני הרשמה' },
-  { value: 'melodies', label: 'מנגינות',         desc: 'תוכנית שעות בית הספר' },
+  { value: 'melodies', label: 'מנגינות (שנה א, ב, ג)', desc: 'תוכנית שעות בית הספר' },
+  { value: 'new',      label: 'מתחיל/ה',               desc: 'תלמיד/ה חדש/ה ללימודי כלי נגינה' },
+  { value: 'continue', label: 'ממשיך/ה',                desc: 'המשך לימודים מהשנה הקודמת' },
+  { value: 'adult',    label: 'בוגר/ת',                 desc: 'מבוגרים המעוניינים ללמוד' },
+  { value: 'trial',    label: 'שיעור ניסיון',           desc: 'שיעור אחד לפני הרשמה' },
 ];
 
 const SLOT_OPTIONS = [
