@@ -69,7 +69,7 @@ function ThankYouContent() {
           target="_blank"
           rel="noopener noreferrer"
           className="btn-primary w-full block mb-6 text-center"
-          style={{ background: 'linear-gradient(135deg, #059669 0%, #0891B2 100%)' }}
+          style={{ background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)' }}
         >
           לתשלום דמי הרישום ושכר הלימוד ←
         </a>
