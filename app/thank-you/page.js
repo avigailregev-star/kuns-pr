@@ -56,6 +56,13 @@ function ThankYouContent() {
         )}
       </div>
 
+      {!isTrial && (
+        <div className="flex items-center gap-2 p-3 rounded-xl mb-4 text-sm text-amber-300" style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)' }}>
+          <span>🗓️</span>
+          <span>לא יחויב תשלום לפני ה-10 לספטמבר</span>
+        </div>
+      )}
+
       {paymentUrl && (
         <a
           href={paymentUrl}

@@ -30,6 +30,8 @@ export async function POST(request) {
     if (assignedDay !== undefined) updateData.assigned_day = assignedDay;
     if (assignedTime !== undefined) updateData.assigned_time = assignedTime;
     if (adminNotes !== undefined) updateData.admin_notes = adminNotes;
+    if (body.orchestra !== undefined) updateData.orchestra = body.orchestra;
+    if (body.theoryDay !== undefined) updateData.theory_day = body.theoryDay;
 
     const { error: updateError } = await supabase
       .from('registrations')
