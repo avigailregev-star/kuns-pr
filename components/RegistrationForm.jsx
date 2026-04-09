@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import InstrumentPicker from './InstrumentPicker';
 import DaysPicker from './DaysPicker';
 import AgreementScroll from './AgreementScroll';
-import { getPaymentLink, getCourseNames } from '../lib/paymentLinks';
+import { getPaymentLink, getCourseNames, getCoursePrice } from '../lib/paymentLinks';
 
 const COURSE_NAMES = getCourseNames();
 const MELODIES_COURSE_NAMES = COURSE_NAMES.filter((name) => name.includes('מנגינות'));
@@ -279,6 +279,13 @@ export default function RegistrationForm() {
                   ))}
                 </select>
               </div>
+
+              {form.selectedCourse && getCoursePrice(form.selectedCourse) && (
+                <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.25)' }}>
+                  <span className="text-sm text-slate-300">עלות שנתית:</span>
+                  <span className="text-lg font-bold text-purple-300">{getCoursePrice(form.selectedCourse)}</span>
+                </div>
+              )}
 
               {form.type === 'continue' && (
                 <div>
