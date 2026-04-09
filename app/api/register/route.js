@@ -3,7 +3,7 @@ import { getSupabaseClient } from '../../../lib/supabase';
 import { appendRegistrationRow } from '../../../lib/googleSheets';
 import { sendToMake } from '../../../lib/makeWebhook';
 import { sendConfirmationEmail } from '../../../lib/email';
-import { getOrchestraForInstruments } from '../../../lib/autoAssign';
+import { getOrchestraForInstruments, getOrchestraFromCourse } from '../../../lib/autoAssign';
 
 export async function POST(request) {
   try {
@@ -25,8 +25,8 @@ export async function POST(request) {
       return NextResponse.json({ error: 'חסרים שדות חובה' }, { status: 400 });
     }
 
-    // Auto-assign orchestra/choir for continuing students
-    const orchestra = type === 'continue' ? getOrchestraForInstruments(instruments) : null;
+    // Auto-assign orchestra/choir for continuing students (by course name, since they don't pick instruments)
+    const orchestra = type === 'continue' ? getOrchestraFromCourse(selectedCourse) : null;
 
     // 1. Save to Supabase
     const supabase = getSupabaseClient();
