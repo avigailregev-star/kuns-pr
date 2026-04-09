@@ -10,6 +10,7 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -53,14 +54,24 @@ export default function AdminLoginPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">סיסמה</label>
-            <input
-              type="password"
-              className="form-input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                className="form-input"
+                style={{ paddingLeft: '3.5rem' }}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.8rem', color: '#7C3AED', background: 'none', border: 'none', cursor: 'pointer', zIndex: 10 }}
+              >
+                {showPassword ? 'הסתר' : 'הצג'}
+              </button>
+            </div>
           </div>
 
           {error && (
