@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { getSupabaseClient } from '../../../lib/supabase';
 import { sendToMake } from '../../../lib/makeWebhook';
+import { sendAssignmentEmail } from '../../../lib/email';
 
 export async function POST(request) {
   // Auth guard
@@ -72,6 +73,20 @@ export async function POST(request) {
           assignedTime: assignedTime || reg.assigned_time,
           instruments: reg.instruments,
         });
+
+        try {
+          await sendAssignmentEmail({
+            parentName: reg.parent_name,
+            studentName: reg.student_name,
+            parentEmail: reg.parent_email,
+            teacher: teacher || reg.teacher,
+            assignedDay: assignedDay || reg.assigned_day,
+            assignedTime: assignedTime || reg.assigned_time,
+            orchestra: reg.orchestra,
+          });
+        } catch (emailErr) {
+          console.error('Assignment email error:', emailErr.message);
+        }
 
         // Update message_log status
         await supabase
