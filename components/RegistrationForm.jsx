@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation';
 import InstrumentPicker from './InstrumentPicker';
 import DaysPicker from './DaysPicker';
 import AgreementScroll from './AgreementScroll';
-import { getPaymentLink, getCourseNames, getCoursePrice } from '../lib/paymentLinks';
+import { getPaymentLink, getCoursePrice, COURSE_GROUPS, PAYMENT_LINKS } from '../lib/paymentLinks';
 
-const COURSE_NAMES = getCourseNames();
-const MELODIES_COURSE_NAMES = COURSE_NAMES.filter((name) => name.includes('מנגינות'));
+const MELODIES_COURSE_NAMES = Object.keys(PAYMENT_LINKS).filter((name) => name.includes('מנגינות'));
 
 const REGISTRATION_TYPES = [
   { value: 'melodies', label: 'מנגינות (שנה א, ב, ג)', desc: 'תוכנית שעות בית הספר' },
@@ -131,8 +130,6 @@ export default function RegistrationForm() {
       setLoading(false);
     }
   }
-
-  const courseList = form.type === 'melodies' ? MELODIES_COURSE_NAMES : COURSE_NAMES;
 
   return (
     <div className="max-w-lg mx-auto">
@@ -274,9 +271,19 @@ export default function RegistrationForm() {
                   onChange={(e) => update('selectedCourse', e.target.value)}
                 >
                   <option value="">— בחרו קורס —</option>
-                  {courseList.map((name) => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
+                  {form.type === 'melodies' ? (
+                    MELODIES_COURSE_NAMES.map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))
+                  ) : (
+                    COURSE_GROUPS.map((group) => (
+                      <optgroup key={group.label} label={group.label}>
+                        {group.courses.map((name) => (
+                          <option key={name} value={name}>{name}</option>
+                        ))}
+                      </optgroup>
+                    ))
+                  )}
                 </select>
               </div>
 
