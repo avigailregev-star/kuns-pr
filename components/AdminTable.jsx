@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import StatusSelect from './StatusSelect';
+import { getOrchestraForInstruments } from '../lib/autoAssign';
 
 const TYPE_LABELS = {
   new: 'חדש/ה',
@@ -127,6 +128,9 @@ export default function AdminTable() {
 
   async function saveAssignment(row) {
     setUpdating(row.id);
+    const orchestraAuto = row.type === 'continue'
+      ? (row.orchestra || getOrchestraForInstruments(row.instruments))
+      : undefined;
     try {
       await fetch('/api/update-status', {
         method: 'POST',
@@ -139,6 +143,8 @@ export default function AdminTable() {
           assignedTime: row.assigned_time,
           adminNotes: row.admin_notes,
           groupId: selectedGroups[row.id] || null,
+          orchestra: orchestraAuto,
+          theoryDay: row.theory_day,
         }),
       });
     } finally {
@@ -305,6 +311,47 @@ export default function AdminTable() {
                                 : 'ללא הגבלה'}
                             </p>
                           </div>
+
+                          {/* Auto-assignment suggestions for continuing students */}
+                          {row.type === 'continue' && (
+                            <div className="space-y-2 mb-3">
+                              <h4 className="font-semibold text-gray-700 mb-1">שיבוץ אוטומטי</h4>
+                              {getOrchestraForInstruments(row.instruments) && (
+                                <div className="flex items-center gap-2 p-2 rounded-lg bg-green-50 border border-green-200 text-sm">
+                                  <span className="text-green-600">🎼</span>
+                                  <span className="text-green-700">
+                                    תזמורת/מקהלה: <strong>{row.orchestra || getOrchestraForInstruments(row.instruments)}</strong>
+                                  </span>
+                                  {!row.orchestra && (
+                                    <button
+                                      type="button"
+                                      onClick={() => updateAssignment(row.id, 'orchestra', getOrchestraForInstruments(row.instruments))}
+                                      className="mr-auto text-xs text-green-600 underline"
+                                    >
+                                      אשר
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                              {row.assigned_day && (
+                                <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 border border-blue-200 text-sm">
+                                  <span className="text-blue-600">📚</span>
+                                  <span className="text-blue-700">
+                                    תיאוריה מוצעת: <strong>יום {row.theory_day || row.assigned_day}</strong>
+                                  </span>
+                                  {!row.theory_day && (
+                                    <button
+                                      type="button"
+                                      onClick={() => updateAssignment(row.id, 'theory_day', row.assigned_day)}
+                                      className="mr-auto text-xs text-blue-600 underline"
+                                    >
+                                      אשר
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
 
                           {/* Assignment */}
                           <div>
