@@ -3,6 +3,7 @@ import { getSupabaseClient } from '../../../lib/supabase';
 import { appendRegistrationRow } from '../../../lib/googleSheets';
 import { sendToMake } from '../../../lib/makeWebhook';
 import { sendConfirmationEmail } from '../../../lib/email';
+import { getOrchestraForInstruments } from '../../../lib/autoAssign';
 
 export async function POST(request) {
   try {
@@ -24,6 +25,9 @@ export async function POST(request) {
       return NextResponse.json({ error: 'חסרים שדות חובה' }, { status: 400 });
     }
 
+    // Auto-assign orchestra/choir for continuing students
+    const orchestra = type === 'continue' ? getOrchestraForInstruments(instruments) : null;
+
     // 1. Save to Supabase
     const supabase = getSupabaseClient();
     const { data, error: dbError } = await supabase
@@ -40,6 +44,7 @@ export async function POST(request) {
           unavailable_days: unavailableDays,
           preferred_slot: preferredSlot,
           status: 'חדש',
+          orchestra: orchestra || null,
         },
       ])
       .select('id')
@@ -54,7 +59,7 @@ export async function POST(request) {
 
     // 2. Send confirmation email
     try {
-      await sendConfirmationEmail({ parentName, studentName, parentEmail, instruments, preferredSlot });
+      await sendConfirmationEmail({ parentName, studentName, parentEmail, instruments, preferredSlot, orchestra });
     } catch (emailError) {
       console.error('Email error:', emailError.message);
     }
