@@ -298,7 +298,9 @@ export default function AdminTable() {
                       {TYPE_LABELS[row.type] || row.type}
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
-                      {Array.isArray(row.instruments) ? row.instruments.join(', ') : row.instruments}
+                      {Array.isArray(row.instruments) && row.instruments.length > 0
+                        ? row.instruments.join(', ')
+                        : row.selected_course || '—'}
                     </td>
                     <td className="px-4 py-3">
                       <StatusSelect
