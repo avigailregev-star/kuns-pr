@@ -340,7 +340,7 @@ export default function AdminTable() {
                             <h4 className="font-semibold text-gray-700 mb-2">פרטי קשר</h4>
                             <p className="text-sm text-gray-600">📧 {row.parent_email}</p>
                             <p className="text-sm text-gray-600">
-                              📅 מועד רצוי: {row.preferred_slot || '—'}
+                              📅 שיחה טלפונית בזמן רצוי: {row.preferred_slot || '—'}
                             </p>
                             <p className="text-sm text-gray-600">
                               🚫 ימים לא פנויים:{' '}
