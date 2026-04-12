@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   assigned_day text,
   assigned_time text,
   admin_notes text,
+  registration_status text NOT NULL DEFAULT 'Pending',
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz
 );

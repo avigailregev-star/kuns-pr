@@ -56,7 +56,14 @@ function ThankYouContent() {
         )}
       </div>
 
-      {!isTrial && (
+      {!isTrial && paymentUrl && (
+        <div className="flex items-center gap-2 p-3 rounded-xl mb-4 text-sm text-amber-300" style={{ background: 'rgba(217,119,6,0.15)', border: '1px solid rgba(217,119,6,0.5)' }}>
+          <span>💳</span>
+          <span><strong>נדרש תשלום</strong> — דמי רישום ושכר לימוד</span>
+        </div>
+      )}
+
+      {!isTrial && !paymentUrl && (
         <div className="flex items-center gap-2 p-3 rounded-xl mb-4 text-sm text-red-300" style={{ background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.4)' }}>
           <span>🗓️</span>
           <span>לא יחויב תשלום לפני ה-10 לספטמבר</span>
@@ -68,7 +75,7 @@ function ThankYouContent() {
           href={paymentUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="btn-primary w-full block mb-6 text-center"
+          className="w-full block mb-6 text-center text-white font-bold py-4 text-lg rounded-xl transition hover:opacity-90"
           style={{ background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)' }}
         >
           לתשלום דמי הרישום ושכר הלימוד ←

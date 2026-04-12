@@ -73,6 +73,16 @@ function printTable(rows) {
   win.print();
 }
 
+function RegistrationStatusBadge({ status }) {
+  const map = {
+    Confirmed: { label: 'שולם', cls: 'bg-green-100 text-green-800' },
+    Pending:   { label: 'ממתין', cls: 'bg-yellow-100 text-yellow-800' },
+    Cancelled: { label: 'בוטל', cls: 'bg-gray-100 text-gray-500' },
+  };
+  const { label, cls } = map[status] || map.Pending;
+  return <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cls}`}>{label}</span>;
+}
+
 export default function AdminTable() {
   const [rows, setRows] = useState([]);
   const [groups, setGroups] = useState([]);
@@ -158,6 +168,20 @@ export default function AdminTable() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, admin_notes: notes }),
     });
+  }
+
+  async function updatePaymentStatus(id, newPaymentStatus) {
+    setUpdating(id);
+    try {
+      await fetch('/api/registrations', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, registration_status: newPaymentStatus }),
+      });
+      setRows((prev) => prev.map((r) => r.id === id ? { ...r, registration_status: newPaymentStatus } : r));
+    } finally {
+      setUpdating(null);
+    }
   }
 
   const filtered = rows.filter((r) => {
@@ -247,13 +271,14 @@ export default function AdminTable() {
                 <th className="px-4 py-3 text-right font-semibold text-gray-600">סוג</th>
                 <th className="px-4 py-3 text-right font-semibold text-gray-600">כלים</th>
                 <th className="px-4 py-3 text-right font-semibold text-gray-600">סטטוס</th>
+                <th className="px-4 py-3 text-right font-semibold text-gray-600">תשלום</th>
                 <th className="px-4 py-3 text-right font-semibold text-gray-600">פעולות</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-8 text-gray-400">
+                  <td colSpan={8} className="text-center py-8 text-gray-400">
                     לא נמצאו רישומים
                   </td>
                 </tr>
@@ -283,6 +308,9 @@ export default function AdminTable() {
                       />
                     </td>
                     <td className="px-4 py-3">
+                      <RegistrationStatusBadge status={row.registration_status} />
+                    </td>
+                    <td className="px-4 py-3">
                       <button
                         onClick={() => setExpandedRow(expandedRow === row.id ? null : row.id)}
                         className="text-primary text-xs hover:underline"
@@ -295,7 +323,7 @@ export default function AdminTable() {
                   {/* Expanded row */}
                   {expandedRow === row.id && (
                     <tr key={`${row.id}-expand`} className="bg-primary-50">
-                      <td colSpan={7} className="px-6 py-4">
+                      <td colSpan={8} className="px-6 py-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {/* Contact */}
                           <div>
@@ -429,8 +457,29 @@ export default function AdminTable() {
                             </div>
                           )}
 
-                          {/* Save button */}
-                          <div className="sm:col-span-2 flex justify-end">
+                          {/* Save button + payment status buttons */}
+                          <div className="sm:col-span-2 flex flex-wrap items-center gap-2 justify-end">
+                            <button
+                              onClick={() => updatePaymentStatus(row.id, 'Confirmed')}
+                              disabled={updating === row.id || row.registration_status === 'Confirmed'}
+                              className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-green-100 text-green-800 hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              ✓ סמן כשולם
+                            </button>
+                            <button
+                              onClick={() => updatePaymentStatus(row.id, 'Cancelled')}
+                              disabled={updating === row.id || row.registration_status === 'Cancelled'}
+                              className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              ✗ בטל
+                            </button>
+                            <button
+                              onClick={() => updatePaymentStatus(row.id, 'Pending')}
+                              disabled={updating === row.id || row.registration_status === 'Pending'}
+                              className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-yellow-100 text-yellow-800 hover:bg-yellow-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              ↺ ממתין
+                            </button>
                             <button
                               onClick={() => saveAssignment(row)}
                               disabled={updating === row.id}

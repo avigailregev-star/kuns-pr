@@ -35,11 +35,14 @@ export async function PATCH(request) {
   }
 
   try {
-    const { id, admin_notes } = await request.json();
+    const { id, admin_notes, registration_status } = await request.json();
+    const updateData = { updated_at: new Date().toISOString() };
+    if (admin_notes !== undefined) updateData.admin_notes = admin_notes;
+    if (registration_status !== undefined) updateData.registration_status = registration_status;
     const supabase = getSupabaseClient();
     const { error } = await supabase
       .from('registrations')
-      .update({ admin_notes, updated_at: new Date().toISOString() })
+      .update(updateData)
       .eq('id', id);
 
     if (error) return NextResponse.json({ error: 'שגיאה' }, { status: 500 });
