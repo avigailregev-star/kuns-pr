@@ -92,7 +92,7 @@ export default function RegistrationForm() {
     }
     if (currentStepId === 'instrument') {
       if (form.instruments.length === 0) return 'יש לבחור לפחות כלי נגינה אחד';
-      if (form.type !== 'trial' && !form.preferredSlot) return 'יש לבחור מועד רצוי';
+      if (form.type !== 'trial' && !form.preferredSlot) return 'יש לבחור מועד רצוי לשיחה טלפונית';
     }
     if (currentStepId === 'course') {
       if (!form.selectedCourse) return 'יש לבחור קורס';
@@ -251,7 +251,7 @@ export default function RegistrationForm() {
 
               {form.type !== 'trial' && (
                 <div>
-                  <label className="field-label">מועד רצוי לשיחת התאמה *</label>
+                  <label className="field-label">מועד רצוי לשיחה טלפונית *</label>
                   <select className="form-input mt-1" value={form.preferredSlot}
                     onChange={(e) => update('preferredSlot', e.target.value)}>
                     <option value="">— בחרו מועד מועדף —</option>
@@ -343,7 +343,7 @@ export default function RegistrationForm() {
 
                   {!form.continueTeacher && (
                     <div>
-                      <label className="field-label">מועד רצוי לשיחת התאמה *</label>
+                      <label className="field-label">מועד רצוי לשיחה טלפונית *</label>
                       <select className="form-input mt-1" value={form.preferredSlot}
                         onChange={(e) => update('preferredSlot', e.target.value)}>
                         <option value="">— בחרו מועד מועדף —</option>
