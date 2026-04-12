@@ -73,8 +73,6 @@ function ThankYouContent() {
       {paymentUrl && (
         <a
           href={paymentUrl}
-          target="_blank"
-          rel="noopener noreferrer"
           className="w-full block mb-6 text-center text-white font-bold py-4 text-lg rounded-xl transition hover:opacity-90"
           style={{ background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)' }}
         >
