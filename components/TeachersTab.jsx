@@ -80,7 +80,7 @@ export default function TeachersTab() {
     ]);
     const [tJson, rJson] = await Promise.all([tRes.json(), rRes.json()]);
     setTeachers(tJson.data || []);
-    setRegistrations((rJson.data || []).filter(r => r.teacher && r.status === 'שובץ'));
+    setRegistrations((rJson.data || []).filter(r => r.teacher));
     setLoading(false);
   }
 
