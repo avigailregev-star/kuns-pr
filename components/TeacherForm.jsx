@@ -50,7 +50,7 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
           <label className="block text-sm font-medium text-gray-700 mb-1">שם המורה *</label>
           <input
             type="text"
-            className="form-input"
+            className="admin-input"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="שם פרטי ומשפחה"
@@ -58,7 +58,7 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">סוג כלי *</label>
-          <select className="form-input" value={instrumentType} onChange={(e) => setInstrumentType(e.target.value)}>
+          <select className="admin-input" value={instrumentType} onChange={(e) => setInstrumentType(e.target.value)}>
             <option value="">— בחר —</option>
             {INSTRUMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
@@ -94,14 +94,14 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
                 <span className="text-sm w-10 text-gray-600">יום {day}:</span>
                 <input
                   type="time"
-                  className="form-input py-1 text-sm"
+                  className="admin-input py-1 text-sm"
                   value={availableHours[day]?.from || ''}
                   onChange={(e) => setHours(day, 'from', e.target.value)}
                 />
                 <span className="text-gray-400">עד</span>
                 <input
                   type="time"
-                  className="form-input py-1 text-sm"
+                  className="admin-input py-1 text-sm"
                   value={availableHours[day]?.to || ''}
                   onChange={(e) => setHours(day, 'to', e.target.value)}
                 />
