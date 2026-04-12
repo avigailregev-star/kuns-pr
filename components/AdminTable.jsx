@@ -464,21 +464,21 @@ export default function AdminTable() {
                             <button
                               onClick={() => updatePaymentStatus(row.id, 'Confirmed')}
                               disabled={updating === row.id || row.registration_status === 'Confirmed'}
-                              className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-green-100 text-green-800 hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               ✓ סמן כשולם
                             </button>
                             <button
                               onClick={() => updatePaymentStatus(row.id, 'Cancelled')}
                               disabled={updating === row.id || row.registration_status === 'Cancelled'}
-                              className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-gray-500 text-white hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               ✗ בטל
                             </button>
                             <button
                               onClick={() => updatePaymentStatus(row.id, 'Pending')}
                               disabled={updating === row.id || row.registration_status === 'Pending'}
-                              className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-yellow-100 text-yellow-800 hover:bg-yellow-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-yellow-500 text-white hover:bg-yellow-600 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               ↺ ממתין
                             </button>
