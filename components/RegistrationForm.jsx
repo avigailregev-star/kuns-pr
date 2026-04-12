@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import InstrumentPicker from './InstrumentPicker';
 import DaysPicker from './DaysPicker';
@@ -42,11 +42,21 @@ const FLOWS = {
   melodies: ['personal', 'course',              'agreement'],
 };
 
+const DAYS_HE = ['א', 'ב', 'ג', 'ד', 'ה', 'ו'];
+
 export default function RegistrationForm() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [teachersList, setTeachersList] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/teachers/public')
+      .then(r => r.json())
+      .then(j => setTeachersList(j.data || []))
+      .catch(() => {});
+  }, []);
 
   const [form, setForm] = useState({
     studentName: '',
@@ -56,6 +66,9 @@ export default function RegistrationForm() {
     type: 'new',
     instruments: [],
     selectedCourse: '',
+    continueTeacher: '',
+    continueDay: '',
+    continueTime: '',
     unavailableDays: [],
     preferredSlot: '',
     agreed: false,
@@ -83,6 +96,8 @@ export default function RegistrationForm() {
     }
     if (currentStepId === 'course') {
       if (!form.selectedCourse) return 'יש לבחור קורס';
+      if (form.type === 'continue' && !form.continueTeacher && !form.preferredSlot)
+        return 'יש לבחור מורה או מועד רצוי לשיחת התאמה';
     }
     if (currentStepId === 'agreement') {
       if (!form.agreed) return 'יש לקרוא ולאשר את ההסכם';
@@ -294,15 +309,50 @@ export default function RegistrationForm() {
               )}
 
               {form.type === 'continue' && (
-                <div>
-                  <label className="field-label">מועד רצוי לשיחת התאמה *</label>
-                  <select className="form-input mt-1" value={form.preferredSlot}
-                    onChange={(e) => update('preferredSlot', e.target.value)}>
-                    <option value="">— בחרו מועד מועדף —</option>
-                    {SLOT_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
+                <div className="space-y-4 pt-2 border-t border-white/10">
+                  <p className="text-sm text-purple-300 font-medium">שיבוץ אוטומטי (אם ידוע)</p>
+
+                  <div>
+                    <label className="field-label">שם המורה שלי</label>
+                    <select className="form-input mt-1" value={form.continueTeacher}
+                      onChange={(e) => update('continueTeacher', e.target.value)}>
+                      <option value="">— בחרו מורה (אופציונלי) —</option>
+                      {teachersList.map(t => (
+                        <option key={t.id} value={t.name}>{t.name}{t.instrument_type ? ` (${t.instrument_type})` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {form.continueTeacher && (
+                    <div className="flex gap-3">
+                      <div className="flex-1">
+                        <label className="field-label">יום השיעור הקבוע</label>
+                        <select className="form-input mt-1" value={form.continueDay}
+                          onChange={(e) => update('continueDay', e.target.value)}>
+                          <option value="">— יום —</option>
+                          {DAYS_HE.map(d => <option key={d} value={d}>יום {d}</option>)}
+                        </select>
+                      </div>
+                      <div className="flex-1">
+                        <label className="field-label">שעת השיעור</label>
+                        <input type="time" className="form-input mt-1" value={form.continueTime}
+                          onChange={(e) => update('continueTime', e.target.value)} />
+                      </div>
+                    </div>
+                  )}
+
+                  {!form.continueTeacher && (
+                    <div>
+                      <label className="field-label">מועד רצוי לשיחת התאמה *</label>
+                      <select className="form-input mt-1" value={form.preferredSlot}
+                        onChange={(e) => update('preferredSlot', e.target.value)}>
+                        <option value="">— בחרו מועד מועדף —</option>
+                        {SLOT_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

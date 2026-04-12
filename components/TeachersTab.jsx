@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import TeacherForm from './TeacherForm';
+import ImportAssignments from './ImportAssignments';
 
 function TeacherCard({ t, registrations, onEdit, onDelete }) {
   const [open, setOpen] = useState(false);
@@ -67,6 +68,7 @@ export default function TeachersTab() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [showImport, setShowImport] = useState(false);
 
   useEffect(() => {
     fetchAll();
@@ -121,13 +123,25 @@ export default function TeachersTab() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-bold text-gray-800">מורים</h2>
-        <button
-          onClick={() => { setEditing(null); setShowForm(true); }}
-          className="btn-primary text-sm"
-        >
-          + הוסף מורה
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowImport(v => !v)}
+            className="text-sm border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50"
+          >
+            📥 ייבוא שיבוצים
+          </button>
+          <button
+            onClick={() => { setEditing(null); setShowForm(true); }}
+            className="btn-primary text-sm"
+          >
+            + הוסף מורה
+          </button>
+        </div>
       </div>
+
+      {showImport && (
+        <ImportAssignments onDone={() => { setShowImport(false); fetchAll(); }} />
+      )}
 
       {(showForm && !editing) && (
         <TeacherForm onSave={handleSave} onCancel={() => setShowForm(false)} />

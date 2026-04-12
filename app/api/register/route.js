@@ -16,6 +16,9 @@ export async function POST(request) {
       type,
       instruments,
       selectedCourse,
+      continueTeacher,
+      continueDay,
+      continueTime,
       unavailableDays,
       preferredSlot,
     } = body;
@@ -27,6 +30,10 @@ export async function POST(request) {
 
     // Auto-assign orchestra/choir for continuing students (by course name, since they don't pick instruments)
     const orchestra = type === 'continue' ? getOrchestraFromCourse(selectedCourse) : null;
+
+    // Auto-assign for continuing students who provided their teacher/day/time
+    const autoAssign = type === 'continue' && continueTeacher;
+    const initialStatus = autoAssign ? 'שובץ' : 'חדש';
 
     // 1. Save to Supabase
     const supabase = getSupabaseClient();
@@ -42,9 +49,12 @@ export async function POST(request) {
           instruments,
           selected_course: selectedCourse || null,
           unavailable_days: unavailableDays,
-          preferred_slot: preferredSlot,
-          status: 'חדש',
+          preferred_slot: preferredSlot || null,
+          status: initialStatus,
           orchestra: orchestra || null,
+          teacher: continueTeacher || null,
+          assigned_day: continueDay || null,
+          assigned_time: continueTime || null,
         },
       ])
       .select('id')
