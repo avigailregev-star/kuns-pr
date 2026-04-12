@@ -390,7 +390,7 @@ export default function AdminTable() {
                               <input
                                 type="text"
                                 placeholder="שם המורה"
-                                className="form-input text-sm"
+                                className="admin-input"
                                 value={row.teacher || ''}
                                 onChange={(e) => updateAssignment(row.id, 'teacher', e.target.value)}
                               />
@@ -398,21 +398,21 @@ export default function AdminTable() {
                                 <input
                                   type="text"
                                   placeholder="יום השיעור"
-                                  className="form-input text-sm flex-1"
+                                  className="admin-input flex-1"
                                   value={row.assigned_day || ''}
                                   onChange={(e) => updateAssignment(row.id, 'assigned_day', e.target.value)}
                                 />
                                 <input
                                   type="text"
                                   placeholder="שעה"
-                                  className="form-input text-sm flex-1"
+                                  className="admin-input flex-1"
                                   value={row.assigned_time || ''}
                                   onChange={(e) => updateAssignment(row.id, 'assigned_time', e.target.value)}
                                 />
                               </div>
                               {groups.length > 0 && (
                                 <select
-                                  className="form-input text-sm"
+                                  className="admin-input"
                                   value={selectedGroups[row.id] || ''}
                                   onChange={(e) => setSelectedGroups(prev => ({ ...prev, [row.id]: e.target.value }))}
                                 >
@@ -431,7 +431,7 @@ export default function AdminTable() {
                           <div className="sm:col-span-2">
                             <h4 className="font-semibold text-gray-700 mb-2">הערות מנהל</h4>
                             <textarea
-                              className="form-input text-sm h-20 resize-none"
+                              className="admin-input h-20 resize-none"
                               value={row.admin_notes || ''}
                               onChange={(e) => updateAssignment(row.id, 'admin_notes', e.target.value)}
                               onBlur={(e) => saveNotes(row.id, e.target.value)}
