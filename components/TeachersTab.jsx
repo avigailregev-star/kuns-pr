@@ -93,18 +93,16 @@ export default function TeachersTab() {
   }
 
   async function handleSave(data) {
-    if (editing) {
-      await fetch(`/api/teachers/${editing.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-    } else {
-      await fetch('/api/teachers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+    const url = editing ? `/api/teachers/${editing.id}` : '/api/teachers';
+    const method = editing ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.error || 'שגיאה בשמירה');
     }
     setShowForm(false);
     setEditing(null);
