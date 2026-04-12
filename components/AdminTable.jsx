@@ -86,10 +86,12 @@ function RegistrationStatusBadge({ status }) {
 export default function AdminTable() {
   const [rows, setRows] = useState([]);
   const [groups, setGroups] = useState([]);
+  const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [updating, setUpdating] = useState(null);
+  const [saved, setSaved] = useState(null);
   const [expandedRow, setExpandedRow] = useState(null);
   const [selectedGroups, setSelectedGroups] = useState({});
 
@@ -111,6 +113,10 @@ export default function AdminTable() {
     fetch('/api/groups')
       .then(r => r.json())
       .then(j => setGroups(j.data || []))
+      .catch(() => {});
+    fetch('/api/teachers')
+      .then(r => r.json())
+      .then(j => setTeachers(j.data || []))
       .catch(() => {});
   }, [fetchData]);
 
@@ -157,6 +163,8 @@ export default function AdminTable() {
           theoryDay: row.theory_day,
         }),
       });
+      setSaved(row.id);
+      setTimeout(() => setSaved(null), 3000);
     } finally {
       setUpdating(null);
     }
@@ -387,13 +395,16 @@ export default function AdminTable() {
                           <div>
                             <h4 className="font-semibold text-gray-700 mb-2">שיבוץ</h4>
                             <div className="space-y-2">
-                              <input
-                                type="text"
-                                placeholder="שם המורה"
+                              <select
                                 className="admin-input"
                                 value={row.teacher || ''}
                                 onChange={(e) => updateAssignment(row.id, 'teacher', e.target.value)}
-                              />
+                              >
+                                <option value="">— בחר מורה —</option>
+                                {teachers.map(t => (
+                                  <option key={t.id} value={t.name}>{t.name}{t.instrument_type ? ` (${t.instrument_type})` : ''}</option>
+                                ))}
+                              </select>
                               <div className="flex gap-2">
                                 <input
                                   type="text"
@@ -485,9 +496,9 @@ export default function AdminTable() {
                             <button
                               onClick={() => saveAssignment(row)}
                               disabled={updating === row.id}
-                              className="btn-primary text-sm"
+                              className={`text-sm px-4 py-2 rounded-xl font-semibold transition-colors ${saved === row.id ? 'bg-green-500 text-white' : 'btn-primary'}`}
                             >
-                              {updating === row.id ? '⏳ שומר...' : '💾 שמור שיבוץ'}
+                              {updating === row.id ? '⏳ שומר...' : saved === row.id ? '✓ נשמר!' : '💾 שמור שיבוץ'}
                             </button>
                           </div>
                         </div>
