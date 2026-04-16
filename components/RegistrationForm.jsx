@@ -117,7 +117,7 @@ export default function RegistrationForm() {
       if (form.type === 'new' && form.attendedOpenDay === null)
         return 'יש לענות על שאלת יום הפתוח';
     }
-    if (currentStepId === 'instrument') {
+    if (currentStepId === 'instrument' && !isInterviewFlow) {
       if (form.instruments.length === 0) return 'יש לבחור לפחות כלי נגינה אחד';
       if (form.type !== 'trial' && !form.preferredSlot) return 'יש לבחור מועד רצוי לשיחה טלפונית';
     }
