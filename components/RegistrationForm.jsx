@@ -9,12 +9,16 @@ import { getPaymentLink, getCoursePrice, COURSE_GROUPS, PAYMENT_LINKS } from '..
 
 const MELODIES_COURSE_NAMES = Object.keys(PAYMENT_LINKS).filter((name) => name.includes('מנגינות'));
 
-const REGISTRATION_TYPES = [
-  { value: 'melodies', label: 'מנגינות (שנה א, ב, ג)', desc: 'תוכנית שעות בית הספר' },
-  { value: 'new',      label: 'מתחיל/ה',               desc: 'תלמיד/ה חדש/ה ללימודי כלי נגינה' },
-  { value: 'continue', label: 'ממשיך/ה',                desc: 'המשך לימודים מהשנה הקודמת' },
-  { value: 'adult',    label: 'בוגר/ת',                 desc: 'מבוגרים המעוניינים ללמוד' },
-  { value: 'trial',    label: 'שיעור ניסיון',           desc: 'שיעור אחד לפני הרשמה' },
+const PROGRAM_CATEGORIES = [
+  { value: 'melodies',      label: 'מנגינות (שנה א, ב, ג)', desc: 'תוכנית שעות בית הספר' },
+  { value: 'conservatory',  label: 'קונסרבטוריון',           desc: 'לימודי כלי נגינה פרטיים' },
+];
+
+const CONSERVATORY_TYPES = [
+  { value: 'new',      label: 'מתחיל/ה',      desc: 'תלמיד/ה חדש/ה ללימודי כלי נגינה' },
+  { value: 'continue', label: 'ממשיך/ה',       desc: 'המשך לימודים מהשנה הקודמת' },
+  { value: 'adult',    label: 'בוגר/ת',        desc: 'מבוגרים המעוניינים ללמוד' },
+  { value: 'trial',    label: 'שיעור ניסיון',  desc: 'שיעור אחד לפני הרשמה' },
 ];
 
 const SLOT_OPTIONS = [
@@ -50,6 +54,7 @@ export default function RegistrationForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [teachersList, setTeachersList] = useState([]);
+  const [programCategory, setProgramCategory] = useState('conservatory');
 
   useEffect(() => {
     fetch('/api/teachers/public')
@@ -214,23 +219,50 @@ export default function RegistrationForm() {
 
               <div>
                 <label className="field-label">סוג הרשמה</label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1">
-                  {REGISTRATION_TYPES.map((t) => (
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  {PROGRAM_CATEGORIES.map((cat) => (
                     <button
-                      key={t.value}
+                      key={cat.value}
                       type="button"
-                      onClick={() => update('type', t.value)}
+                      onClick={() => {
+                        setProgramCategory(cat.value);
+                        if (cat.value === 'melodies') {
+                          update('type', 'melodies');
+                        } else {
+                          update('type', 'new');
+                        }
+                      }}
                       className={`p-3 rounded-xl border text-right transition-all duration-200 ${
-                        form.type === t.value
+                        programCategory === cat.value
                           ? 'border-purple-400/70 bg-purple-500/15 text-white'
                           : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20'
                       }`}
                     >
-                      <div className="text-sm font-semibold">{t.label}</div>
-                      <div className="text-xs opacity-60 mt-0.5">{t.desc}</div>
+                      <div className="text-sm font-semibold">{cat.label}</div>
+                      <div className="text-xs opacity-60 mt-0.5">{cat.desc}</div>
                     </button>
                   ))}
                 </div>
+
+                {programCategory === 'conservatory' && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                    {CONSERVATORY_TYPES.map((t) => (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => update('type', t.value)}
+                        className={`p-3 rounded-xl border text-right transition-all duration-200 ${
+                          form.type === t.value
+                            ? 'border-purple-400/70 bg-purple-500/15 text-white'
+                            : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20'
+                        }`}
+                      >
+                        <div className="text-sm font-semibold">{t.label}</div>
+                        <div className="text-xs opacity-60 mt-0.5">{t.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
