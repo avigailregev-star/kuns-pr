@@ -297,7 +297,14 @@ export default function AdminTable() {
                     <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
                       {new Date(row.created_at).toLocaleDateString('he-IL')}
                     </td>
-                    <td className="px-4 py-3 font-medium">{row.student_name}</td>
+                    <td className="px-4 py-3 font-medium">
+                      {row.student_name}
+                      {row.attended_open_day === false && (
+                        <span className="mr-1 text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">
+                          טרם שיחת היכרות
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-gray-500">
                       <div>{row.parent_name}</div>
                       <div className="text-xs" dir="ltr">{row.parent_phone}</div>
