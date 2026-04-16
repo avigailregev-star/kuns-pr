@@ -1,12 +1,14 @@
 'use client';
 
-const STATUS_OPTIONS = ['חדש', 'בבדיקה', 'שובץ', 'נדחה'];
+const STATUS_OPTIONS = ['חדש', 'בבדיקה', 'שובץ', 'נדחה', 'רשימת המתנה', 'ממתין לשיחת היכרות'];
 
 const STATUS_COLORS = {
-  'חדש': 'bg-blue-100 text-blue-800',
-  'בבדיקה': 'bg-yellow-100 text-yellow-800',
-  'שובץ': 'bg-green-100 text-green-800',
-  'נדחה': 'bg-red-100 text-red-800',
+  'חדש':                    'bg-blue-100 text-blue-800',
+  'בבדיקה':                 'bg-yellow-100 text-yellow-800',
+  'שובץ':                   'bg-green-100 text-green-800',
+  'נדחה':                   'bg-red-100 text-red-800',
+  'רשימת המתנה':            'bg-orange-100 text-orange-800',
+  'ממתין לשיחת היכרות':    'bg-purple-100 text-purple-800',
 };
 
 export default function StatusSelect({ value, onChange, disabled }) {
