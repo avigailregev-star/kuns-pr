@@ -84,7 +84,7 @@ function ThankYouContent() {
         </div>
       )}
 
-      {!isInterview && paymentUrl && (
+      {!isInterview && !isTrial && paymentUrl && (
         <a
           href={paymentUrl}
           className="w-full block mb-6 text-center text-white font-bold py-4 text-lg rounded-xl transition hover:opacity-90"

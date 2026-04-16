@@ -98,6 +98,8 @@ export default function RegistrationForm() {
 
   const steps = FLOWS[form.type].map((id) => ({ id, ...STEP_DEFS[id] }));
   const currentStepId = steps[step]?.id;
+  const isYearA = form.selectedCourse?.includes("שנה א'");
+  const showOrchestraCheckbox = !isYearA;
 
   function update(field, value) {
     if (field === 'type') setStep(0);
@@ -117,11 +119,13 @@ export default function RegistrationForm() {
     if (currentStepId === 'instrument') {
       if (form.instruments.length === 0) return 'יש לבחור לפחות כלי נגינה אחד';
       if (form.type !== 'trial' && !form.preferredSlot) return 'יש לבחור מועד רצוי לשיחה טלפונית';
+      if (showOrchestraCheckbox && !form.orchestra_confirmed) return 'יש לאשר השתתפות בתזמורת';
     }
     if (currentStepId === 'course') {
       if (!form.selectedCourse) return 'יש לבחור קורס';
       if (form.type === 'continue' && !form.continueTeacher && !form.preferredSlot)
         return 'יש לבחור מורה או מועד רצוי לשיחת התאמה';
+      if (showOrchestraCheckbox && !form.orchestra_confirmed) return 'יש לאשר השתתפות בתזמורת';
     }
     if (currentStepId === 'agreement') {
       if (!form.agreed) return 'יש לקרוא ולאשר את ההסכם';
@@ -421,6 +425,18 @@ export default function RegistrationForm() {
                   </select>
                 </div>
               )}
+
+              {showOrchestraCheckbox && (
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.orchestra_confirmed}
+                    onChange={(e) => update('orchestra_confirmed', e.target.checked)}
+                    className="w-4 h-4 rounded accent-purple-500"
+                  />
+                  <span className="text-sm text-slate-200">אני מאשר/ת השתתפות בתזמורת *</span>
+                </label>
+              )}
             </div>
           )}
 
@@ -466,6 +482,18 @@ export default function RegistrationForm() {
                   <span className="text-sm text-slate-300">עלות שנתית:</span>
                   <span className="text-lg font-bold text-purple-300">{getCoursePrice(form.selectedCourse)}</span>
                 </div>
+              )}
+
+              {showOrchestraCheckbox && (
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.orchestra_confirmed}
+                    onChange={(e) => update('orchestra_confirmed', e.target.checked)}
+                    className="w-4 h-4 rounded accent-purple-500"
+                  />
+                  <span className="text-sm text-slate-200">אני מאשר/ת השתתפות בתזמורת *</span>
+                </label>
               )}
 
               {form.type === 'continue' && (
