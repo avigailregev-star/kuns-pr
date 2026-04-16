@@ -51,7 +51,7 @@ const STEP_DEFS = {
 
 const FLOWS = {
   trial:    ['personal', 'instrument'],
-  new:      ['personal', 'instrument', 'agreement'],
+  new:      ['personal', 'course',     'agreement'],
   adult:    ['personal', 'instrument', 'agreement'],
   continue: ['personal', 'course',     'agreement'],
   melodies: ['personal', 'course',     'agreement'],
@@ -123,8 +123,8 @@ export default function RegistrationForm() {
     }
     if (currentStepId === 'course') {
       if (!form.selectedCourse) return 'יש לבחור קורס';
-      if (form.type === 'continue' && !form.continueTeacher && !form.preferredSlot)
-        return 'יש לבחור מורה או מועד רצוי לשיחת התאמה';
+      if ((form.type === 'continue' || form.type === 'new') && !form.continueTeacher && !form.preferredSlot)
+        return 'יש לבחור מורה או מועד רצוי לשיחה טלפונית';
       if (showOrchestraCheckbox && !form.orchestra_confirmed) return 'יש לאשר השתתפות בתזמורת';
     }
     if (currentStepId === 'agreement') {
@@ -485,7 +485,7 @@ export default function RegistrationForm() {
                 </label>
               )}
 
-              {form.type === 'continue' && (
+              {(form.type === 'continue' || form.type === 'new') && (
                 <div className="space-y-4 pt-2 border-t border-white/10">
                   <div>
                     <label className="field-label">שם המורה שלי</label>
