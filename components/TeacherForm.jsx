@@ -10,6 +10,9 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
   const [instrumentType, setInstrumentType] = useState(initial.instrument_type || '');
   const [availableDays, setAvailableDays] = useState(initial.available_days || []);
   const [availableHours, setAvailableHours] = useState(initial.available_hours || {});
+  const [maxStudents, setMaxStudents] = useState(
+    initial.max_students != null ? String(initial.max_students) : ''
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -35,7 +38,13 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
     setSaving(true);
     setError('');
     try {
-      await onSave({ name, instrument_type: instrumentType, available_days: availableDays, available_hours: availableHours });
+      await onSave({
+        name,
+        instrument_type: instrumentType,
+        available_days: availableDays,
+        available_hours: availableHours,
+        max_students: maxStudents !== '' ? parseInt(maxStudents, 10) : null,
+      });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -63,6 +72,20 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
             {INSTRUMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          מכסת תלמידים מקסימאלית
+        </label>
+        <input
+          type="number"
+          min="0"
+          className="admin-input"
+          value={maxStudents}
+          onChange={(e) => setMaxStudents(e.target.value)}
+          placeholder="ריק = ללא מכסה"
+        />
       </div>
 
       <div>
