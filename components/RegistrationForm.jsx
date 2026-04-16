@@ -98,8 +98,9 @@ export default function RegistrationForm() {
 
   const steps = FLOWS[form.type].map((id) => ({ id, ...STEP_DEFS[id] }));
   const currentStepId = steps[step]?.id;
+  const isInterviewFlow = form.type === 'new' && form.attendedOpenDay === false;
   const isYearA = form.selectedCourse?.includes("שנה א'");
-  const showOrchestraCheckbox = !isYearA;
+  const showOrchestraCheckbox = (form.type === 'continue' || form.type === 'melodies') && !isYearA;
 
   function update(field, value) {
     if (field === 'type') setStep(0);
@@ -119,7 +120,6 @@ export default function RegistrationForm() {
     if (currentStepId === 'instrument') {
       if (form.instruments.length === 0) return 'יש לבחור לפחות כלי נגינה אחד';
       if (form.type !== 'trial' && !form.preferredSlot) return 'יש לבחור מועד רצוי לשיחה טלפונית';
-      if (showOrchestraCheckbox && !form.orchestra_confirmed) return 'יש לאשר השתתפות בתזמורת';
     }
     if (currentStepId === 'course') {
       if (!form.selectedCourse) return 'יש לבחור קורס';
@@ -400,7 +400,7 @@ export default function RegistrationForm() {
           )}
 
           {/* ── Instrument Picker ── */}
-          {currentStepId === 'instrument' && (
+          {currentStepId === 'instrument' && !isInterviewFlow && (
             <div className="space-y-6">
               <div className="mb-6">
                 <h2 className="text-xl font-bold text-white mb-1">כלי נגינה</h2>
@@ -426,17 +426,6 @@ export default function RegistrationForm() {
                 </div>
               )}
 
-              {showOrchestraCheckbox && (
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.orchestra_confirmed}
-                    onChange={(e) => update('orchestra_confirmed', e.target.checked)}
-                    className="w-4 h-4 rounded accent-purple-500"
-                  />
-                  <span className="text-sm text-slate-200">אני מאשר/ת השתתפות בתזמורת *</span>
-                </label>
-              )}
             </div>
           )}
 
@@ -547,7 +536,7 @@ export default function RegistrationForm() {
           )}
 
           {/* ── Unavailable Days ── */}
-          {currentStepId === 'days' && (
+          {currentStepId === 'days' && !isInterviewFlow && (
             <div className="space-y-5">
               <div className="mb-6">
                 <h2 className="text-xl font-bold text-white mb-1">ימים לא זמינים</h2>
@@ -567,7 +556,7 @@ export default function RegistrationForm() {
           )}
 
           {/* ── Agreement ── */}
-          {currentStepId === 'agreement' && (
+          {currentStepId === 'agreement' && !isInterviewFlow && (
             <div className="space-y-5">
               <div className="mb-6">
                 <h2 className="text-xl font-bold text-white mb-1">תקנון ותנאי הרשמה</h2>
@@ -593,7 +582,7 @@ export default function RegistrationForm() {
             </button>
           )}
 
-          {step < steps.length - 1 ? (
+          {step < steps.length - 1 && !(isInterviewFlow && step > 0) ? (
             <button type="button" onClick={nextStep} className="btn-primary flex-1">
               המשך ←
             </button>
