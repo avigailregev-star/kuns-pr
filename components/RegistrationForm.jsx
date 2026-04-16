@@ -84,6 +84,8 @@ export default function RegistrationForm() {
     grade: '',
     schoolName: '',
     hasAccommodations: false,
+    orchestra_confirmed: false,
+    attendedOpenDay: null,
     instruments: [],
     selectedCourse: '',
     continueTeacher: '',
@@ -109,6 +111,8 @@ export default function RegistrationForm() {
       if (!form.parentPhone.trim()) return 'יש להזין מספר טלפון';
       if (!form.parentEmail.trim() || !form.parentEmail.includes('@'))
         return 'יש להזין כתובת אימייל תקינה';
+      if (form.type === 'new' && form.attendedOpenDay === null)
+        return 'יש לענות על שאלת יום הפתוח';
     }
     if (currentStepId === 'instrument') {
       if (form.instruments.length === 0) return 'יש לבחור לפחות כלי נגינה אחד';
@@ -122,6 +126,9 @@ export default function RegistrationForm() {
     if (currentStepId === 'agreement') {
       if (!form.agreed) return 'יש לקרוא ולאשר את ההסכם';
     }
+    if (form.type === 'new' && form.attendedOpenDay === false && currentStepId !== 'personal') {
+      if (!form.preferredSlot) return 'יש לבחור מועד לשיחת היכרות';
+    }
     return '';
   }
 
@@ -129,6 +136,13 @@ export default function RegistrationForm() {
     const err = validateStep();
     if (err) { setError(err); return; }
     setError('');
+
+    // New student who didn't attend open day — skip to interview submit screen
+    if (form.type === 'new' && form.attendedOpenDay === false && currentStepId === 'personal') {
+      setStep(1);
+      return;
+    }
+
     setStep((s) => s + 1);
   }
 
@@ -153,10 +167,14 @@ export default function RegistrationForm() {
       if (!res.ok) { setError(json.error || 'אירעה שגיאה. נסה שוב.'); return; }
 
       const params = new URLSearchParams();
-      params.set('type', form.type);
-      if (form.type !== 'trial') {
-        const paymentUrl = getPaymentLink(form.selectedCourse);
-        if (paymentUrl) params.set('paymentUrl', paymentUrl);
+      if (form.type === 'new' && form.attendedOpenDay === false) {
+        params.set('type', 'interview');
+      } else {
+        params.set('type', form.type);
+        if (form.type !== 'trial') {
+          const paymentUrl = getPaymentLink(form.selectedCourse);
+          if (paymentUrl) params.set('paymentUrl', paymentUrl);
+        }
       }
       router.push(`/thank-you?${params.toString()}`);
     } catch {
@@ -320,6 +338,59 @@ export default function RegistrationForm() {
                     ))}
                   </div>
                 )}
+              </div>
+
+              {form.type === 'new' && (
+                <div>
+                  <label className="field-label">האם השתתפת ביום הפתוח? *</label>
+                  <div className="grid grid-cols-2 gap-2 mt-1">
+                    {[
+                      { value: true,  label: 'כן', desc: 'השתתפתי ביום הפתוח' },
+                      { value: false, label: 'לא', desc: 'לא הגעתי ליום הפתוח' },
+                    ].map((opt) => (
+                      <button
+                        key={String(opt.value)}
+                        type="button"
+                        onClick={() => update('attendedOpenDay', opt.value)}
+                        className={`p-3 rounded-xl border text-right transition-all duration-200 ${
+                          form.attendedOpenDay === opt.value
+                            ? 'border-purple-400/70 bg-purple-500/15 text-white'
+                            : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20'
+                        }`}
+                      >
+                        <div className="text-sm font-semibold">{opt.label}</div>
+                        <div className="text-xs opacity-60 mt-0.5">{opt.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Interview Scheduling (new student, no open day) ── */}
+          {form.type === 'new' && form.attendedOpenDay === false && currentStepId !== 'personal' && (
+            <div className="space-y-6">
+              <div className="mb-4 p-4 rounded-xl border border-purple-400/30 bg-purple-500/10">
+                <div className="text-2xl mb-2 text-center">📞</div>
+                <h2 className="text-lg font-bold text-white mb-2 text-center">תיאום שיחת היכרות</h2>
+                <p className="text-slate-300 text-sm text-center leading-relaxed">
+                  כדי להירשם, יש לקיים תחילה שיחת היכרות עם המזכירה.
+                  <br />אנא בחר/י מועד מועדף:
+                </p>
+              </div>
+              <div>
+                <label className="field-label">מועד מועדף לשיחה *</label>
+                <select
+                  className="form-input mt-1"
+                  value={form.preferredSlot}
+                  onChange={(e) => update('preferredSlot', e.target.value)}
+                >
+                  <option value="">— בחרו מועד —</option>
+                  {SLOT_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
               </div>
             </div>
           )}
