@@ -8,17 +8,20 @@ function ThankYouContent() {
   const searchParams = useSearchParams();
   const paymentUrl = searchParams.get('paymentUrl');
   const isTrial = searchParams.get('type') === 'trial';
+  const isInterview = searchParams.get('type') === 'interview';
 
   return (
     <div className="relative z-10 glass p-10 max-w-md w-full text-center">
-      <div className="text-6xl mb-5">{isTrial ? '🎵' : '🎉'}</div>
+      <div className="text-6xl mb-5">{isInterview ? '📞' : isTrial ? '🎵' : '🎉'}</div>
       <h1 className="text-3xl font-bold mb-3">
         <span className="gradient-text">
-          {isTrial ? 'קיבלנו את בקשתך!' : 'הרשמתך התקבלה!'}
+          {isInterview ? 'קיבלנו את בקשתך!' : isTrial ? 'קיבלנו את בקשתך!' : 'הרשמתך התקבלה!'}
         </span>
       </h1>
       <p className="text-slate-400 mb-8 leading-relaxed">
-        {isTrial
+        {isInterview
+          ? 'כדי להשלים את ההרשמה, יש לקיים תחילה שיחת היכרות.'
+          : isTrial
           ? 'תודה על התעניינותך בקונסרבטוריון המוזיקה.'
           : <>תודה על ההרשמה לקונסרבטוריון המוזיקה.<br />ניצור איתך קשר בהקדם לתיאום שיחת התאמה.</>
         }
@@ -27,7 +30,18 @@ function ThankYouContent() {
       <div className="text-right space-y-3 mb-8 p-4 rounded-xl" style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)' }}>
         <h3 className="font-semibold text-purple-300 mb-3">מה הלאה?</h3>
 
-        {isTrial ? (
+        {isInterview ? (
+          <>
+            <div className="flex items-start gap-3 text-sm text-slate-300">
+              <span className="text-purple-400 mt-0.5">📞</span>
+              <span>נחזור אליך במועד שבחרת לשיחת היכרות עם המזכירה</span>
+            </div>
+            <div className="flex items-start gap-3 text-sm text-slate-300">
+              <span className="text-purple-400 mt-0.5">✅</span>
+              <span>לאחר שיחת ההיכרות תוכלו להשלים את ההרשמה המלאה</span>
+            </div>
+          </>
+        ) : isTrial ? (
           <>
             <div className="flex items-start gap-3 text-sm text-slate-300">
               <span className="text-purple-400 mt-0.5">📞</span>
@@ -56,21 +70,21 @@ function ThankYouContent() {
         )}
       </div>
 
-      {!isTrial && paymentUrl && (
+      {!isInterview && !isTrial && paymentUrl && (
         <div className="flex items-center gap-2 p-3 rounded-xl mb-4 text-sm text-amber-300" style={{ background: 'rgba(217,119,6,0.15)', border: '1px solid rgba(217,119,6,0.5)' }}>
           <span>💳</span>
           <span><strong>נדרש תשלום</strong> — דמי רישום ושכר לימוד</span>
         </div>
       )}
 
-      {!isTrial && !paymentUrl && (
+      {!isInterview && !isTrial && !paymentUrl && (
         <div className="flex items-center gap-2 p-3 rounded-xl mb-4 text-sm text-red-300" style={{ background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.4)' }}>
           <span>🗓️</span>
           <span>לא יחויב תשלום לפני ה-10 לספטמבר</span>
         </div>
       )}
 
-      {paymentUrl && (
+      {!isInterview && paymentUrl && (
         <a
           href={paymentUrl}
           className="w-full block mb-6 text-center text-white font-bold py-4 text-lg rounded-xl transition hover:opacity-90"
