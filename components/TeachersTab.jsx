@@ -28,8 +28,13 @@ function TeacherCard({ t, registrations, onEdit, onDelete }) {
             onClick={() => setOpen(o => !o)}
             className="flex items-center gap-1.5 text-sm text-purple-600 font-medium hover:text-purple-800"
           >
-            <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded-full">
-              {students.length} תלמידים
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+              t.max_students != null && students.length >= t.max_students
+                ? 'bg-red-100 text-red-700'
+                : 'bg-purple-100 text-purple-700'
+            }`}>
+              {students.length}
+              {t.max_students != null ? ` / ${t.max_students}` : ''} תלמידים
             </span>
             <span>{open ? '▲' : '▼'}</span>
           </button>
