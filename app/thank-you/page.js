@@ -71,9 +71,12 @@ function ThankYouContent() {
       </div>
 
       {!isInterview && !isTrial && paymentUrl && (
-        <div className="flex items-center gap-2 p-3 rounded-xl mb-4 text-sm text-amber-300" style={{ background: 'rgba(217,119,6,0.15)', border: '1px solid rgba(217,119,6,0.5)' }}>
-          <span>💳</span>
-          <span><strong>נדרש תשלום</strong> — דמי רישום ושכר לימוד</span>
+        <div className="mb-4 space-y-2">
+          <div className="flex items-center gap-2 p-3 rounded-xl text-sm text-amber-300" style={{ background: 'rgba(217,119,6,0.15)', border: '1px solid rgba(217,119,6,0.5)' }}>
+            <span>💳</span>
+            <span><strong>נדרש תשלום</strong> — דמי רישום ושכר לימוד</span>
+          </div>
+          <p className="text-center text-sm font-bold text-red-400">ללא תשלום לא יישמר מקום</p>
         </div>
       )}
 
