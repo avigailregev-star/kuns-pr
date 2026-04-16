@@ -487,12 +487,10 @@ export default function RegistrationForm() {
 
               {form.type === 'continue' && (
                 <div className="space-y-4 pt-2 border-t border-white/10">
-                  <p className="text-sm text-purple-300 font-medium">שיבוץ אוטומטי (אם ידוע)</p>
-
                   <div>
                     <label className="field-label">שם המורה שלי</label>
                     <select className="form-input mt-1" value={form.continueTeacher}
-                      onChange={(e) => update('continueTeacher', e.target.value)}>
+                      onChange={(e) => { update('continueTeacher', e.target.value); update('continueDay', ''); update('continueTime', ''); }}>
                       <option value="">— בחרו מורה (אופציונלי) —</option>
                       {teachersList.map(t => (
                         <option key={t.id} value={t.name}>{t.name}{t.instrument_type ? ` (${t.instrument_type})` : ''}</option>
@@ -500,23 +498,44 @@ export default function RegistrationForm() {
                     </select>
                   </div>
 
-                  {form.continueTeacher && (
-                    <div className="flex gap-3">
-                      <div className="flex-1">
+                  {form.continueTeacher && (() => {
+                    const teacher = teachersList.find(t => t.name === form.continueTeacher);
+                    const days = teacher?.available_days || [];
+                    const hours = teacher?.available_hours || {};
+                    return days.length > 0 ? (
+                      <div className="space-y-3">
                         <label className="field-label">יום השיעור הקבוע</label>
-                        <select className="form-input mt-1" value={form.continueDay}
-                          onChange={(e) => update('continueDay', e.target.value)}>
-                          <option value="">— יום —</option>
-                          {DAYS_HE.map(d => <option key={d} value={d}>יום {d}</option>)}
-                        </select>
+                        <div className="grid grid-cols-3 gap-2">
+                          {days.map(d => (
+                            <button key={d} type="button"
+                              onClick={() => { update('continueDay', d); update('continueTime', ''); }}
+                              className={`p-2 rounded-xl border text-sm text-center transition-all ${
+                                form.continueDay === d
+                                  ? 'border-purple-400/70 bg-purple-500/15 text-white'
+                                  : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20'
+                              }`}>
+                              <div className="font-semibold">יום {d}</div>
+                              {hours[d] && <div className="text-xs opacity-70 mt-0.5">{hours[d].from}–{hours[d].to}</div>}
+                            </button>
+                          ))}
+                        </div>
+                        {form.continueDay && (
+                          <div>
+                            <label className="field-label">שעת השיעור</label>
+                            <input type="time" className="form-input mt-1" value={form.continueTime}
+                              min={hours[form.continueDay]?.from}
+                              max={hours[form.continueDay]?.to}
+                              onChange={(e) => update('continueTime', e.target.value)} />
+                            {hours[form.continueDay] && (
+                              <p className="text-xs text-slate-500 mt-1">שעות פנויות: {hours[form.continueDay].from}–{hours[form.continueDay].to}</p>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <div className="flex-1">
-                        <label className="field-label">שעת השיעור</label>
-                        <input type="time" className="form-input mt-1" value={form.continueTime}
-                          onChange={(e) => update('continueTime', e.target.value)} />
-                      </div>
-                    </div>
-                  )}
+                    ) : (
+                      <p className="text-xs text-slate-500">אין מידע על זמינות המורה</p>
+                    );
+                  })()}
 
                   {!form.continueTeacher && (
                     <div>
