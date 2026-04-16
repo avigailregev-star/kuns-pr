@@ -51,10 +51,10 @@ const STEP_DEFS = {
 
 const FLOWS = {
   trial:    ['personal', 'instrument'],
-  new:      ['personal', 'instrument', 'days', 'agreement'],
-  adult:    ['personal', 'instrument', 'days', 'agreement'],
-  continue: ['personal', 'course',     'days', 'agreement'],
-  melodies: ['personal', 'course',              'agreement'],
+  new:      ['personal', 'instrument', 'agreement'],
+  adult:    ['personal', 'instrument', 'agreement'],
+  continue: ['personal', 'course',     'agreement'],
+  melodies: ['personal', 'course',     'agreement'],
 };
 
 const DAYS_HE = ['א', 'ב', 'ג', 'ד', 'ה', 'ו'];
