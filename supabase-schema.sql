@@ -11,6 +11,10 @@ CREATE TABLE IF NOT EXISTS registrations (
   parent_phone text NOT NULL,
   parent_email text NOT NULL,
   type text NOT NULL DEFAULT 'new',
+  birthdate date,
+  grade text,
+  school_name text,
+  has_accommodations boolean NOT NULL DEFAULT false,
   instruments text[] DEFAULT '{}',
   unavailable_days text[] DEFAULT '{}',
   preferred_slot text,
@@ -42,3 +46,9 @@ CREATE INDEX IF NOT EXISTS idx_message_log_registration_id ON message_log(regist
 -- ביטול RLS (ניהול פנימי בלבד דרך service key)
 ALTER TABLE registrations DISABLE ROW LEVEL SECURITY;
 ALTER TABLE message_log DISABLE ROW LEVEL SECURITY;
+
+-- מיגרציה: הוספת שדות תלמיד (הרץ פעם אחת ב-Supabase SQL Editor)
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS birthdate date;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS grade text;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS school_name text;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS has_accommodations boolean NOT NULL DEFAULT false;

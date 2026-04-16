@@ -21,6 +21,17 @@ const CONSERVATORY_TYPES = [
   { value: 'trial',    label: 'שיעור ניסיון',  desc: 'שיעור אחד לפני הרשמה' },
 ];
 
+const GRADE_OPTIONS = [
+  'גן', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'יא', 'יב',
+];
+
+// עדכן רשימה זו עם שמות בתי הספר הרלוונטיים
+const SCHOOL_OPTIONS = [
+  // 'שם בית ספר 1',
+  // 'שם בית ספר 2',
+  'אחר',
+];
+
 const SLOT_OPTIONS = [
   'ימי א׳ בין 16:00–19:00',
   'ימי ב׳ בין 15:00–18:00',
@@ -69,6 +80,10 @@ export default function RegistrationForm() {
     parentPhone: '',
     parentEmail: '',
     type: 'new',
+    birthdate: '',
+    grade: '',
+    schoolName: '',
+    hasAccommodations: false,
     instruments: [],
     selectedCourse: '',
     continueTeacher: '',
@@ -215,6 +230,48 @@ export default function RegistrationForm() {
                 <label className="field-label">אימייל *</label>
                 <input type="email" className="form-input" value={form.parentEmail}
                   onChange={(e) => update('parentEmail', e.target.value)} placeholder="example@email.com" dir="ltr" />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="field-label">תאריך לידה</label>
+                  <input type="date" className="form-input" value={form.birthdate}
+                    onChange={(e) => update('birthdate', e.target.value)} dir="ltr" />
+                </div>
+                <div>
+                  <label className="field-label">כיתה</label>
+                  <select className="form-input" value={form.grade}
+                    onChange={(e) => update('grade', e.target.value)}>
+                    <option value="">— בחרו כיתה —</option>
+                    {GRADE_OPTIONS.map((g) => (
+                      <option key={g} value={g}>כיתה {g}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="field-label">שם בית הספר</label>
+                <select className="form-input" value={form.schoolName}
+                  onChange={(e) => update('schoolName', e.target.value)}>
+                  <option value="">— בחרו בית ספר —</option>
+                  {SCHOOL_OPTIONS.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-white/5">
+                <input
+                  type="checkbox"
+                  id="hasAccommodations"
+                  checked={form.hasAccommodations}
+                  onChange={(e) => update('hasAccommodations', e.target.checked)}
+                  className="w-5 h-5 rounded accent-purple-500 cursor-pointer"
+                />
+                <label htmlFor="hasAccommodations" className="text-sm text-slate-300 cursor-pointer select-none">
+                  לתלמיד/ה מגיע התאמות
+                </label>
               </div>
 
               <div>
