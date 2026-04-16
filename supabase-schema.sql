@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS registrations (
   grade text,
   school_name text,
   has_accommodations boolean NOT NULL DEFAULT false,
+  orchestra_confirmed boolean,
+  attended_open_day boolean,
   instruments text[] DEFAULT '{}',
   unavailable_days text[] DEFAULT '{}',
   preferred_slot text,
@@ -47,8 +49,12 @@ CREATE INDEX IF NOT EXISTS idx_message_log_registration_id ON message_log(regist
 ALTER TABLE registrations DISABLE ROW LEVEL SECURITY;
 ALTER TABLE message_log DISABLE ROW LEVEL SECURITY;
 
--- מיגרציה: הוספת שדות תלמיד (הרץ פעם אחת ב-Supabase SQL Editor)
+-- מיגרציות (הרץ פעם אחת ב-Supabase SQL Editor)
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS birthdate date;
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS grade text;
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS school_name text;
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS has_accommodations boolean NOT NULL DEFAULT false;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS orchestra_confirmed boolean;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS attended_open_day boolean;
+ALTER TABLE teachers ADD COLUMN IF NOT EXISTS max_students integer;
+ALTER TABLE teachers ADD COLUMN IF NOT EXISTS weekly_hours_quota numeric;
