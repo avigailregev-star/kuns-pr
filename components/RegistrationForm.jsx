@@ -121,7 +121,7 @@ export default function RegistrationForm() {
       if (form.instruments.length === 0) return 'יש לבחור לפחות כלי נגינה אחד';
       if (form.type !== 'trial' && !form.preferredSlot) return 'יש לבחור מועד רצוי לשיחה טלפונית';
     }
-    if (currentStepId === 'course') {
+    if (currentStepId === 'course' && !isInterviewFlow) {
       if (!form.selectedCourse) return 'יש לבחור קורס';
       if ((form.type === 'continue' || form.type === 'new') && !form.continueTeacher && !form.preferredSlot)
         return 'יש לבחור מורה או מועד רצוי לשיחה טלפונית';
@@ -430,7 +430,7 @@ export default function RegistrationForm() {
           )}
 
           {/* ── Course Picker ── */}
-          {currentStepId === 'course' && (
+          {currentStepId === 'course' && !isInterviewFlow && (
             <div className="space-y-6">
               <div className="mb-6">
                 <h2 className="text-xl font-bold text-white mb-1">
