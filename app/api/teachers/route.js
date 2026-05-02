@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { getSupabaseClient } from '../../../lib/supabase';
+import { buildUsedMinutesMap } from '../../../lib/teacherCapacity';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -14,7 +15,14 @@ export async function GET() {
     .order('name');
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ data });
+
+  const usedMap = await buildUsedMinutesMap(supabase);
+  const enriched = (data || []).map(t => ({
+    ...t,
+    used_minutes_per_day: usedMap[t.name] || {},
+  }));
+
+  return NextResponse.json({ data: enriched });
 }
 
 export async function POST(request) {
