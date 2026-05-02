@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseClient } from '../../../../lib/supabase';
+import { buildUsedMinutesMap } from '../../../../lib/teacherCapacity';
 
-// Public endpoint — no auth required
 export async function GET() {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
@@ -10,5 +10,12 @@ export async function GET() {
     .order('name');
 
   if (error) return NextResponse.json({ data: [] });
-  return NextResponse.json({ data: data || [] });
+
+  const usedMap = await buildUsedMinutesMap(supabase);
+  const enriched = (data || []).map(t => ({
+    ...t,
+    used_minutes_per_day: usedMap[t.name] || {},
+  }));
+
+  return NextResponse.json({ data: enriched });
 }
