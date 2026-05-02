@@ -533,7 +533,16 @@ export default function RegistrationForm() {
                         )}
                       </div>
                     ) : (
-                      <p className="text-xs text-slate-500">אין מידע על זמינות המורה</p>
+                      <div>
+                        <label className="field-label">מועד רצוי לשיחה טלפונית *</label>
+                        <select className="form-input mt-1" value={form.preferredSlot}
+                          onChange={(e) => update('preferredSlot', e.target.value)}>
+                          <option value="">— בחרו מועד מועדף —</option>
+                          {SLOT_OPTIONS.map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      </div>
                     );
                   })()}
 

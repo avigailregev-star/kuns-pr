@@ -412,22 +412,65 @@ export default function AdminTable() {
                                   <option key={t.id} value={t.name}>{t.name}{t.instrument_type ? ` (${t.instrument_type})` : ''}</option>
                                 ))}
                               </select>
-                              <div className="flex gap-2">
-                                <input
-                                  type="text"
-                                  placeholder="יום השיעור"
-                                  className="admin-input flex-1"
-                                  value={row.assigned_day || ''}
-                                  onChange={(e) => updateAssignment(row.id, 'assigned_day', e.target.value)}
-                                />
-                                <input
-                                  type="text"
-                                  placeholder="שעה"
-                                  className="admin-input flex-1"
-                                  value={row.assigned_time || ''}
-                                  onChange={(e) => updateAssignment(row.id, 'assigned_time', e.target.value)}
-                                />
-                              </div>
+                              {(() => {
+                                const selectedTeacher = teachers.find(t => t.name === row.teacher);
+                                const days = selectedTeacher?.available_days || [];
+                                const hours = selectedTeacher?.available_hours || {};
+                                if (days.length > 0) {
+                                  return (
+                                    <div className="space-y-2">
+                                      <div className="flex gap-1 flex-wrap">
+                                        {days.map(d => (
+                                          <button
+                                            key={d}
+                                            type="button"
+                                            onClick={() => {
+                                              updateAssignment(row.id, 'assigned_day', d);
+                                              updateAssignment(row.id, 'assigned_time', '');
+                                            }}
+                                            className={`px-3 py-1 rounded-lg text-sm border transition-all ${
+                                              row.assigned_day === d
+                                                ? 'border-blue-500 bg-blue-50 text-blue-700 font-semibold'
+                                                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
+                                            }`}
+                                          >
+                                            יום {d}
+                                            {hours[d] && <span className="text-xs opacity-60 mr-1">{hours[d].from}–{hours[d].to}</span>}
+                                          </button>
+                                        ))}
+                                      </div>
+                                      {row.assigned_day && (
+                                        <input
+                                          type="time"
+                                          className="admin-input w-full"
+                                          value={row.assigned_time || ''}
+                                          min={hours[row.assigned_day]?.from}
+                                          max={hours[row.assigned_day]?.to}
+                                          onChange={(e) => updateAssignment(row.id, 'assigned_time', e.target.value)}
+                                        />
+                                      )}
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <div className="flex gap-2">
+                                    <input
+                                      type="text"
+                                      placeholder="יום השיעור"
+                                      className="admin-input flex-1"
+                                      value={row.assigned_day || ''}
+                                      onChange={(e) => updateAssignment(row.id, 'assigned_day', e.target.value)}
+                                    />
+                                    <input
+                                      type="text"
+                                      placeholder="שעה"
+                                      className="admin-input flex-1"
+                                      value={row.assigned_time || ''}
+                                      onChange={(e) => updateAssignment(row.id, 'assigned_time', e.target.value)}
+                                    />
+                                  </div>
+                                );
+                              })()}
                               {groups.length > 0 && (
                                 <select
                                   className="admin-input"
