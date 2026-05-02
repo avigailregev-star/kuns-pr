@@ -4,6 +4,8 @@ import { appendRegistrationRow } from '../../../lib/googleSheets';
 import { sendToMake } from '../../../lib/makeWebhook';
 import { sendConfirmationEmail } from '../../../lib/email';
 import { getOrchestraForInstruments, getOrchestraFromCourse } from '../../../lib/autoAssign';
+import { getLessonDuration } from '../../../lib/lessonDuration';
+import { buildUsedMinutesMap, freeMinutesOnDay } from '../../../lib/teacherCapacity';
 
 /**
  * Parse a preferredSlot string like "ימי ב' בין 15:00–18:00"
@@ -138,6 +140,30 @@ export async function POST(request) {
       }
     }
 
+    // ── Day capacity check (when a specific day was selected) ─────────────────
+    if (continueTeacher && continueDay) {
+      const supabase = getSupabaseClient();
+      const usedMap = await buildUsedMinutesMap(supabase);
+      const { data: teacherRow } = await supabase
+        .from('teachers')
+        .select('available_hours')
+        .eq('name', continueTeacher)
+        .single();
+
+      const lessonDuration = getLessonDuration(selectedCourse);
+      const free = freeMinutesOnDay(
+        teacherRow?.available_hours || {},
+        continueDay,
+        usedMap[continueTeacher]?.[continueDay]
+      );
+
+      if (free < lessonDuration) {
+        initialStatus = 'רשימת המתנה';
+        adminNotes = (adminNotes ? adminNotes + ' | ' : '') +
+          `⚠️ יום ${continueDay} מלא אצל ${continueTeacher} — הוכנס לרשימת המתנה`;
+      }
+    }
+
     // ── Auto-assign orchestra/choir ──────────────────────────────────────────
     const orchestraGroup =
       type === 'continue'
@@ -146,7 +172,7 @@ export async function POST(request) {
 
     // ── Auto-assign continuing students ─────────────────────────────────────
     const autoAssign = type === 'continue' && continueTeacher;
-    if (autoAssign) initialStatus = 'שובץ';
+    if (autoAssign && initialStatus !== 'רשימת המתנה') initialStatus = 'שובץ';
 
     // ── Save to Supabase ─────────────────────────────────────────────────────
     const supabase = getSupabaseClient();
