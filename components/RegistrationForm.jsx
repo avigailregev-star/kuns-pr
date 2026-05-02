@@ -6,6 +6,8 @@ import InstrumentPicker from './InstrumentPicker';
 import DaysPicker from './DaysPicker';
 import AgreementScroll from './AgreementScroll';
 import { getPaymentLink, getCoursePrice, COURSE_GROUPS, PAYMENT_LINKS } from '../lib/paymentLinks';
+import { getLessonDuration } from '../lib/lessonDuration';
+import { freeMinutesOnDay } from '../lib/teacherCapacity';
 
 const MELODIES_COURSE_NAMES = Object.keys(PAYMENT_LINKS).filter((name) => name.includes('מנגינות'));
 
@@ -504,18 +506,29 @@ export default function RegistrationForm() {
                       <div className="space-y-3">
                         <label className="field-label">יום השיעור הקבוע</label>
                         <div className="grid grid-cols-3 gap-2">
-                          {days.map(d => (
-                            <button key={d} type="button"
-                              onClick={() => { update('continueDay', d); update('continueTime', ''); }}
-                              className={`p-2 rounded-xl border text-sm text-center transition-all ${
-                                form.continueDay === d
-                                  ? 'border-purple-400/70 bg-purple-500/15 text-white'
-                                  : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20'
-                              }`}>
-                              <div className="font-semibold">יום {d}</div>
-                              {hours[d] && <div className="text-xs opacity-70 mt-0.5">{hours[d].from}–{hours[d].to}</div>}
-                            </button>
-                          ))}
+                          {days.map(d => {
+                            const lessonDuration = getLessonDuration(form.selectedCourse);
+                            const free = freeMinutesOnDay(hours, d, teacher?.used_minutes_per_day?.[d]);
+                            const isFull = free < lessonDuration;
+                            return (
+                              <button key={d} type="button"
+                                disabled={isFull}
+                                onClick={() => { if (!isFull) { update('continueDay', d); update('continueTime', ''); } }}
+                                className={`p-2 rounded-xl border text-sm text-center transition-all ${
+                                  isFull
+                                    ? 'border-white/5 bg-white/3 text-slate-600 cursor-not-allowed opacity-50'
+                                    : form.continueDay === d
+                                    ? 'border-purple-400/70 bg-purple-500/15 text-white'
+                                    : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20'
+                                }`}>
+                                <div className="font-semibold">יום {d}</div>
+                                {isFull
+                                  ? <div className="text-xs mt-0.5 text-red-400">מלא</div>
+                                  : <div className="text-xs opacity-70 mt-0.5">{free} דק' פנויות</div>
+                                }
+                              </button>
+                            );
+                          })}
                         </div>
                         {form.continueDay && (
                           <div>
