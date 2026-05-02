@@ -119,12 +119,10 @@ export default function RegistrationForm() {
     }
     if (currentStepId === 'instrument' && !isInterviewFlow) {
       if (form.instruments.length === 0) return 'יש לבחור לפחות כלי נגינה אחד';
-      if (form.type !== 'trial' && !form.preferredSlot) return 'יש לבחור מועד רצוי לשיחה טלפונית';
+      if (form.type === 'trial' && !form.preferredSlot) return 'יש לבחור מועד רצוי לשיחה טלפונית';
     }
     if (currentStepId === 'course' && !isInterviewFlow) {
       if (!form.selectedCourse) return 'יש לבחור קורס';
-      if ((form.type === 'continue' || form.type === 'new') && !form.continueTeacher && !form.preferredSlot)
-        return 'יש לבחור מורה או מועד רצוי לשיחה טלפונית';
       if (showOrchestraCheckbox && !form.orchestra_confirmed) return 'יש לאשר השתתפות בתזמורת';
     }
     if (currentStepId === 'agreement') {
@@ -413,7 +411,7 @@ export default function RegistrationForm() {
                 <p className="text-xs text-purple-300">נבחרו: {form.instruments.join(', ')}</p>
               )}
 
-              {form.type !== 'trial' && (
+              {form.type === 'trial' && (
                 <div>
                   <label className="field-label">מועד רצוי לשיחה טלפונית *</label>
                   <select className="form-input mt-1" value={form.preferredSlot}
@@ -532,32 +530,8 @@ export default function RegistrationForm() {
                           </div>
                         )}
                       </div>
-                    ) : (
-                      <div>
-                        <label className="field-label">מועד רצוי לשיחה טלפונית *</label>
-                        <select className="form-input mt-1" value={form.preferredSlot}
-                          onChange={(e) => update('preferredSlot', e.target.value)}>
-                          <option value="">— בחרו מועד מועדף —</option>
-                          {SLOT_OPTIONS.map((opt) => (
-                            <option key={opt} value={opt}>{opt}</option>
-                          ))}
-                        </select>
-                      </div>
-                    );
+                    ) : null;
                   })()}
-
-                  {!form.continueTeacher && (
-                    <div>
-                      <label className="field-label">מועד רצוי לשיחה טלפונית *</label>
-                      <select className="form-input mt-1" value={form.preferredSlot}
-                        onChange={(e) => update('preferredSlot', e.target.value)}>
-                        <option value="">— בחרו מועד מועדף —</option>
-                        {SLOT_OPTIONS.map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
