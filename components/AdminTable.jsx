@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import StatusSelect from './StatusSelect';
 import { getOrchestraForInstruments } from '../lib/autoAssign';
+import { getLessonDuration } from '../lib/lessonDuration';
+import { freeMinutesOnDay } from '../lib/teacherCapacity';
 
 const TYPE_LABELS = {
   new: 'חדש/ה',
@@ -420,24 +422,36 @@ export default function AdminTable() {
                                   return (
                                     <div className="space-y-2">
                                       <div className="flex gap-1 flex-wrap">
-                                        {days.map(d => (
-                                          <button
-                                            key={d}
-                                            type="button"
-                                            onClick={() => {
-                                              updateAssignment(row.id, 'assigned_day', d);
-                                              updateAssignment(row.id, 'assigned_time', '');
-                                            }}
-                                            className={`px-3 py-1 rounded-lg text-sm border transition-all ${
-                                              row.assigned_day === d
-                                                ? 'border-blue-500 bg-blue-50 text-blue-700 font-semibold'
-                                                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
-                                            }`}
-                                          >
-                                            יום {d}
-                                            {hours[d] && <span className="text-xs opacity-60 mr-1">{hours[d].from}–{hours[d].to}</span>}
-                                          </button>
-                                        ))}
+                                        {days.map(d => {
+                                          const lessonDuration = getLessonDuration(row.selected_course);
+                                          const free = freeMinutesOnDay(hours, d, selectedTeacher?.used_minutes_per_day?.[d]);
+                                          const isFull = free < lessonDuration;
+                                          return (
+                                            <button
+                                              key={d}
+                                              type="button"
+                                              disabled={isFull}
+                                              onClick={() => {
+                                                if (isFull) return;
+                                                updateAssignment(row.id, 'assigned_day', d);
+                                                updateAssignment(row.id, 'assigned_time', '');
+                                              }}
+                                              className={`px-3 py-1 rounded-lg text-sm border transition-all ${
+                                                isFull
+                                                  ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                                                  : row.assigned_day === d
+                                                  ? 'border-blue-500 bg-blue-50 text-blue-700 font-semibold'
+                                                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
+                                              }`}
+                                            >
+                                              יום {d}
+                                              {isFull
+                                                ? <span className="text-xs mr-1 text-red-400">מלא</span>
+                                                : hours[d] && <span className="text-xs opacity-60 mr-1">{hours[d].from}–{hours[d].to}</span>
+                                              }
+                                            </button>
+                                          );
+                                        })}
                                       </div>
                                       {row.assigned_day && (
                                         <input
