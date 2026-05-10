@@ -68,6 +68,7 @@ export default function RegistrationForm() {
   const [error, setError] = useState('');
   const [teachersList, setTeachersList] = useState([]);
   const [programCategory, setProgramCategory] = useState('conservatory');
+  const [selectedGroup, setSelectedGroup] = useState('');
 
   useEffect(() => {
     fetch('/api/teachers/public')
@@ -98,6 +99,19 @@ export default function RegistrationForm() {
     agreed: false,
   });
 
+  useEffect(() => {
+    if (!form.selectedCourse) {
+      update('continueTeacher', '');
+      update('continueDay', '');
+      update('continueTime', '');
+      return;
+    }
+    const matched = teachersList.find((t) => form.selectedCourse.includes(t.name));
+    update('continueTeacher', matched?.name || '');
+    update('continueDay', '');
+    update('continueTime', '');
+  }, [form.selectedCourse, teachersList]);
+
   const steps = FLOWS[form.type].map((id) => ({ id, ...STEP_DEFS[id] }));
   const currentStepId = steps[step]?.id;
   const isInterviewFlow = form.type === 'new' && form.attendedOpenDay === false;
@@ -105,7 +119,7 @@ export default function RegistrationForm() {
   const showOrchestraCheckbox = (form.type === 'continue' || form.type === 'melodies') && !isYearA;
 
   function update(field, value) {
-    if (field === 'type') setStep(0);
+    if (field === 'type') { setStep(0); setSelectedGroup(''); }
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
@@ -443,28 +457,52 @@ export default function RegistrationForm() {
                 </p>
               </div>
 
-              <div>
-                <label className="field-label">קורס *</label>
-                <select
-                  className="form-input mt-1"
-                  value={form.selectedCourse}
-                  onChange={(e) => update('selectedCourse', e.target.value)}
-                >
-                  <option value="">— בחרו קורס —</option>
-                  {form.type === 'melodies' ? (
-                    MELODIES_COURSE_NAMES.map((name) => (
+              {form.type === 'melodies' ? (
+                <div>
+                  <label className="field-label">קורס *</label>
+                  <select
+                    className="form-input mt-1"
+                    value={form.selectedCourse}
+                    onChange={(e) => update('selectedCourse', e.target.value)}
+                  >
+                    <option value="">— בחרו קורס —</option>
+                    {MELODIES_COURSE_NAMES.map((name) => (
                       <option key={name} value={name}>{name}</option>
-                    ))
-                  ) : (
-                    COURSE_GROUPS.flatMap((group) => [
-                      <option key={`__header__${group.label}`} disabled>── {group.label} ──</option>,
-                      ...group.courses.map((name) => (
-                        <option key={name} value={name}>&nbsp;&nbsp;{name}</option>
-                      )),
-                    ])
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="field-label">כלי *</label>
+                    <select
+                      className="form-input mt-1"
+                      value={selectedGroup}
+                      onChange={(e) => { setSelectedGroup(e.target.value); update('selectedCourse', ''); }}
+                    >
+                      <option value="">— בחרו כלי —</option>
+                      {COURSE_GROUPS.map((group) => (
+                        <option key={group.label} value={group.label}>{group.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {selectedGroup && (
+                    <div>
+                      <label className="field-label">קורס *</label>
+                      <select
+                        className="form-input mt-1"
+                        value={form.selectedCourse}
+                        onChange={(e) => update('selectedCourse', e.target.value)}
+                      >
+                        <option value="">— בחרו קורס —</option>
+                        {COURSE_GROUPS.find((g) => g.label === selectedGroup)?.courses.map((name) => (
+                          <option key={name} value={name}>{name}</option>
+                        ))}
+                      </select>
+                    </div>
                   )}
-                </select>
-              </div>
+                </>
+              )}
 
               {form.selectedCourse && getCoursePrice(form.selectedCourse) && (
                 <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.25)' }}>
@@ -485,68 +523,53 @@ export default function RegistrationForm() {
                 </label>
               )}
 
-              {(form.type === 'continue' || form.type === 'new') && (
-                <div className="space-y-4 pt-2 border-t border-white/10">
-                  <div>
-                    <label className="field-label">שם המורה שלי</label>
-                    <select className="form-input mt-1" value={form.continueTeacher}
-                      onChange={(e) => { update('continueTeacher', e.target.value); update('continueDay', ''); update('continueTime', ''); }}>
-                      <option value="">— בחרו מורה (אופציונלי) —</option>
-                      {teachersList.map(t => (
-                        <option key={t.id} value={t.name}>{t.name}{t.instrument_type ? ` (${t.instrument_type})` : ''}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {form.continueTeacher && (() => {
-                    const teacher = teachersList.find(t => t.name === form.continueTeacher);
-                    const days = teacher?.available_days || [];
-                    const hours = teacher?.available_hours || {};
-                    return days.length > 0 ? (
-                      <div className="space-y-3">
-                        <label className="field-label">יום השיעור הקבוע</label>
-                        <div className="grid grid-cols-3 gap-2">
-                          {days.map(d => {
-                            const lessonDuration = getLessonDuration(form.selectedCourse);
-                            const free = freeMinutesOnDay(hours, d, teacher?.used_minutes_per_day?.[d]);
-                            const isFull = free < lessonDuration;
-                            return (
-                              <button key={d} type="button"
-                                disabled={isFull}
-                                onClick={() => { if (!isFull) { update('continueDay', d); update('continueTime', ''); } }}
-                                className={`p-2 rounded-xl border text-sm text-center transition-all ${
-                                  isFull
-                                    ? 'border-white/5 bg-white/3 text-slate-600 cursor-not-allowed opacity-50'
-                                    : form.continueDay === d
-                                    ? 'border-purple-400/70 bg-purple-500/15 text-white'
-                                    : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20'
-                                }`}>
-                                <div className="font-semibold">יום {d}</div>
-                                {isFull
-                                  ? <div className="text-xs mt-0.5 text-red-400">מלא</div>
-                                  : <div className="text-xs opacity-70 mt-0.5">{free} דק' פנויות</div>
-                                }
-                              </button>
-                            );
-                          })}
-                        </div>
-                        {form.continueDay && (
-                          <div>
-                            <label className="field-label">שעת השיעור</label>
-                            <input type="time" className="form-input mt-1" value={form.continueTime}
-                              min={hours[form.continueDay]?.from}
-                              max={hours[form.continueDay]?.to}
-                              onChange={(e) => update('continueTime', e.target.value)} />
-                            {hours[form.continueDay] && (
-                              <p className="text-xs text-slate-500 mt-1">שעות פנויות: {hours[form.continueDay].from}–{hours[form.continueDay].to}</p>
-                            )}
-                          </div>
+              {(form.type === 'continue' || form.type === 'new') && form.continueTeacher && (() => {
+                const teacher = teachersList.find(t => t.name === form.continueTeacher);
+                const days = teacher?.available_days || [];
+                const hours = teacher?.available_hours || {};
+                return days.length > 0 ? (
+                  <div className="space-y-3 pt-2 border-t border-white/10">
+                    <label className="field-label">יום השיעור הקבוע</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {days.map(d => {
+                        const lessonDuration = getLessonDuration(form.selectedCourse);
+                        const free = freeMinutesOnDay(hours, d, teacher?.used_minutes_per_day?.[d]);
+                        const isFull = free < lessonDuration;
+                        return (
+                          <button key={d} type="button"
+                            disabled={isFull}
+                            onClick={() => { if (!isFull) { update('continueDay', d); update('continueTime', ''); } }}
+                            className={`p-2 rounded-xl border text-sm text-center transition-all ${
+                              isFull
+                                ? 'border-white/5 bg-white/3 text-slate-600 cursor-not-allowed opacity-50'
+                                : form.continueDay === d
+                                ? 'border-purple-400/70 bg-purple-500/15 text-white'
+                                : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20'
+                            }`}>
+                            <div className="font-semibold">יום {d}</div>
+                            {isFull
+                              ? <div className="text-xs mt-0.5 text-red-400">מלא</div>
+                              : <div className="text-xs opacity-70 mt-0.5">{free} דק' פנויות</div>
+                            }
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {form.continueDay && (
+                      <div>
+                        <label className="field-label">שעת השיעור</label>
+                        <input type="time" className="form-input mt-1" value={form.continueTime}
+                          min={hours[form.continueDay]?.from}
+                          max={hours[form.continueDay]?.to}
+                          onChange={(e) => update('continueTime', e.target.value)} />
+                        {hours[form.continueDay] && (
+                          <p className="text-xs text-slate-500 mt-1">שעות פנויות: {hours[form.continueDay].from}–{hours[form.continueDay].to}</p>
                         )}
                       </div>
-                    ) : null;
-                  })()}
-                </div>
-              )}
+                    )}
+                  </div>
+                ) : null;
+              })()}
             </div>
           )}
 
