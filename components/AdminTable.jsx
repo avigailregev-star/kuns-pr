@@ -119,13 +119,19 @@ export default function AdminTable() {
     fetchData();
     fetch('/api/groups')
       .then(r => r.json())
-      .then(j => { console.log('groups data:', j.data); setGroups(j.data || []); })
+      .then(j => setGroups(j.data || []))
       .catch(() => {});
     fetch('/api/teachers')
       .then(r => r.json())
       .then(j => setTeachers(j.data || []))
       .catch(() => {});
   }, [fetchData]);
+
+  async function refreshTeachers() {
+    const res = await fetch('/api/teachers');
+    const json = await res.json();
+    setTeachers(json.data || []);
+  }
 
   async function updateStatus(id, newStatus) {
     setUpdating(id);
@@ -172,6 +178,7 @@ export default function AdminTable() {
       });
       setSaved(row.id);
       setTimeout(() => setSaved(null), 3000);
+      refreshTeachers();
     } finally {
       setUpdating(null);
     }
