@@ -6,6 +6,8 @@ import { getOrchestraForInstruments } from '../lib/autoAssign';
 import { getLessonDuration } from '../lib/lessonDuration';
 import { freeMinutesOnDay } from '../lib/teacherCapacity';
 
+const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+
 const TYPE_LABELS = {
   new: 'חדש/ה',
   continue: 'ממשיך/ה',
@@ -575,6 +577,26 @@ export default function AdminTable() {
                                   <option value="__new__">➕ צור קבוצה חדשה</option>
                                 </select>
                               )}
+                              {(() => {
+                                const selId = selectedGroups[row.id];
+                                if (!selId) return null;
+                                const grp = groups.find(g => String(g.id) === String(selId));
+                                const schedules = grp?.group_schedules || [];
+                                if (schedules.length === 0) return null;
+                                return (
+                                  <div className="flex flex-wrap gap-2 mt-1">
+                                    {schedules
+                                      .slice()
+                                      .sort((a, b) => a.day_of_week - b.day_of_week)
+                                      .map((s, i) => (
+                                        <span key={i} className="text-xs bg-blue-50 border border-blue-200 text-blue-700 rounded-lg px-2 py-1">
+                                          יום {DAY_NAMES[s.day_of_week] ?? s.day_of_week}
+                                          {s.start_time && s.end_time ? ` · ${s.start_time}–${s.end_time}` : s.start_time ? ` · ${s.start_time}` : ''}
+                                        </span>
+                                      ))}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
 
