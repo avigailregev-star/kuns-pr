@@ -177,12 +177,17 @@ export default function AdminTable() {
     }
   }
 
-  async function handleCreateGroup(rowId) {
+  async function handleCreateGroup(rowId, teacherName) {
     if (!newGroupName.trim() || !newGroupType) return;
+    const teacher = teachers.find(t => t.name === teacherName);
     const res = await fetch('/api/groups', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newGroupName.trim(), lesson_type: newGroupType }),
+      body: JSON.stringify({
+        name: newGroupName.trim(),
+        lesson_type: newGroupType,
+        teacher_id: teacher?.id || null,
+      }),
     });
     const json = await res.json();
     if (!res.ok) {
@@ -589,7 +594,7 @@ export default function AdminTable() {
                                   <div className="flex gap-2">
                                     <button
                                       type="button"
-                                      onClick={() => handleCreateGroup(row.id)}
+                                      onClick={() => handleCreateGroup(row.id, row.teacher)}
                                       disabled={!newGroupName.trim() || !newGroupType}
                                       className="text-xs px-3 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed"
                                     >

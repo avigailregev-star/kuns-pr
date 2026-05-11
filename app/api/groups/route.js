@@ -11,7 +11,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { name, lesson_type, is_mangan_school, school_name } = body;
+    const { name, lesson_type, is_mangan_school, school_name, teacher_id } = body;
 
     if (!name?.trim()) {
       return NextResponse.json({ error: 'שם קבוצה הוא שדה חובה' }, { status: 400 });
@@ -21,6 +21,7 @@ export async function POST(request) {
     const insertData = { name: name.trim() };
     if (lesson_type != null) insertData.lesson_type = lesson_type;
     if (school_name != null) insertData.school_name = school_name;
+    if (teacher_id != null) insertData.teacher_id = teacher_id;
     insertData.is_mangan_school = !!is_mangan_school;
 
     const { data, error } = await supabase
