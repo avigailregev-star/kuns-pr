@@ -96,6 +96,8 @@ export default function AdminTable() {
   const [saved, setSaved] = useState(null);
   const [expandedRow, setExpandedRow] = useState(null);
   const [selectedGroups, setSelectedGroups] = useState({});
+  const [creatingGroupFor, setCreatingGroupFor] = useState(null);
+  const [newGroupName, setNewGroupName] = useState('');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -170,6 +172,21 @@ export default function AdminTable() {
     } finally {
       setUpdating(null);
     }
+  }
+
+  async function handleCreateGroup(rowId) {
+    if (!newGroupName.trim()) return;
+    const res = await fetch('/api/groups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newGroupName.trim() }),
+    });
+    const json = await res.json();
+    if (!res.ok) return;
+    setGroups(prev => [...prev, json.data].sort((a, b) => a.name.localeCompare(b.name)));
+    setSelectedGroups(prev => ({ ...prev, [rowId]: json.data.id }));
+    setCreatingGroupFor(null);
+    setNewGroupName('');
   }
 
   async function saveNotes(id, notes) {
@@ -485,11 +502,47 @@ export default function AdminTable() {
                                   </div>
                                 );
                               })()}
-                              {groups.length > 0 && (
+                              {creatingGroupFor === row.id ? (
+                                <div className="flex gap-2">
+                                  <input
+                                    autoFocus
+                                    type="text"
+                                    className="admin-input flex-1"
+                                    placeholder="שם הקבוצה החדשה"
+                                    value={newGroupName}
+                                    onChange={(e) => setNewGroupName(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') handleCreateGroup(row.id);
+                                      if (e.key === 'Escape') { setCreatingGroupFor(null); setNewGroupName(''); }
+                                    }}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCreateGroup(row.id)}
+                                    className="text-xs px-3 py-1 rounded-lg bg-purple-600 text-white hover:bg-purple-700"
+                                  >
+                                    צור
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => { setCreatingGroupFor(null); setNewGroupName(''); }}
+                                    className="text-xs px-3 py-1 rounded-lg border border-gray-300 hover:bg-gray-50"
+                                  >
+                                    ביטול
+                                  </button>
+                                </div>
+                              ) : (
                                 <select
                                   className="admin-input"
                                   value={selectedGroups[row.id] || ''}
-                                  onChange={(e) => setSelectedGroups(prev => ({ ...prev, [row.id]: e.target.value }))}
+                                  onChange={(e) => {
+                                    if (e.target.value === '__new__') {
+                                      setCreatingGroupFor(row.id);
+                                      setNewGroupName('');
+                                    } else {
+                                      setSelectedGroups(prev => ({ ...prev, [row.id]: e.target.value }));
+                                    }
+                                  }}
                                 >
                                   <option value="">— הוסף לקבוצה בנוכחות —</option>
                                   {groups.map(g => (
@@ -497,6 +550,7 @@ export default function AdminTable() {
                                       {g.name}{g.is_mangan_school && g.school_name ? ` (${g.school_name})` : ''}
                                     </option>
                                   ))}
+                                  <option value="__new__">➕ צור קבוצה חדשה</option>
                                 </select>
                               )}
                             </div>

@@ -3,6 +3,39 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { getSupabaseClient } from '../../../lib/supabase';
 
+export async function POST(request) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: 'אינך מורשה' }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { name, lesson_type, is_mangan_school, school_name } = body;
+
+    if (!name?.trim()) {
+      return NextResponse.json({ error: 'שם קבוצה הוא שדה חובה' }, { status: 400 });
+    }
+
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from('groups')
+      .insert({ name: name.trim(), lesson_type, is_mangan_school: !!is_mangan_school, school_name })
+      .select('id, name, lesson_type, is_mangan_school, school_name')
+      .single();
+
+    if (error) {
+      console.error('Group create error:', error.message);
+      return NextResponse.json({ error: 'שגיאה ביצירת קבוצה' }, { status: 500 });
+    }
+
+    return NextResponse.json({ data });
+  } catch (err) {
+    console.error('Groups POST error:', err);
+    return NextResponse.json({ error: 'שגיאת שרת פנימית' }, { status: 500 });
+  }
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) {
