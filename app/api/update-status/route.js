@@ -97,13 +97,16 @@ export async function POST(request) {
 
         // Auto-add to students table if group selected
         if (groupId) {
-          await supabase.from('students').insert({
+          const { error: studentError } = await supabase.from('students').insert({
             group_id: groupId,
             name: reg.student_name,
             instrument: Array.isArray(reg.instruments) ? reg.instruments[0] : reg.instruments || null,
             parent_phone: reg.parent_phone,
             is_active: true,
           });
+          if (studentError) {
+            console.error('Students insert error:', studentError.message, studentError.details);
+          }
         }
       }
     }
