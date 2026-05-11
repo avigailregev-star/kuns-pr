@@ -442,6 +442,61 @@ export default function AdminTable() {
                                 const selectedTeacher = teachers.find(t => t.name === row.teacher);
                                 const days = selectedTeacher?.available_days || [];
                                 const hours = selectedTeacher?.available_hours || {};
+
+                                // Days from attendance app via group_schedules
+                                const teacherGroups = selectedTeacher
+                                  ? groups.filter(g => g.teacher_id === selectedTeacher.id)
+                                  : [];
+                                const scheduleMap = new Map();
+                                teacherGroups.forEach(g =>
+                                  (g.group_schedules || []).forEach(s => {
+                                    if (!scheduleMap.has(s.day_of_week)) scheduleMap.set(s.day_of_week, s);
+                                  })
+                                );
+                                const scheduleDays = [...scheduleMap.values()].sort((a, b) => a.day_of_week - b.day_of_week);
+
+                                if (scheduleDays.length > 0) {
+                                  return (
+                                    <div className="space-y-2">
+                                      <div className="flex gap-1 flex-wrap">
+                                        {scheduleDays.map(s => {
+                                          const isSelected = String(row.assigned_day) === String(s.day_of_week);
+                                          return (
+                                            <button
+                                              key={s.day_of_week}
+                                              type="button"
+                                              onClick={() => {
+                                                updateAssignment(row.id, 'assigned_day', s.day_of_week);
+                                                updateAssignment(row.id, 'assigned_time', s.start_time || '');
+                                              }}
+                                              className={`px-3 py-1 rounded-lg text-sm border transition-all ${
+                                                isSelected
+                                                  ? 'border-blue-500 bg-blue-50 text-blue-700 font-semibold'
+                                                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
+                                              }`}
+                                            >
+                                              יום {DAY_NAMES[s.day_of_week] ?? s.day_of_week}
+                                              {s.start_time && (
+                                                <span className="text-xs opacity-60 mr-1">
+                                                  {s.start_time}{s.end_time ? `–${s.end_time}` : ''}
+                                                </span>
+                                              )}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                      {row.assigned_day != null && row.assigned_day !== '' && (
+                                        <input
+                                          type="time"
+                                          className="admin-input w-full"
+                                          value={row.assigned_time || ''}
+                                          onChange={(e) => updateAssignment(row.id, 'assigned_time', e.target.value)}
+                                        />
+                                      )}
+                                    </div>
+                                  );
+                                }
+
                                 if (days.length > 0) {
                                   return (
                                     <div className="space-y-2">
@@ -490,6 +545,7 @@ export default function AdminTable() {
                                     </div>
                                   );
                                 }
+
                                 return (
                                   <div className="flex gap-2">
                                     <input

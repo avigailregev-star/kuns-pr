@@ -51,7 +51,7 @@ export async function GET() {
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('groups')
-      .select('id, name, lesson_type, is_mangan_school, school_name, group_schedules(day_of_week, start_time, end_time)')
+      .select('id, name, lesson_type, is_mangan_school, school_name, teacher_id, group_schedules(day_of_week, start_time, end_time)')
       .order('name', { ascending: true });
 
     if (error) {
