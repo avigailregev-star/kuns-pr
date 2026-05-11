@@ -98,6 +98,7 @@ export default function AdminTable() {
   const [selectedGroups, setSelectedGroups] = useState({});
   const [creatingGroupFor, setCreatingGroupFor] = useState(null);
   const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupType, setNewGroupType] = useState('');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -175,11 +176,11 @@ export default function AdminTable() {
   }
 
   async function handleCreateGroup(rowId) {
-    if (!newGroupName.trim()) return;
+    if (!newGroupName.trim() || !newGroupType) return;
     const res = await fetch('/api/groups', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newGroupName.trim() }),
+      body: JSON.stringify({ name: newGroupName.trim(), lesson_type: newGroupType }),
     });
     const json = await res.json();
     if (!res.ok) {
@@ -190,6 +191,7 @@ export default function AdminTable() {
     setSelectedGroups(prev => ({ ...prev, [rowId]: String(json.data.id) }));
     setCreatingGroupFor(null);
     setNewGroupName('');
+    setNewGroupType('');
   }
 
   async function saveNotes(id, notes) {
@@ -506,33 +508,48 @@ export default function AdminTable() {
                                 );
                               })()}
                               {creatingGroupFor === row.id ? (
-                                <div className="flex gap-2">
+                                <div className="space-y-2">
                                   <input
                                     autoFocus
                                     type="text"
-                                    className="admin-input flex-1"
+                                    className="admin-input w-full"
                                     placeholder="שם הקבוצה החדשה"
                                     value={newGroupName}
                                     onChange={(e) => setNewGroupName(e.target.value)}
                                     onKeyDown={(e) => {
-                                      if (e.key === 'Enter') handleCreateGroup(row.id);
-                                      if (e.key === 'Escape') { setCreatingGroupFor(null); setNewGroupName(''); }
+                                      if (e.key === 'Escape') { setCreatingGroupFor(null); setNewGroupName(''); setNewGroupType(''); }
                                     }}
                                   />
-                                  <button
-                                    type="button"
-                                    onClick={() => handleCreateGroup(row.id)}
-                                    className="text-xs px-3 py-1 rounded-lg bg-purple-600 text-white hover:bg-purple-700"
+                                  <select
+                                    className="admin-input w-full"
+                                    value={newGroupType}
+                                    onChange={(e) => setNewGroupType(e.target.value)}
                                   >
-                                    צור
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => { setCreatingGroupFor(null); setNewGroupName(''); }}
-                                    className="text-xs px-3 py-1 rounded-lg border border-gray-300 hover:bg-gray-50"
-                                  >
-                                    ביטול
-                                  </button>
+                                    <option value="">— סוג שיעור —</option>
+                                    <option>פרטני 45 דקות</option>
+                                    <option>פרטני 60 דקות</option>
+                                    <option>קבוצתי</option>
+                                    <option>תזמורת</option>
+                                    <option>מקהלה</option>
+                                    <option>תיאוריה</option>
+                                  </select>
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCreateGroup(row.id)}
+                                      disabled={!newGroupName.trim() || !newGroupType}
+                                      className="text-xs px-3 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                      צור קבוצה
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => { setCreatingGroupFor(null); setNewGroupName(''); setNewGroupType(''); }}
+                                      className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50"
+                                    >
+                                      ביטול
+                                    </button>
+                                  </div>
                                 </div>
                               ) : (
                                 <select
