@@ -456,30 +456,48 @@ export default function AdminTable() {
                                   .sort((a, b) => a.day_of_week - b.day_of_week);
 
                                 if (availRanges.length > 0) {
+                                  const lessonDuration = getLessonDuration(row.selected_course);
                                   return (
                                     <div className="space-y-2">
                                       <div className="flex gap-1 flex-wrap">
                                         {availRanges.map((s, i) => {
                                           const isSelected = String(row.assigned_day) === String(s.day_of_week);
+                                          const usedMins = selectedTeacher?.used_minutes_per_day?.[s.day_of_week] || 0;
+                                          const totalMins = (() => {
+                                            if (!s.start_time || !s.end_time) return Infinity;
+                                            const [sh, sm] = s.start_time.split(':').map(Number);
+                                            const [eh, em] = s.end_time.split(':').map(Number);
+                                            return (eh * 60 + em) - (sh * 60 + sm);
+                                          })();
+                                          const freeMins = totalMins - usedMins;
+                                          const isFull = freeMins < lessonDuration;
                                           return (
                                             <button
                                               key={i}
                                               type="button"
+                                              disabled={isFull}
                                               onClick={() => {
+                                                if (isFull) return;
                                                 updateAssignment(row.id, 'assigned_day', s.day_of_week);
                                                 updateAssignment(row.id, 'assigned_time', s.start_time || '');
                                               }}
                                               className={`px-3 py-1 rounded-lg text-sm border transition-all ${
-                                                isSelected
+                                                isFull
+                                                  ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                                                  : isSelected
                                                   ? 'border-blue-500 bg-blue-50 text-blue-700 font-semibold'
                                                   : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
                                               }`}
                                             >
                                               יום {DAY_NAMES[s.day_of_week] ?? s.day_of_week}
-                                              {s.start_time && (
-                                                <span className="text-xs opacity-60 mr-1">
-                                                  {s.start_time}{s.end_time ? `–${s.end_time}` : ''}
-                                                </span>
+                                              {isFull ? (
+                                                <span className="text-xs mr-1 text-red-400">לא פנוי</span>
+                                              ) : (
+                                                s.start_time && (
+                                                  <span className="text-xs opacity-60 mr-1">
+                                                    {s.start_time}{s.end_time ? `–${s.end_time}` : ''}
+                                                  </span>
+                                                )
                                               )}
                                             </button>
                                           );
