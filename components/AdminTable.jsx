@@ -182,9 +182,12 @@ export default function AdminTable() {
       body: JSON.stringify({ name: newGroupName.trim() }),
     });
     const json = await res.json();
-    if (!res.ok) return;
-    setGroups(prev => [...prev, json.data].sort((a, b) => a.name.localeCompare(b.name)));
-    setSelectedGroups(prev => ({ ...prev, [rowId]: json.data.id }));
+    if (!res.ok) {
+      alert(json.error || 'שגיאה ביצירת קבוצה');
+      return;
+    }
+    setGroups(prev => [...prev, json.data].sort((a, b) => a.name.localeCompare(b.name, 'he')));
+    setSelectedGroups(prev => ({ ...prev, [rowId]: String(json.data.id) }));
     setCreatingGroupFor(null);
     setNewGroupName('');
   }

@@ -18,9 +18,14 @@ export async function POST(request) {
     }
 
     const supabase = getSupabaseClient();
+    const insertData = { name: name.trim() };
+    if (lesson_type != null) insertData.lesson_type = lesson_type;
+    if (school_name != null) insertData.school_name = school_name;
+    insertData.is_mangan_school = !!is_mangan_school;
+
     const { data, error } = await supabase
       .from('groups')
-      .insert({ name: name.trim(), lesson_type, is_mangan_school: !!is_mangan_school, school_name })
+      .insert(insertData)
       .select('id, name, lesson_type, is_mangan_school, school_name')
       .single();
 
