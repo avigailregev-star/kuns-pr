@@ -11,7 +11,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { name, lesson_type, is_mangan_school, school_name, teacher_id } = body;
+    const { name, lesson_type, is_mangan_school, school_name, teacher_id, assigned_day, assigned_time } = body;
 
     if (!name?.trim()) {
       return NextResponse.json({ error: 'שם קבוצה הוא שדה חובה' }, { status: 400 });
@@ -33,6 +33,16 @@ export async function POST(request) {
     if (error) {
       console.error('Group create error:', error.message);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Create group_schedules entry if day was provided
+    if (assigned_day != null && assigned_time) {
+      const { error: schedErr } = await supabase.from('group_schedules').insert({
+        group_id: data.id,
+        day_of_week: assigned_day,
+        start_time: assigned_time,
+      });
+      if (schedErr) console.error('group_schedules insert error:', schedErr.message);
     }
 
     return NextResponse.json({ data });

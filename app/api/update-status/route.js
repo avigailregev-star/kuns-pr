@@ -53,6 +53,38 @@ export async function POST(request) {
       },
     ]);
 
+    // Auto-add to students table if group selected (always, not just on שובץ)
+    if (groupId) {
+      const { data: reg } = await supabase
+        .from('registrations')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (reg) {
+        // Check if student already in this group
+        const { data: existing } = await supabase
+          .from('students')
+          .select('id')
+          .eq('group_id', groupId)
+          .eq('name', reg.student_name)
+          .maybeSingle();
+
+        if (!existing) {
+          const { error: studentError } = await supabase.from('students').insert({
+            group_id: groupId,
+            name: reg.student_name,
+            instrument: Array.isArray(reg.instruments) ? reg.instruments[0] : reg.instruments || null,
+            parent_phone: reg.parent_phone,
+            is_active: true,
+          });
+          if (studentError) {
+            console.error('Students insert error:', studentError.message, studentError.details);
+          }
+        }
+      }
+    }
+
     // If assigned, notify Make
     if (newStatus === 'שובץ') {
       const { data: reg } = await supabase
@@ -94,20 +126,6 @@ export async function POST(request) {
           .update({ status: 'sent', sent_at: new Date().toISOString() })
           .eq('registration_id', id)
           .eq('action', 'status_changed_to_שובץ');
-
-        // Auto-add to students table if group selected
-        if (groupId) {
-          const { error: studentError } = await supabase.from('students').insert({
-            group_id: groupId,
-            name: reg.student_name,
-            instrument: Array.isArray(reg.instruments) ? reg.instruments[0] : reg.instruments || null,
-            parent_phone: reg.parent_phone,
-            is_active: true,
-          });
-          if (studentError) {
-            console.error('Students insert error:', studentError.message, studentError.details);
-          }
-        }
       }
     }
 
