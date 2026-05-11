@@ -31,7 +31,7 @@ export async function POST(request) {
 
     if (error) {
       console.error('Group create error:', error.message);
-      return NextResponse.json({ error: 'שגיאה ביצירת קבוצה' }, { status: 500 });
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ data });
