@@ -119,7 +119,7 @@ export default function AdminTable() {
     fetchData();
     fetch('/api/groups')
       .then(r => r.json())
-      .then(j => setGroups(j.data || []))
+      .then(j => { console.log('groups data:', j.data); setGroups(j.data || []); })
       .catch(() => {});
     fetch('/api/teachers')
       .then(r => r.json())
