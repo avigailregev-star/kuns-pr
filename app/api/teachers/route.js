@@ -11,7 +11,7 @@ export async function GET() {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('teachers')
-    .select('*')
+    .select('*, teacher_availability_ranges(day_of_week, start_time, end_time)')
     .order('name');
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

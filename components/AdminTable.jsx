@@ -443,27 +443,20 @@ export default function AdminTable() {
                                 const days = selectedTeacher?.available_days || [];
                                 const hours = selectedTeacher?.available_hours || {};
 
-                                // Days from attendance app via group_schedules
-                                const teacherGroups = selectedTeacher
-                                  ? groups.filter(g => g.teacher_id === selectedTeacher.id)
-                                  : [];
-                                const scheduleMap = new Map();
-                                teacherGroups.forEach(g =>
-                                  (g.group_schedules || []).forEach(s => {
-                                    if (!scheduleMap.has(s.day_of_week)) scheduleMap.set(s.day_of_week, s);
-                                  })
-                                );
-                                const scheduleDays = [...scheduleMap.values()].sort((a, b) => a.day_of_week - b.day_of_week);
+                                // Days from attendance app via teacher_availability_ranges
+                                const availRanges = (selectedTeacher?.teacher_availability_ranges || [])
+                                  .slice()
+                                  .sort((a, b) => a.day_of_week - b.day_of_week);
 
-                                if (scheduleDays.length > 0) {
+                                if (availRanges.length > 0) {
                                   return (
                                     <div className="space-y-2">
                                       <div className="flex gap-1 flex-wrap">
-                                        {scheduleDays.map(s => {
+                                        {availRanges.map((s, i) => {
                                           const isSelected = String(row.assigned_day) === String(s.day_of_week);
                                           return (
                                             <button
-                                              key={s.day_of_week}
+                                              key={i}
                                               type="button"
                                               onClick={() => {
                                                 updateAssignment(row.id, 'assigned_day', s.day_of_week);
