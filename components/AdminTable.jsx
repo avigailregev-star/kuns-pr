@@ -526,12 +526,14 @@ export default function AdminTable() {
                                     onChange={(e) => setNewGroupType(e.target.value)}
                                   >
                                     <option value="">— סוג שיעור —</option>
-                                    <option>פרטני 45 דקות</option>
-                                    <option>פרטני 60 דקות</option>
-                                    <option>קבוצתי</option>
-                                    <option>תזמורת</option>
-                                    <option>מקהלה</option>
-                                    <option>תיאוריה</option>
+                                    <option value="individual_45">פרטני 45 דקות</option>
+                                    <option value="individual_60">פרטני 60 דקות</option>
+                                    <option value="group">קבוצתי</option>
+                                    <option value="orchestra">תזמורת</option>
+                                    <option value="choir">מקהלה</option>
+                                    <option value="theory">תיאוריה</option>
+                                    <option value="melodies_individual">מנגינות פרטני</option>
+                                    <option value="melodies_group">מנגינות קבוצתי</option>
                                   </select>
                                   <div className="flex gap-2">
                                     <button
