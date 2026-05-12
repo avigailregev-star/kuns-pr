@@ -8,6 +8,15 @@ import { freeMinutesOnDay } from '../lib/teacherCapacity';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
+function timeToMins(t) {
+  if (!t) return null;
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+function minsToTime(m) {
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+}
+
 const TYPE_LABELS = {
   new: 'חדש/ה',
   continue: 'ממשיך/ה',
@@ -482,21 +491,40 @@ export default function AdminTable() {
                                       <div className="flex gap-1 flex-wrap">
                                         {availRanges.map((s, i) => {
                                           const isSelected = String(row.assigned_day) === String(s.day_of_week);
-                                          const usedMins = selectedTeacher?.used_minutes_per_day?.[s.day_of_week] || 0;
-                                          const totalMins = (() => {
-                                            if (!s.start_time || !s.end_time) return Infinity;
-                                            const [sh, sm] = s.start_time.split(':').map(Number);
-                                            const [eh, em] = s.end_time.split(':').map(Number);
-                                            return (eh * 60 + em) - (sh * 60 + sm);
-                                          })();
-                                          const freeMins = totalMins - usedMins;
-                                          const isFull = freeMins < lessonDuration;
-                                          const nextTime = (() => {
-                                            if (!s.start_time || usedMins === 0) return s.start_time;
-                                            const [sh, sm] = s.start_time.split(':').map(Number);
-                                            const nm = sh * 60 + sm + usedMins;
-                                            return `${String(Math.floor(nm / 60)).padStart(2, '0')}:${String(nm % 60).padStart(2, '0')}`;
-                                          })();
+                                          const winStart = timeToMins(s.start_time);
+                                          const winEnd = timeToMins(s.end_time);
+                                          const occupied = [];
+                                          for (const r of teacherAssignments) {
+                                            if (String(r.assigned_day) !== String(s.day_of_week)) continue;
+                                            const rStart = timeToMins(r.assigned_time);
+                                            if (rStart == null) continue;
+                                            occupied.push({ start: rStart, end: rStart + getLessonDuration(r.selected_course) });
+                                          }
+                                          const tGroups = groups.filter(g => g.teacher_id === selectedTeacher?.id);
+                                          for (const g of tGroups) {
+                                            const sched = (g.group_schedules || []).find(sc => String(sc.day_of_week) === String(s.day_of_week));
+                                            if (!sched?.start_time) continue;
+                                            const gStart = timeToMins(sched.start_time);
+                                            const gEnd = sched.end_time ? timeToMins(sched.end_time) : (winEnd ?? gStart + 60);
+                                            occupied.push({ start: gStart, end: gEnd });
+                                          }
+                                          occupied.sort((a, b) => a.start - b.start);
+                                          let cursor = winStart ?? 0;
+                                          let nextSlotStart = null;
+                                          if (winStart != null) {
+                                            for (const occ of occupied) {
+                                              const occStart = Math.max(occ.start, winStart);
+                                              const occEnd = winEnd != null ? Math.min(occ.end, winEnd) : occ.end;
+                                              if (occStart >= (winEnd ?? Infinity)) break;
+                                              if (cursor + lessonDuration <= occStart) { nextSlotStart = cursor; break; }
+                                              if (occEnd > cursor) cursor = occEnd;
+                                            }
+                                            if (nextSlotStart === null && (winEnd == null || cursor + lessonDuration <= winEnd)) {
+                                              nextSlotStart = cursor;
+                                            }
+                                          }
+                                          const isFull = winStart != null && winEnd != null && nextSlotStart === null;
+                                          const nextTime = nextSlotStart != null ? minsToTime(nextSlotStart) : s.start_time;
                                           return (
                                             <button
                                               key={i}
