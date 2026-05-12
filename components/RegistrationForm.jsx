@@ -60,6 +60,7 @@ const FLOWS = {
 };
 
 const DAYS_HE = ['א', 'ב', 'ג', 'ד', 'ה', 'ו'];
+const DAY_NAMES_FULL = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
 export default function RegistrationForm() {
   const router = useRouter();
@@ -525,6 +526,73 @@ export default function RegistrationForm() {
 
               {(form.type === 'continue' || form.type === 'new') && form.continueTeacher && (() => {
                 const teacher = teachersList.find(t => t.name === form.continueTeacher);
+                const lessonDuration = getLessonDuration(form.selectedCourse);
+
+                // New system: teacher_availability_ranges
+                const availRanges = (teacher?.teacher_availability_ranges || [])
+                  .slice().sort((a, b) => a.day_of_week - b.day_of_week);
+
+                if (availRanges.length > 0) {
+                  return (
+                    <div className="space-y-3 pt-2 border-t border-white/10">
+                      <label className="field-label">יום השיעור הקבוע</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {availRanges.map(s => {
+                          const usedMins = teacher?.used_minutes_per_day?.[s.day_of_week] || 0;
+                          const totalMins = (() => {
+                            if (!s.start_time || !s.end_time) return Infinity;
+                            const [sh, sm] = s.start_time.split(':').map(Number);
+                            const [eh, em] = s.end_time.split(':').map(Number);
+                            return (eh * 60 + em) - (sh * 60 + sm);
+                          })();
+                          const freeMins = totalMins - usedMins;
+                          const isFull = freeMins < lessonDuration;
+                          const nextTime = (() => {
+                            if (!s.start_time || usedMins === 0) return s.start_time;
+                            const [sh, sm] = s.start_time.split(':').map(Number);
+                            const nm = sh * 60 + sm + usedMins;
+                            return `${String(Math.floor(nm / 60)).padStart(2, '0')}:${String(nm % 60).padStart(2, '0')}`;
+                          })();
+                          const isSelected = String(form.continueDay) === String(s.day_of_week);
+                          return (
+                            <button key={s.day_of_week} type="button"
+                              disabled={isFull}
+                              onClick={() => {
+                                if (!isFull) {
+                                  update('continueDay', s.day_of_week);
+                                  update('continueTime', nextTime || s.start_time || '');
+                                }
+                              }}
+                              className={`p-2 rounded-xl border text-sm text-center transition-all ${
+                                isFull
+                                  ? 'border-white/5 bg-white/3 text-slate-600 cursor-not-allowed opacity-50'
+                                  : isSelected
+                                  ? 'border-purple-400/70 bg-purple-500/15 text-white'
+                                  : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20'
+                              }`}>
+                              <div className="font-semibold">יום {DAY_NAMES_FULL[s.day_of_week] ?? s.day_of_week}</div>
+                              {isFull
+                                ? <div className="text-xs mt-0.5 text-red-400">מלא</div>
+                                : <div className="text-xs opacity-70 mt-0.5">
+                                    {nextTime || s.start_time}{s.end_time ? `–${s.end_time}` : ''}
+                                  </div>
+                              }
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {form.continueDay !== '' && form.continueDay != null && (
+                        <div>
+                          <label className="field-label">שעת השיעור</label>
+                          <input type="time" className="form-input mt-1" value={form.continueTime}
+                            onChange={(e) => update('continueTime', e.target.value)} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                // Old system: available_days (Hebrew letters)
                 const days = teacher?.available_days || [];
                 const hours = teacher?.available_hours || {};
                 return days.length > 0 ? (
@@ -532,7 +600,6 @@ export default function RegistrationForm() {
                     <label className="field-label">יום השיעור הקבוע</label>
                     <div className="grid grid-cols-3 gap-2">
                       {days.map(d => {
-                        const lessonDuration = getLessonDuration(form.selectedCourse);
                         const free = freeMinutesOnDay(hours, d, teacher?.used_minutes_per_day?.[d]);
                         const isFull = free < lessonDuration;
                         return (

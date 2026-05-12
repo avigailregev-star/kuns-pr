@@ -141,23 +141,35 @@ export async function POST(request) {
     }
 
     // ── Day capacity check (when a specific day was selected) ─────────────────
-    if (continueTeacher && continueDay) {
+    if (continueTeacher && continueDay != null && continueDay !== '') {
       const supabase = getSupabaseClient();
       const usedMap = await buildUsedMinutesMap(supabase);
+      const lessonDuration = getLessonDuration(selectedCourse);
+      const usedMins = usedMap[continueTeacher]?.[continueDay] || 0;
+
       const { data: teacherRow } = await supabase
         .from('teachers')
-        .select('available_hours')
+        .select('available_hours, teacher_availability_ranges(day_of_week, start_time, end_time)')
         .eq('name', continueTeacher)
         .single();
 
-      const lessonDuration = getLessonDuration(selectedCourse);
-      const free = freeMinutesOnDay(
-        teacherRow?.available_hours || {},
-        continueDay,
-        usedMap[continueTeacher]?.[continueDay]
-      );
+      const dayNum = Number(continueDay);
+      const isNumericDay = !isNaN(dayNum) && String(dayNum) === String(continueDay);
+      let free;
 
-      if (free < lessonDuration) {
+      if (isNumericDay) {
+        const range = (teacherRow?.teacher_availability_ranges || [])
+          .find(r => r.day_of_week === dayNum);
+        if (range?.start_time && range?.end_time) {
+          const [sh, sm] = range.start_time.split(':').map(Number);
+          const [eh, em] = range.end_time.split(':').map(Number);
+          free = (eh * 60 + em) - (sh * 60 + sm) - usedMins;
+        }
+      } else {
+        free = freeMinutesOnDay(teacherRow?.available_hours || {}, continueDay, usedMins);
+      }
+
+      if (free != null && free < lessonDuration) {
         initialStatus = 'רשימת המתנה';
         adminNotes = (adminNotes ? adminNotes + ' | ' : '') +
           `⚠️ יום ${continueDay} מלא אצל ${continueTeacher} — הוכנס לרשימת המתנה`;
