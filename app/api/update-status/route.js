@@ -53,6 +53,17 @@ export async function POST(request) {
       },
     ]);
 
+    // Deactivate student in attendance app when registration is cancelled
+    if (newStatus === 'בוטל') {
+      const { data: cancelledReg } = await supabase
+        .from('registrations').select('student_name').eq('id', id).single();
+      if (cancelledReg?.student_name) {
+        await supabase.from('students')
+          .update({ is_active: false, registration_status: 'בוטל' })
+          .eq('name', cancelledReg.student_name);
+      }
+    }
+
     // Auto-add to students table if group selected (always, not just on שובץ)
     if (groupId) {
       const { data: reg } = await supabase

@@ -34,6 +34,8 @@ export async function PATCH(request) {
     return NextResponse.json({ error: 'אינך מורשה' }, { status: 401 });
   }
 
+  const PAYMENT_STATUS_MAP = { Pending: 'ממתין לתשלום', Confirmed: 'שולם', Cancelled: 'בוטל' };
+
   try {
     const { id, admin_notes, registration_status } = await request.json();
     const updateData = { updated_at: new Date().toISOString() };
@@ -46,6 +48,21 @@ export async function PATCH(request) {
       .eq('id', id);
 
     if (error) return NextResponse.json({ error: 'שגיאה' }, { status: 500 });
+
+    // Sync payment status to students table in the attendance app
+    if (registration_status !== undefined) {
+      const hebrewStatus = PAYMENT_STATUS_MAP[registration_status];
+      if (hebrewStatus) {
+        const { data: reg } = await supabase
+          .from('registrations').select('student_name').eq('id', id).single();
+        if (reg?.student_name) {
+          const studentUpdate = { registration_status: hebrewStatus };
+          if (registration_status === 'Cancelled') studentUpdate.is_active = false;
+          await supabase.from('students').update(studentUpdate).eq('name', reg.student_name);
+        }
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json({ error: 'שגיאת שרת פנימית' }, { status: 500 });
