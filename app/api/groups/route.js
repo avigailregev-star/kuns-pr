@@ -18,6 +18,34 @@ export async function POST(request) {
     }
 
     const supabase = getSupabaseClient();
+
+    // Block overlapping group schedules for the same teacher on the same day
+    if (teacher_id != null && assigned_day != null && assigned_time) {
+      const { data: existing } = await supabase
+        .from('groups')
+        .select('group_schedules(day_of_week, start_time, end_time)')
+        .eq('teacher_id', teacher_id);
+
+      const toM = t => { const [h, m] = t.split(':').map(Number); return h * 60 + (m || 0); };
+      const newStart = toM(assigned_time);
+      const newEnd = newStart + 90;
+      const dayNum = Number(assigned_day);
+
+      for (const g of (existing || [])) {
+        for (const sched of (g.group_schedules || [])) {
+          if (Number(sched.day_of_week) !== dayNum || !sched.start_time) continue;
+          const eStart = toM(sched.start_time);
+          const eEnd = sched.end_time ? toM(sched.end_time) : eStart + 90;
+          if (newStart < eEnd && eStart < newEnd) {
+            return NextResponse.json(
+              { error: `חיפוף בזמנים עם קבוצה קיימת באותו יום (${sched.start_time})` },
+              { status: 409 }
+            );
+          }
+        }
+      }
+    }
+
     const insertData = { name: name.trim() };
     if (lesson_type != null) insertData.lesson_type = lesson_type;
     if (school_name != null) insertData.school_name = school_name;

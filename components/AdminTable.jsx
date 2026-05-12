@@ -525,6 +525,13 @@ export default function AdminTable() {
                                           }
                                           const isFull = winStart != null && winEnd != null && nextSlotStart === null;
                                           const nextTime = nextSlotStart != null ? minsToTime(nextSlotStart) : s.start_time;
+                                          let gapEnd = winEnd;
+                                          if (nextSlotStart != null) {
+                                            for (const occ of occupied) {
+                                              if (occ.start > nextSlotStart) { gapEnd = occ.start; break; }
+                                            }
+                                          }
+                                          const slotEndTime = gapEnd != null ? minsToTime(gapEnd) : s.end_time;
                                           return (
                                             <button
                                               key={i}
@@ -549,7 +556,7 @@ export default function AdminTable() {
                                               ) : (
                                                 s.start_time && (
                                                   <span className="text-xs opacity-60 mr-1">
-                                                    {nextTime || s.start_time}{s.end_time ? `–${s.end_time}` : ''}
+                                                    {nextTime || s.start_time}{slotEndTime ? `–${slotEndTime}` : ''}
                                                   </span>
                                                 )
                                               )}
