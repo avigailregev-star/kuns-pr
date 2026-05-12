@@ -4,10 +4,20 @@ import { useState, useEffect } from 'react';
 import TeacherForm from './TeacherForm';
 import ImportAssignments from './ImportAssignments';
 
+const DAY_NAMES_TEACHER = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+
+function formatDayTeacher(assignedDay) {
+  if (assignedDay == null || assignedDay === '') return null;
+  const num = Number(assignedDay);
+  if (!isNaN(num) && num >= 0 && num <= 6) return DAY_NAMES_TEACHER[num];
+  return assignedDay;
+}
+
 function TeacherCard({ t, registrations, onEdit, onDelete }) {
   const [open, setOpen] = useState(false);
   const students = registrations.filter(
-    r => r.teacher?.trim().toLowerCase() === t.name?.trim().toLowerCase()
+    r => r.teacher?.trim().toLowerCase() === t.name?.trim().toLowerCase() &&
+      !['בוטל', 'נדחה', 'רשימת המתנה'].includes(r.status)
   );
 
   return (
@@ -54,7 +64,7 @@ function TeacherCard({ t, registrations, onEdit, onDelete }) {
                   <span className="font-medium text-gray-800">{s.student_name}</span>
                   <span className="text-gray-500 text-xs">
                     {s.selected_course || (Array.isArray(s.instruments) ? s.instruments.join(', ') : s.instruments) || '—'}
-                    {s.assigned_day ? ` · יום ${s.assigned_day}` : ''}
+                    {formatDayTeacher(s.assigned_day) != null ? ` · יום ${formatDayTeacher(s.assigned_day)}` : ''}
                     {s.assigned_time ? ` ${s.assigned_time}` : ''}
                   </span>
                 </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import StatusSelect from './StatusSelect';
 import { getOrchestraForInstruments } from '../lib/autoAssign';
 import { getLessonDuration } from '../lib/lessonDuration';
@@ -161,7 +161,7 @@ export default function AdminTable() {
       ? (row.orchestra || getOrchestraForInstruments(row.instruments))
       : undefined;
     try {
-      await fetch('/api/update-status', {
+      const res = await fetch('/api/update-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -176,9 +176,16 @@ export default function AdminTable() {
           theoryDay: row.theory_day,
         }),
       });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || 'שגיאה בשמירה — נסה שוב');
+        return;
+      }
       setSaved(row.id);
       setTimeout(() => setSaved(null), 3000);
       await refreshTeachers();
+    } catch {
+      alert('שגיאת רשת — בדוק חיבור ונסה שוב');
     } finally {
       setUpdating(null);
     }
@@ -332,8 +339,8 @@ export default function AdminTable() {
                 </tr>
               )}
               {filtered.map((row) => (
-                <>
-                  <tr key={row.id} className="hover:bg-gray-50 transition">
+                <React.Fragment key={row.id}>
+                  <tr className="hover:bg-gray-50 transition">
                     <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
                       {new Date(row.created_at).toLocaleDateString('he-IL')}
                     </td>
@@ -379,7 +386,7 @@ export default function AdminTable() {
 
                   {/* Expanded row */}
                   {expandedRow === row.id && (
-                    <tr key={`${row.id}-expand`} className="bg-primary-50">
+                    <tr className="bg-primary-50">
                       <td colSpan={8} className="px-6 py-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {/* Contact */}
@@ -774,7 +781,7 @@ export default function AdminTable() {
                       </td>
                     </tr>
                   )}
-                </>
+                </React.Fragment>
               ))}
             </tbody>
           </table>

@@ -217,6 +217,7 @@ export async function POST(request) {
         studentName,
         parentEmail,
         instruments,
+        selectedCourse: selectedCourse || null,
         preferredSlot,
         orchestra: orchestraGroup,
       });

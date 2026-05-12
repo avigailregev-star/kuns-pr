@@ -42,7 +42,6 @@ export default function ImportAssignments({ onDone }) {
 
     setResults({ success, failed });
     setLoading(false);
-    if (success.length > 0) onDone?.();
   }
 
   return (
@@ -79,7 +78,7 @@ export default function ImportAssignments({ onDone }) {
 
       <div className="flex gap-2 justify-end">
         <button onClick={() => onDone?.()} className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
-          סגור
+          {results ? 'סגור ורענן' : 'סגור'}
         </button>
         <button
           onClick={handleImport}
