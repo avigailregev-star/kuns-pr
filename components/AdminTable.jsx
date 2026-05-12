@@ -464,6 +464,12 @@ export default function AdminTable() {
 
                                 if (availRanges.length > 0) {
                                   const lessonDuration = getLessonDuration(row.selected_course);
+                                  const teacherAssignments = rows.filter(r =>
+                                    r.teacher === row.teacher &&
+                                    r.id !== row.id &&
+                                    r.assigned_day != null &&
+                                    !['בוטל', 'ממתין לשיחת היכרות', 'רשימת המתנה'].includes(r.status)
+                                  );
                                   return (
                                     <div className="space-y-2">
                                       <div className="flex gap-1 flex-wrap">
@@ -524,6 +530,20 @@ export default function AdminTable() {
                                           onChange={(e) => updateAssignment(row.id, 'assigned_time', e.target.value)}
                                         />
                                       )}
+                                      {availRanges.map(s => {
+                                        const dayStudents = teacherAssignments.filter(r => String(r.assigned_day) === String(s.day_of_week));
+                                        if (dayStudents.length === 0) return null;
+                                        return (
+                                          <div key={s.day_of_week} className="text-xs flex flex-wrap gap-1 items-center">
+                                            <span className="text-gray-500">יום {DAY_NAMES[s.day_of_week]}:</span>
+                                            {dayStudents.map(r => (
+                                              <span key={r.id} className="bg-amber-50 border border-amber-200 text-amber-700 px-1.5 py-0.5 rounded-md">
+                                                {r.student_name}{r.assigned_time ? ` · ${r.assigned_time}` : ''}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        );
+                                      })}
                                     </div>
                                   );
                                 }
