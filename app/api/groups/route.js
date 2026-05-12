@@ -80,6 +80,42 @@ export async function POST(request) {
   }
 }
 
+export async function DELETE(request) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: 'אינך מורשה' }, { status: 401 });
+  }
+
+  try {
+    const { id } = await request.json();
+    if (!id) return NextResponse.json({ error: 'חסר מזהה קבוצה' }, { status: 400 });
+
+    const supabase = getSupabaseClient();
+
+    // Delete students in this group first (FK constraint)
+    const { error: studErr } = await supabase.from('students').delete().eq('group_id', id);
+    if (studErr) {
+      console.error('Students delete error:', studErr.message);
+      return NextResponse.json({ error: 'שגיאה במחיקת תלמידים' }, { status: 500 });
+    }
+
+    // Delete group schedules
+    await supabase.from('group_schedules').delete().eq('group_id', id);
+
+    // Delete the group
+    const { error } = await supabase.from('groups').delete().eq('id', id);
+    if (error) {
+      console.error('Group delete error:', error.message);
+      return NextResponse.json({ error: 'שגיאה במחיקת קבוצה' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error('Groups DELETE error:', err);
+    return NextResponse.json({ error: 'שגיאת שרת פנימית' }, { status: 500 });
+  }
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) {

@@ -591,8 +591,27 @@ export default function AdminTable() {
                                               {dayGroups.map(g => {
                                                 const sched = g.group_schedules?.find(sc => String(sc.day_of_week) === String(s.day_of_week));
                                                 return (
-                                                  <span key={g.id} className="bg-blue-50 border border-blue-200 text-blue-700 px-1.5 py-0.5 rounded-md">
+                                                  <span key={g.id} className="bg-blue-50 border border-blue-200 text-blue-700 px-1.5 py-0.5 rounded-md flex items-center gap-1">
                                                     🎵 {g.name}{sched?.start_time ? ` · ${sched.start_time}` : ''}
+                                                    <button
+                                                      type="button"
+                                                      title="מחק קבוצה"
+                                                      onClick={async () => {
+                                                        if (!confirm(`למחוק את הקבוצה "${g.name}"?\nתלמידי הקבוצה יוסרו גם כן מאפליקציית הנוכחות.`)) return;
+                                                        const res = await fetch('/api/groups', {
+                                                          method: 'DELETE',
+                                                          headers: { 'Content-Type': 'application/json' },
+                                                          body: JSON.stringify({ id: g.id }),
+                                                        });
+                                                        if (res.ok) {
+                                                          setGroups(prev => prev.filter(x => x.id !== g.id));
+                                                        } else {
+                                                          const j = await res.json();
+                                                          alert(j.error || 'שגיאה במחיקה');
+                                                        }
+                                                      }}
+                                                      className="text-blue-300 hover:text-red-500 font-bold leading-none transition-colors"
+                                                    >×</button>
                                                   </span>
                                                 );
                                               })}
