@@ -178,7 +178,7 @@ export default function AdminTable() {
       });
       setSaved(row.id);
       setTimeout(() => setSaved(null), 3000);
-      refreshTeachers();
+      await refreshTeachers();
     } finally {
       setUpdating(null);
     }
@@ -478,7 +478,12 @@ export default function AdminTable() {
                                           })();
                                           const freeMins = totalMins - usedMins;
                                           const isFull = freeMins < lessonDuration;
-                                          console.log('day check', DAY_NAMES[s.day_of_week], {usedMins, totalMins, freeMins, lessonDuration, isFull, used_minutes_per_day: selectedTeacher?.used_minutes_per_day});
+                                          const nextTime = (() => {
+                                            if (!s.start_time || usedMins === 0) return s.start_time;
+                                            const [sh, sm] = s.start_time.split(':').map(Number);
+                                            const nm = sh * 60 + sm + usedMins;
+                                            return `${String(Math.floor(nm / 60)).padStart(2, '0')}:${String(nm % 60).padStart(2, '0')}`;
+                                          })();
                                           return (
                                             <button
                                               key={i}
@@ -487,7 +492,7 @@ export default function AdminTable() {
                                               onClick={() => {
                                                 if (isFull) return;
                                                 updateAssignment(row.id, 'assigned_day', s.day_of_week);
-                                                updateAssignment(row.id, 'assigned_time', s.start_time || '');
+                                                updateAssignment(row.id, 'assigned_time', nextTime || s.start_time || '');
                                               }}
                                               className={`px-3 py-1 rounded-lg text-sm border transition-all ${
                                                 isFull
@@ -503,7 +508,7 @@ export default function AdminTable() {
                                               ) : (
                                                 s.start_time && (
                                                   <span className="text-xs opacity-60 mr-1">
-                                                    {s.start_time}{s.end_time ? `–${s.end_time}` : ''}
+                                                    {nextTime || s.start_time}{s.end_time ? `–${s.end_time}` : ''}
                                                   </span>
                                                 )
                                               )}
