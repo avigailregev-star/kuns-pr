@@ -478,6 +478,7 @@ export default function AdminTable() {
                                           })();
                                           const freeMins = totalMins - usedMins;
                                           const isFull = freeMins < lessonDuration;
+                                          console.log('day check', DAY_NAMES[s.day_of_week], {usedMins, totalMins, freeMins, lessonDuration, isFull, used_minutes_per_day: selectedTeacher?.used_minutes_per_day});
                                           return (
                                             <button
                                               key={i}
