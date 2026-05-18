@@ -92,9 +92,9 @@ export default function RegistrationForm() {
     attendedOpenDay: null,
     instruments: [],
     selectedCourse: '',
-    continueTeacher: '',
-    continueDay: '',
-    continueTime: '',
+    selectedTeacher: '',
+    selectedDay: '',
+    selectedTime: '',
     unavailableDays: [],
     preferredSlot: '',
     agreed: false,
@@ -102,15 +102,15 @@ export default function RegistrationForm() {
 
   useEffect(() => {
     if (!form.selectedCourse) {
-      update('continueTeacher', '');
-      update('continueDay', '');
-      update('continueTime', '');
+      update('selectedTeacher', '');
+      update('selectedDay', '');
+      update('selectedTime', '');
       return;
     }
     const matched = teachersList.find((t) => form.selectedCourse.includes(t.name));
-    update('continueTeacher', matched?.name || '');
-    update('continueDay', '');
-    update('continueTime', '');
+    update('selectedTeacher', matched?.name || '');
+    update('selectedDay', '');
+    update('selectedTime', '');
   }, [form.selectedCourse, teachersList]);
 
   const steps = FLOWS[form.type].map((id) => ({ id, ...STEP_DEFS[id] }));
@@ -524,8 +524,8 @@ export default function RegistrationForm() {
                 </label>
               )}
 
-              {(form.type === 'continue' || form.type === 'new') && form.continueTeacher && (() => {
-                const teacher = teachersList.find(t => t.name === form.continueTeacher);
+              {(form.type === 'continue' || form.type === 'new') && form.selectedTeacher && (() => {
+                const teacher = teachersList.find(t => t.name === form.selectedTeacher);
                 const lessonDuration = getLessonDuration(form.selectedCourse);
 
                 // New system: teacher_availability_ranges
@@ -553,14 +553,14 @@ export default function RegistrationForm() {
                             const nm = sh * 60 + sm + usedMins;
                             return `${String(Math.floor(nm / 60)).padStart(2, '0')}:${String(nm % 60).padStart(2, '0')}`;
                           })();
-                          const isSelected = String(form.continueDay) === String(s.day_of_week);
+                          const isSelected = String(form.selectedDay) === String(s.day_of_week);
                           return (
                             <button key={s.day_of_week} type="button"
                               disabled={isFull}
                               onClick={() => {
                                 if (!isFull) {
-                                  update('continueDay', s.day_of_week);
-                                  update('continueTime', nextTime || s.start_time || '');
+                                  update('selectedDay', s.day_of_week);
+                                  update('selectedTime', nextTime || s.start_time || '');
                                 }
                               }}
                               className={`p-2 rounded-xl border text-sm text-center transition-all ${
@@ -581,11 +581,11 @@ export default function RegistrationForm() {
                           );
                         })}
                       </div>
-                      {form.continueDay !== '' && form.continueDay != null && (
+                      {form.selectedDay !== '' && form.selectedDay != null && (
                         <div>
                           <label className="field-label">שעת השיעור</label>
-                          <input type="time" className="form-input mt-1" value={form.continueTime}
-                            onChange={(e) => update('continueTime', e.target.value)} />
+                          <input type="time" className="form-input mt-1" value={form.selectedTime}
+                            onChange={(e) => update('selectedTime', e.target.value)} />
                         </div>
                       )}
                     </div>
@@ -605,11 +605,11 @@ export default function RegistrationForm() {
                         return (
                           <button key={d} type="button"
                             disabled={isFull}
-                            onClick={() => { if (!isFull) { update('continueDay', d); update('continueTime', ''); } }}
+                            onClick={() => { if (!isFull) { update('selectedDay', d); update('selectedTime', ''); } }}
                             className={`p-2 rounded-xl border text-sm text-center transition-all ${
                               isFull
                                 ? 'border-white/5 bg-white/3 text-slate-600 cursor-not-allowed opacity-50'
-                                : form.continueDay === d
+                                : form.selectedDay === d
                                 ? 'border-purple-400/70 bg-purple-500/15 text-white'
                                 : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20'
                             }`}>
@@ -622,15 +622,15 @@ export default function RegistrationForm() {
                         );
                       })}
                     </div>
-                    {form.continueDay && (
+                    {form.selectedDay && (
                       <div>
                         <label className="field-label">שעת השיעור</label>
-                        <input type="time" className="form-input mt-1" value={form.continueTime}
-                          min={hours[form.continueDay]?.from}
-                          max={hours[form.continueDay]?.to}
-                          onChange={(e) => update('continueTime', e.target.value)} />
-                        {hours[form.continueDay] && (
-                          <p className="text-xs text-slate-500 mt-1">שעות פנויות: {hours[form.continueDay].from}–{hours[form.continueDay].to}</p>
+                        <input type="time" className="form-input mt-1" value={form.selectedTime}
+                          min={hours[form.selectedDay]?.from}
+                          max={hours[form.selectedDay]?.to}
+                          onChange={(e) => update('selectedTime', e.target.value)} />
+                        {hours[form.selectedDay] && (
+                          <p className="text-xs text-slate-500 mt-1">שעות פנויות: {hours[form.selectedDay].from}–{hours[form.selectedDay].to}</p>
                         )}
                       </div>
                     )}
