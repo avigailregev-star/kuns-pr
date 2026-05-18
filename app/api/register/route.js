@@ -48,9 +48,9 @@ export async function POST(request) {
       orchestraConfirmed,
       attendedOpenDay,
       selectedCourse,
-      continueTeacher,
-      continueDay,
-      continueTime,
+      selectedTeacher,
+      selectedDay,
+      selectedTime,
       unavailableDays,
       preferredSlot,
     } = body;
@@ -141,20 +141,20 @@ export async function POST(request) {
     }
 
     // ── Day capacity check (when a specific day was selected) ─────────────────
-    if (continueTeacher && continueDay != null && continueDay !== '') {
+    if (selectedTeacher && selectedDay != null && selectedDay !== '') {
       const supabase = getSupabaseClient();
       const usedMap = await buildUsedMinutesMap(supabase);
       const lessonDuration = getLessonDuration(selectedCourse);
-      const usedMins = usedMap[continueTeacher]?.[continueDay] || 0;
+      const usedMins = usedMap[selectedTeacher]?.[selectedDay] || 0;
 
       const { data: teacherRow } = await supabase
         .from('teachers')
         .select('available_hours, teacher_availability_ranges(day_of_week, start_time, end_time)')
-        .eq('name', continueTeacher)
+        .eq('name', selectedTeacher)
         .single();
 
-      const dayNum = Number(continueDay);
-      const isNumericDay = !isNaN(dayNum) && String(dayNum) === String(continueDay);
+      const dayNum = Number(selectedDay);
+      const isNumericDay = !isNaN(dayNum) && String(dayNum) === String(selectedDay);
       let free;
 
       if (isNumericDay) {
@@ -166,13 +166,13 @@ export async function POST(request) {
           free = (eh * 60 + em) - (sh * 60 + sm) - usedMins;
         }
       } else {
-        free = freeMinutesOnDay(teacherRow?.available_hours || {}, continueDay, usedMins);
+        free = freeMinutesOnDay(teacherRow?.available_hours || {}, selectedDay, usedMins);
       }
 
       if (free != null && free < lessonDuration) {
         initialStatus = 'רשימת המתנה';
         adminNotes = (adminNotes ? adminNotes + ' | ' : '') +
-          `⚠️ יום ${continueDay} מלא אצל ${continueTeacher} — הוכנס לרשימת המתנה`;
+          `⚠️ יום ${selectedDay} מלא אצל ${selectedTeacher} — הוכנס לרשימת המתנה`;
       }
     }
 
@@ -183,7 +183,7 @@ export async function POST(request) {
         : null;
 
     // ── Auto-assign continuing students ─────────────────────────────────────
-    const autoAssign = type === 'continue' && continueTeacher;
+    const autoAssign = type === 'continue' && selectedTeacher;
     if (autoAssign && initialStatus !== 'רשימת המתנה') initialStatus = 'שובץ';
 
     // ── Save to Supabase ─────────────────────────────────────────────────────
@@ -208,9 +208,9 @@ export async function POST(request) {
         preferred_slot: preferredSlot || null,
         status: initialStatus,
         orchestra: orchestraGroup || null,
-        teacher: continueTeacher || null,
-        assigned_day: continueDay || null,
-        assigned_time: continueTime || null,
+        teacher: selectedTeacher || null,
+        assigned_day: selectedDay || null,
+        assigned_time: selectedTime || null,
         admin_notes: adminNotes || null,
       }])
       .select('id')
