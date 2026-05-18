@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { COURSE_GROUPS } from '../lib/paymentLinks';
 
 const DAYS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו'];
+const RANGE_DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const INSTRUMENT_TYPES = ['קשת', 'נשיפה', 'פסנתר', 'שירה', 'אחר'];
 
 export default function TeacherForm({ initial = {}, onSave, onCancel }) {
@@ -15,6 +16,16 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
     initial.max_students != null ? String(initial.max_students) : ''
   );
   const [courses, setCourses] = useState(initial.courses || []);
+  const [availabilityRanges, setAvailabilityRanges] = useState(() => {
+    const map = {};
+    for (const r of (initial.teacher_availability_ranges || [])) {
+      map[r.day_of_week] = {
+        start_time: (r.start_time || '').slice(0, 5),
+        end_time: (r.end_time || '').slice(0, 5),
+      };
+    }
+    return map;
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -42,6 +53,18 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
     );
   }
 
+  function toggleDayRange(day) {
+    setAvailabilityRanges((prev) => {
+      const next = { ...prev };
+      if (next[day]) { delete next[day]; } else { next[day] = { start_time: '', end_time: '' }; }
+      return next;
+    });
+  }
+
+  function setRangeTime(day, field, value) {
+    setAvailabilityRanges((prev) => ({ ...prev, [day]: { ...prev[day], [field]: value } }));
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!name.trim() || !instrumentType) {
@@ -58,6 +81,9 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
         available_hours: availableHours,
         max_students: maxStudents !== '' ? parseInt(maxStudents, 10) : null,
         courses,
+        availability_ranges: Object.entries(availabilityRanges)
+          .filter(([, t]) => t.start_time && t.end_time)
+          .map(([day, t]) => ({ day_of_week: Number(day), start_time: t.start_time, end_time: t.end_time })),
       });
     } catch (err) {
       setError(err.message);
@@ -147,6 +173,42 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
           </div>
         </div>
       )}
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          זמינות מדויקת
+          <span className="text-xs text-gray-400 font-normal mr-1">(גוברת על "ימים זמינים" בטופס הרשמה)</span>
+        </label>
+        <div className="space-y-2">
+          {[0,1,2,3,4,5,6].map((day) => {
+            const isOn = !!availabilityRanges[day];
+            return (
+              <div key={day} className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => toggleDayRange(day)}
+                  className={`text-xs px-3 py-1 rounded-full border transition-all w-20 text-center ${
+                    isOn ? 'bg-purple-100 border-purple-400 text-purple-700' : 'bg-gray-50 border-gray-300 text-gray-500'
+                  }`}
+                >
+                  יום {RANGE_DAY_NAMES[day]}
+                </button>
+                {isOn && (
+                  <>
+                    <input type="time" className="admin-input py-1 text-sm"
+                      value={availabilityRanges[day].start_time}
+                      onChange={(e) => setRangeTime(day, 'start_time', e.target.value)} />
+                    <span className="text-gray-400 text-sm">עד</span>
+                    <input type="time" className="admin-input py-1 text-sm"
+                      value={availabilityRanges[day].end_time}
+                      onChange={(e) => setRangeTime(day, 'end_time', e.target.value)} />
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       {assignableCourses.length > 0 && (
         <div>

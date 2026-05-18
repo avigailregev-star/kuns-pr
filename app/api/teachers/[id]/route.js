@@ -8,7 +8,7 @@ export async function PUT(request, { params }) {
   if (!session) return NextResponse.json({ error: 'אינך מורשה' }, { status: 401 });
 
   const body = await request.json();
-  const { name, instrument_type, available_days, available_hours, max_students, courses } = body;
+  const { name, instrument_type, available_days, available_hours, max_students, courses, availability_ranges } = body;
 
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
@@ -26,6 +26,22 @@ export async function PUT(request, { params }) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if (Array.isArray(availability_ranges)) {
+    await supabase.from('teacher_availability_ranges').delete().eq('teacher_id', params.id);
+    if (availability_ranges.length > 0) {
+      const { error: rangesError } = await supabase
+        .from('teacher_availability_ranges')
+        .insert(availability_ranges.map((r) => ({
+          teacher_id: params.id,
+          day_of_week: r.day_of_week,
+          start_time: r.start_time,
+          end_time: r.end_time,
+        })));
+      if (rangesError) return NextResponse.json({ error: rangesError.message }, { status: 500 });
+    }
+  }
+
   return NextResponse.json({ data });
 }
 
