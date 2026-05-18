@@ -108,8 +108,8 @@ export default function RegistrationForm() {
       return;
     }
     const matched =
-      teachersList.find((t) => form.selectedCourse.includes(t.name)) ||
-      teachersList.find((t) => (t.courses || []).includes(form.selectedCourse));
+      teachersList.find((t) => (t.courses || []).includes(form.selectedCourse)) ||
+      teachersList.find((t) => form.selectedCourse.includes(t.name));
     update('selectedTeacher', matched?.name || '');
     update('selectedDay', '');
     update('selectedTime', '');
