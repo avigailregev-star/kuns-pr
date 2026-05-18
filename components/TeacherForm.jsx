@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { COURSE_GROUPS } from '../lib/paymentLinks';
 
 const DAYS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו'];
 const INSTRUMENT_TYPES = ['קשת', 'נשיפה', 'פסנתר', 'שירה', 'אחר'];
@@ -13,8 +14,14 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
   const [maxStudents, setMaxStudents] = useState(
     initial.max_students != null ? String(initial.max_students) : ''
   );
+  const [courses, setCourses] = useState(initial.courses || []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // All courses whose name does not already contain this teacher's name
+  const assignableCourses = COURSE_GROUPS.flatMap((g) => g.courses).filter(
+    (course) => !name.trim() || !course.includes(name.trim())
+  );
 
   function toggleDay(day) {
     setAvailableDays((prev) =>
@@ -27,6 +34,12 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
       ...prev,
       [day]: { ...prev[day], [field]: value },
     }));
+  }
+
+  function toggleCourse(course) {
+    setCourses((prev) =>
+      prev.includes(course) ? prev.filter((c) => c !== course) : [...prev, course]
+    );
   }
 
   async function handleSubmit(e) {
@@ -44,6 +57,7 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
         available_days: availableDays,
         available_hours: availableHours,
         max_students: maxStudents !== '' ? parseInt(maxStudents, 10) : null,
+        courses,
       });
     } catch (err) {
       setError(err.message);
@@ -131,6 +145,31 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {assignableCourses.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            קורסים משויכים
+            <span className="text-xs text-gray-400 font-normal mr-1">(קורסים שהשם אינו מופיע בשמם)</span>
+          </label>
+          <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1 bg-gray-50">
+            {assignableCourses.map((course) => (
+              <label key={course} className="flex items-center gap-2 cursor-pointer hover:bg-white px-2 py-1 rounded">
+                <input
+                  type="checkbox"
+                  checked={courses.includes(course)}
+                  onChange={() => toggleCourse(course)}
+                  className="accent-purple-500"
+                />
+                <span className="text-sm text-gray-700">{course}</span>
+              </label>
+            ))}
+          </div>
+          {courses.length > 0 && (
+            <p className="text-xs text-purple-600 mt-1">נבחרו: {courses.join(', ')}</p>
+          )}
         </div>
       )}
 
