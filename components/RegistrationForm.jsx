@@ -537,9 +537,21 @@ export default function RegistrationForm() {
                   .slice().sort((a, b) => a.day_of_week - b.day_of_week);
 
                 if (availRanges.length > 0) {
+                  const allDaysFull = availRanges.every(s => {
+                    const usedMins = teacher?.used_minutes_per_day?.[s.day_of_week] || 0;
+                    if (!s.start_time || !s.end_time) return false;
+                    const [sh, sm] = s.start_time.split(':').map(Number);
+                    const [eh, em] = s.end_time.split(':').map(Number);
+                    return ((eh * 60 + em) - (sh * 60 + sm) - usedMins) < lessonDuration;
+                  });
                   return (
                     <div className="space-y-3 pt-2 border-t border-white/10">
                       <label className="field-label">יום השיעור הקבוע</label>
+                      {allDaysFull && (
+                        <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 text-center">
+                          ⚠️ כל הימים הזמינים מלאים — תירשמ/י ותועבר/י אוטומטית לרשימת המתנה
+                        </p>
+                      )}
                       <div className="grid grid-cols-3 gap-2">
                         {availRanges.map(s => {
                           const usedMins = teacher?.used_minutes_per_day?.[s.day_of_week] || 0;
@@ -599,9 +611,17 @@ export default function RegistrationForm() {
                 // Old system: available_days (Hebrew letters)
                 const days = teacher?.available_days || [];
                 const hours = teacher?.available_hours || {};
+                const allDaysFull = days.length > 0 && days.every(
+                  d => freeMinutesOnDay(hours, d, teacher?.used_minutes_per_day?.[d]) < lessonDuration
+                );
                 return days.length > 0 ? (
                   <div className="space-y-3 pt-2 border-t border-white/10">
                     <label className="field-label">יום השיעור הקבוע</label>
+                    {allDaysFull && (
+                      <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 text-center">
+                        ⚠️ כל הימים הזמינים מלאים — תירשמ/י ותועבר/י אוטומטית לרשימת המתנה
+                      </p>
+                    )}
                     <div className="grid grid-cols-3 gap-2">
                       {days.map(d => {
                         const free = freeMinutesOnDay(hours, d, teacher?.used_minutes_per_day?.[d]);

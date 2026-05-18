@@ -176,6 +176,48 @@ export async function POST(request) {
       }
     }
 
+    // ── All-days-full check (teacher detected but parent couldn't pick a day) ─
+    if (selectedTeacher && (selectedDay == null || selectedDay === '') && type !== 'trial') {
+      const supabase = getSupabaseClient();
+      const { data: teacherFull } = await supabase
+        .from('teachers')
+        .select('available_days, available_hours, teacher_availability_ranges(day_of_week, start_time, end_time)')
+        .eq('name', selectedTeacher)
+        .single();
+
+      if (teacherFull) {
+        const usedMapFull = await buildUsedMinutesMap(supabase);
+        const lessonDur = getLessonDuration(selectedCourse);
+        const ranges = teacherFull.teacher_availability_ranges || [];
+        const oldDays = teacherFull.available_days || [];
+
+        if (ranges.length > 0 || oldDays.length > 0) {
+          let allFull = true;
+          if (ranges.length > 0) {
+            for (const r of ranges) {
+              const used = (usedMapFull[selectedTeacher] || {})[r.day_of_week] || 0;
+              if (!r.start_time || !r.end_time) { allFull = false; break; }
+              const [sh, sm] = r.start_time.split(':').map(Number);
+              const [eh, em] = r.end_time.split(':').map(Number);
+              if ((eh * 60 + em) - (sh * 60 + sm) - used >= lessonDur) { allFull = false; break; }
+            }
+          } else {
+            for (const day of oldDays) {
+              const used = (usedMapFull[selectedTeacher] || {})[day] || 0;
+              if (freeMinutesOnDay(teacherFull.available_hours || {}, day, used) >= lessonDur) {
+                allFull = false; break;
+              }
+            }
+          }
+          if (allFull) {
+            initialStatus = 'רשימת המתנה';
+            adminNotes = (adminNotes ? adminNotes + ' | ' : '') +
+              `⚠️ כל הימים מלאים אצל ${selectedTeacher} — הוכנס לרשימת המתנה`;
+          }
+        }
+      }
+    }
+
     // ── Auto-assign orchestra/choir ──────────────────────────────────────────
     const orchestraGroup =
       type === 'continue'
