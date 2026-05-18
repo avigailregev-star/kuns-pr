@@ -30,7 +30,7 @@ export async function POST(request) {
   if (!session) return NextResponse.json({ error: 'אינך מורשה' }, { status: 401 });
 
   const body = await request.json();
-  const { name, instrument_type, available_days, available_hours, max_students } = body;
+  const { name, instrument_type, available_days, available_hours, max_students, courses } = body;
 
   if (!name || !instrument_type) {
     return NextResponse.json({ error: 'שם וסוג כלי הם שדות חובה' }, { status: 400 });
@@ -45,6 +45,7 @@ export async function POST(request) {
       available_days: available_days || [],
       available_hours: available_hours || {},
       max_students: max_students ?? null,
+      courses: courses || [],
     }])
     .select()
     .single();

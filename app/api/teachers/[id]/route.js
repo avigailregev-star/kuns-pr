@@ -8,12 +8,19 @@ export async function PUT(request, { params }) {
   if (!session) return NextResponse.json({ error: 'אינך מורשה' }, { status: 401 });
 
   const body = await request.json();
-  const { name, instrument_type, available_days, available_hours, max_students } = body;
+  const { name, instrument_type, available_days, available_hours, max_students, courses } = body;
 
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('teachers')
-    .update({ name, instrument_type, available_days, available_hours, max_students: max_students ?? null })
+    .update({
+      name,
+      instrument_type,
+      available_days,
+      available_hours,
+      max_students: max_students ?? null,
+      courses: courses || [],
+    })
     .eq('id', params.id)
     .select()
     .single();
