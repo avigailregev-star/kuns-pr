@@ -20,7 +20,7 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
 
   // All courses whose name does not already contain this teacher's name
   const assignableCourses = COURSE_GROUPS.flatMap((g) => g.courses).filter(
-    (course) => !name.trim() || !course.includes(name.trim())
+    (course) => !name.trim() || !course.toLowerCase().includes(name.trim().toLowerCase())
   );
 
   function toggleDay(day) {
@@ -155,17 +155,23 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
             <span className="text-xs text-gray-400 font-normal mr-1">(קורסים שהשם אינו מופיע בשמם)</span>
           </label>
           <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1 bg-gray-50">
-            {assignableCourses.map((course) => (
-              <label key={course} className="flex items-center gap-2 cursor-pointer hover:bg-white px-2 py-1 rounded">
-                <input
-                  type="checkbox"
-                  checked={courses.includes(course)}
-                  onChange={() => toggleCourse(course)}
-                  className="accent-purple-500"
-                />
-                <span className="text-sm text-gray-700">{course}</span>
-              </label>
-            ))}
+            {assignableCourses.map((course) => {
+              const id = `course-${course.replace(/\s+/g, '-')}`;
+              return (
+                <div key={course} className="flex items-center gap-2 hover:bg-white px-2 py-1 rounded">
+                  <input
+                    type="checkbox"
+                    id={id}
+                    checked={courses.includes(course)}
+                    onChange={() => toggleCourse(course)}
+                    className="accent-purple-500 cursor-pointer"
+                  />
+                  <label htmlFor={id} className="text-sm text-gray-700 cursor-pointer select-none">
+                    {course}
+                  </label>
+                </div>
+              );
+            })}
           </div>
           {courses.length > 0 && (
             <p className="text-xs text-purple-600 mt-1">נבחרו: {courses.join(', ')}</p>
