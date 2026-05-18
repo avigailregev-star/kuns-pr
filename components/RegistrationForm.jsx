@@ -54,7 +54,7 @@ const STEP_DEFS = {
 const FLOWS = {
   trial:    ['personal', 'instrument'],
   new:      ['personal', 'course',     'agreement'],
-  adult:    ['personal', 'instrument', 'agreement'],
+  adult:    ['personal', 'course',     'agreement'],
   continue: ['personal', 'course',     'agreement'],
   melodies: ['personal', 'course',     'agreement'],
 };
@@ -107,7 +107,9 @@ export default function RegistrationForm() {
       update('selectedTime', '');
       return;
     }
-    const matched = teachersList.find((t) => form.selectedCourse.includes(t.name));
+    const matched =
+      teachersList.find((t) => form.selectedCourse.includes(t.name)) ||
+      teachersList.find((t) => (t.courses || []).includes(form.selectedCourse));
     update('selectedTeacher', matched?.name || '');
     update('selectedDay', '');
     update('selectedTime', '');
@@ -524,7 +526,9 @@ export default function RegistrationForm() {
                 </label>
               )}
 
-              {(form.type === 'continue' || form.type === 'new') && form.selectedTeacher && (() => {
+              {['continue', 'new', 'adult'].includes(form.type) &&
+                !(form.type === 'new' && form.attendedOpenDay === false) &&
+                form.selectedTeacher && (() => {
                 const teacher = teachersList.find(t => t.name === form.selectedTeacher);
                 const lessonDuration = getLessonDuration(form.selectedCourse);
 
