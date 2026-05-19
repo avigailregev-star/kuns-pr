@@ -589,14 +589,15 @@ export default function RegistrationForm() {
                               <div className="font-semibold">יום {DAY_NAMES_FULL[s.day_of_week] ?? s.day_of_week}</div>
                               {isFull
                                 ? <div className="text-xs mt-0.5 text-red-400">מלא</div>
-                                : <div className="text-xs opacity-70 mt-0.5">
-                                    {nextTime || s.start_time}{s.end_time ? `–${s.end_time}` : ''}
-                                  </div>
+                                : <div className="text-xs opacity-70 mt-0.5">זמין</div>
                               }
                             </button>
                           );
                         })}
                       </div>
+                      {!allDaysFull && (
+                        <p className="text-xs text-slate-400 text-center">שעה מדויקת תינתן בהמשך</p>
+                      )}
                     </div>
                   );
                 }
@@ -633,12 +634,15 @@ export default function RegistrationForm() {
                             <div className="font-semibold">יום {d}</div>
                             {isFull
                               ? <div className="text-xs mt-0.5 text-red-400">מלא</div>
-                              : <div className="text-xs opacity-70 mt-0.5">{free} דק' פנויות</div>
+                              : <div className="text-xs opacity-70 mt-0.5">זמין</div>
                             }
                           </button>
                         );
                       })}
                     </div>
+                    {!allDaysFull && (
+                      <p className="text-xs text-slate-400 text-center">שעה מדויקת תינתן בהמשך</p>
+                    )}
                   </div>
                 ) : null;
               })()}
