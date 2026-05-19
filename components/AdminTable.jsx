@@ -114,9 +114,19 @@ export default function AdminTable() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/registrations');
-      const json = await res.json();
-      setRows(json.data || []);
+      const [regRes, groupsRes, teachersRes] = await Promise.all([
+        fetch('/api/registrations'),
+        fetch('/api/groups'),
+        fetch('/api/teachers'),
+      ]);
+      const [regJson, groupsJson, teachersJson] = await Promise.all([
+        regRes.json(),
+        groupsRes.json(),
+        teachersRes.json(),
+      ]);
+      setRows(regJson.data || []);
+      setGroups(groupsJson.data || []);
+      setTeachers(teachersJson.data || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -126,14 +136,6 @@ export default function AdminTable() {
 
   useEffect(() => {
     fetchData();
-    fetch('/api/groups')
-      .then(r => r.json())
-      .then(j => setGroups(j.data || []))
-      .catch(() => {});
-    fetch('/api/teachers')
-      .then(r => r.json())
-      .then(j => setTeachers(j.data || []))
-      .catch(() => {});
   }, [fetchData]);
 
   async function refreshTeachers() {
