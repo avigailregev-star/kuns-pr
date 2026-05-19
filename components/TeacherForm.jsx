@@ -128,51 +128,6 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">ימים זמינים</label>
-        <div className="flex gap-2 flex-wrap">
-          {DAYS.map((day) => (
-            <button
-              key={day}
-              type="button"
-              onClick={() => toggleDay(day)}
-              className={`px-3 py-1 rounded-full text-sm border transition-all ${
-                availableDays.includes(day)
-                  ? 'bg-purple-100 border-purple-400 text-purple-700'
-                  : 'bg-gray-50 border-gray-300 text-gray-600'
-              }`}
-            >
-              יום {day}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {availableDays.length > 0 && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">שעות לכל יום</label>
-          <div className="space-y-2">
-            {availableDays.map((day) => (
-              <div key={day} className="flex items-center gap-3">
-                <span className="text-sm w-10 text-gray-600">יום {day}:</span>
-                <input
-                  type="time"
-                  className="admin-input py-1 text-sm"
-                  value={availableHours[day]?.from || ''}
-                  onChange={(e) => setHours(day, 'from', e.target.value)}
-                />
-                <span className="text-gray-400">עד</span>
-                <input
-                  type="time"
-                  className="admin-input py-1 text-sm"
-                  value={availableHours[day]?.to || ''}
-                  onChange={(e) => setHours(day, 'to', e.target.value)}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
