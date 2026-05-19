@@ -28,12 +28,18 @@ export async function PUT(request, { params }) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   if (Array.isArray(availability_ranges)) {
-    await supabase.from('teacher_availability_ranges').delete().eq('teacher_id', params.id);
+    const teacherId = Number(params.id);
+    const { error: deleteError } = await supabase
+      .from('teacher_availability_ranges')
+      .delete()
+      .eq('teacher_id', teacherId);
+    if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 });
+
     if (availability_ranges.length > 0) {
       const { error: rangesError } = await supabase
         .from('teacher_availability_ranges')
         .insert(availability_ranges.map((r) => ({
-          teacher_id: params.id,
+          teacher_id: teacherId,
           day_of_week: r.day_of_week,
           start_time: r.start_time,
           end_time: r.end_time,
