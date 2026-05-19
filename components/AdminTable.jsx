@@ -558,7 +558,7 @@ export default function AdminTable() {
                                               ) : (
                                                 s.start_time && (
                                                   <span className="text-xs opacity-60 mr-1">
-                                                    {nextTime || s.start_time}{slotEndTime ? `–${slotEndTime}` : ''}
+                                                    {s.start_time.slice(0,5)}{s.end_time ? `–${s.end_time.slice(0,5)}` : ''}
                                                   </span>
                                                 )
                                               )}
