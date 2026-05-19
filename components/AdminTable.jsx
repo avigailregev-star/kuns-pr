@@ -486,7 +486,8 @@ export default function AdminTable() {
                                     r.teacher === row.teacher &&
                                     r.id !== row.id &&
                                     r.assigned_day != null &&
-                                    !['בוטל', 'ממתין לשיחת היכרות', 'רשימת המתנה'].includes(r.status)
+                                    !['בוטל', 'ממתין לשיחת היכרות', 'רשימת המתנה'].includes(r.status) &&
+                                    r.registration_status !== 'Cancelled'
                                   );
                                   return (
                                     <div className="space-y-2">
