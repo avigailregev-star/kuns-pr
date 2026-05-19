@@ -438,7 +438,7 @@ export default function AdminTable() {
                                 <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 border border-blue-200 text-sm">
                                   <span className="text-blue-600">📚</span>
                                   <span className="text-blue-700">
-                                    תיאוריה מוצעת: <strong>יום {row.theory_day || row.assigned_day}</strong>
+                                    תיאוריה מוצעת: <strong>יום {(() => { const d = row.theory_day ?? row.assigned_day; const n = Number(d); return (!isNaN(n) && n >= 0 && n <= 6) ? DAY_NAMES[n] : d; })()}</strong>
                                   </span>
                                   {!row.theory_day && (
                                     <button
