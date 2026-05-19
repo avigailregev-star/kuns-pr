@@ -597,13 +597,6 @@ export default function RegistrationForm() {
                           );
                         })}
                       </div>
-                      {form.selectedDay !== '' && form.selectedDay != null && (
-                        <div>
-                          <label className="field-label">שעת השיעור</label>
-                          <input type="time" className="form-input mt-1" value={form.selectedTime}
-                            onChange={(e) => update('selectedTime', e.target.value)} />
-                        </div>
-                      )}
                     </div>
                   );
                 }
@@ -646,18 +639,6 @@ export default function RegistrationForm() {
                         );
                       })}
                     </div>
-                    {form.selectedDay && (
-                      <div>
-                        <label className="field-label">שעת השיעור</label>
-                        <input type="time" className="form-input mt-1" value={form.selectedTime}
-                          min={hours[form.selectedDay]?.from}
-                          max={hours[form.selectedDay]?.to}
-                          onChange={(e) => update('selectedTime', e.target.value)} />
-                        {hours[form.selectedDay] && (
-                          <p className="text-xs text-slate-500 mt-1">שעות פנויות: {hours[form.selectedDay].from}–{hours[form.selectedDay].to}</p>
-                        )}
-                      </div>
-                    )}
                   </div>
                 ) : null;
               })()}
