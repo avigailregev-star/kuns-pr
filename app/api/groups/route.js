@@ -23,19 +23,20 @@ export async function POST(request) {
     if (teacher_id != null && assigned_day != null && assigned_time) {
       const { data: existing } = await supabase
         .from('groups')
-        .select('group_schedules(day_of_week, start_time, end_time)')
+        .select('lesson_type, group_schedules(day_of_week, start_time, end_time)')
         .eq('teacher_id', teacher_id);
 
       const toM = t => { const [h, m] = t.split(':').map(Number); return h * 60 + (m || 0); };
+      const ltDur = lt => (lt === 'individual_45' || lt === 'melodies_individual') ? 45 : 60;
       const newStart = toM(assigned_time);
-      const newEnd = newStart + 90;
+      const newEnd = newStart + ltDur(lesson_type);
       const dayNum = Number(assigned_day);
 
       for (const g of (existing || [])) {
         for (const sched of (g.group_schedules || [])) {
           if (Number(sched.day_of_week) !== dayNum || !sched.start_time) continue;
           const eStart = toM(sched.start_time);
-          const eEnd = sched.end_time ? toM(sched.end_time) : eStart + 90;
+          const eEnd = sched.end_time ? toM(sched.end_time) : eStart + ltDur(g.lesson_type);
           if (newStart < eEnd && eStart < newEnd) {
             return NextResponse.json(
               { error: `חיפוף בזמנים עם קבוצה קיימת באותו יום (${sched.start_time})` },
