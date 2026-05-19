@@ -507,7 +507,7 @@ export default function AdminTable() {
                                             const sched = (g.group_schedules || []).find(sc => String(sc.day_of_week) === String(s.day_of_week));
                                             if (!sched?.start_time) continue;
                                             const gStart = timeToMins(sched.start_time);
-                                            const gEnd = sched.end_time ? timeToMins(sched.end_time) : (winEnd ?? gStart + 60);
+                                            const gEnd = sched.end_time ? timeToMins(sched.end_time) : gStart + 60;
                                             occupied.push({ start: gStart, end: gEnd });
                                           }
                                           occupied.sort((a, b) => a.start - b.start);
