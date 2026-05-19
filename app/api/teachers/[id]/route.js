@@ -28,7 +28,7 @@ export async function PUT(request, { params }) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   if (Array.isArray(availability_ranges)) {
-    const teacherId = Number(params.id);
+    const teacherId = params.id;
     const { error: deleteError } = await supabase
       .from('teacher_availability_ranges')
       .delete()
