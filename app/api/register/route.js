@@ -36,6 +36,7 @@ export async function POST(request) {
     const body = await request.json();
     const {
       studentName,
+      studentPhone,
       parentName,
       parentPhone,
       parentEmail,
@@ -66,6 +67,7 @@ export async function POST(request) {
         .from('registrations')
         .insert([{
           student_name: studentName,
+          student_phone: studentPhone || null,
           parent_name: parentName,
           parent_phone: parentPhone,
           parent_email: parentEmail,
@@ -234,6 +236,7 @@ export async function POST(request) {
       .from('registrations')
       .insert([{
         student_name: studentName,
+        student_phone: studentPhone || null,
         parent_name: parentName,
         parent_phone: parentPhone,
         parent_email: parentEmail,

@@ -80,6 +80,7 @@ export default function RegistrationForm() {
 
   const [form, setForm] = useState({
     studentName: '',
+    studentPhone: '',
     parentName: '',
     parentPhone: '',
     parentEmail: '',
@@ -263,6 +264,12 @@ export default function RegistrationForm() {
                 <label className="field-label">טלפון *</label>
                 <input type="tel" className="form-input" value={form.parentPhone}
                   onChange={(e) => update('parentPhone', e.target.value)} placeholder="05X-XXXXXXX" dir="ltr" />
+              </div>
+
+              <div>
+                <label className="field-label">טלפון תלמיד/ה <span className="text-slate-500 font-normal">(לא חובה)</span></label>
+                <input type="tel" className="form-input" value={form.studentPhone}
+                  onChange={(e) => update('studentPhone', e.target.value)} placeholder="05X-XXXXXXX" dir="ltr" />
               </div>
 
               <div>
