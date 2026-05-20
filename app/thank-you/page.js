@@ -15,7 +15,7 @@ function ThankYouContent() {
   return (
     <div className="relative z-10 glass p-10 max-w-md w-full text-center">
       <div className="mb-5">
-        <img src="/logo.png" alt="קונסרבטוריון המוזיקה" className="h-20 mx-auto" />
+        <img src="/logo.png" alt="קונסרבטוריון המוזיקה" className="h-28 mx-auto" />
       </div>
       <h1 className="text-3xl font-bold mb-3">
         <span className="gradient-text">
