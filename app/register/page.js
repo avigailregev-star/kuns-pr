@@ -26,9 +26,8 @@ export default function RegisterPage() {
       <div className="relative z-10 min-h-screen py-10 px-4">
         {/* Top Header */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 glass px-5 py-2 text-sm text-purple-300 mb-6 rounded-full">
-            <span>🎵</span>
-            <span>קונסרבטוריון המוזיקה</span>
+          <div className="mb-6">
+            <img src="/logo.png" alt="קונסרבטוריון המוזיקה" className="h-28 mx-auto" />
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold mb-3 leading-tight">
             <span className="gradient-text">הרשמה לקונסרבטוריון</span>
