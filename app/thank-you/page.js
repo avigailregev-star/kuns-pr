@@ -29,59 +29,63 @@ function ThankYouContent() {
         }
       </p>
 
-      <div className="text-right space-y-3 mb-8 p-4 rounded-xl" style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)' }}>
-        <h3 className="font-semibold text-purple-300 mb-3">מה הלאה?</h3>
+      {isInterview && (
+        <div className="text-right space-y-3 mb-8 p-4 rounded-xl" style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)' }}>
+          <h3 className="font-semibold text-purple-300 mb-3">מה הלאה?</h3>
+          <div className="flex items-start gap-3 text-sm text-slate-300">
+            <span className="text-purple-400 mt-0.5">📞</span>
+            <span>נחזור אליך במועד שבחרת לשיחת היכרות</span>
+          </div>
+          <div className="flex items-start gap-3 text-sm text-slate-300">
+            <span className="text-purple-400 mt-0.5">…</span>
+            <span>לאחר שיחת ההיכרות תוכלו להשלים את ההרשמה המלאה</span>
+          </div>
+        </div>
+      )}
 
-        {isInterview ? (
-          <>
-            <div className="flex items-start gap-3 text-sm text-slate-300">
-              <span className="text-purple-400 mt-0.5">📞</span>
-              <span>נחזור אליך במועד שבחרת לשיחת היכרות</span>
-            </div>
-            <div className="flex items-start gap-3 text-sm text-slate-300">
-              <span className="text-purple-400 mt-0.5">…</span>
-              <span>לאחר שיחת ההיכרות תוכלו להשלים את ההרשמה המלאה</span>
-            </div>
-          </>
-        ) : isTrial ? (
-          <>
-            <div className="flex items-start gap-3 text-sm text-slate-300">
-              <span className="text-purple-400 mt-0.5">📞</span>
-              <span>נחזור אליך בהקדם לתיאום שיעור הניסיון</span>
-            </div>
-            <div className="flex items-start gap-3 text-sm text-slate-300">
-              <span className="text-purple-400 mt-0.5">🎹</span>
-              <span>שיעור הניסיון אינו כרוך בתשלום</span>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="flex items-start gap-3 text-sm text-slate-300">
-              <span className="text-purple-400 mt-0.5">✉️</span>
-              <span>שלחנו לך אישור לכתובת האימייל שסיפקת</span>
-            </div>
-            <div className="flex items-start gap-3 text-sm text-slate-300">
-              <span className="text-purple-400 mt-0.5">📞</span>
-              <span>נחזור אליך לשיחת התאמה במועד שבחרת</span>
-            </div>
-            <div className="flex items-start gap-3 text-sm text-slate-300">
-              <span className="text-purple-400 mt-0.5">🎵</span>
-              <span>לאחר השיחה נשבץ אותך לקבוצה המתאימה</span>
-            </div>
-            {isValidPaymentUrl && (
-              <div className="flex items-start gap-3 text-sm text-slate-300 pt-2 mt-1 border-t border-purple-500/20">
-                <span className="text-purple-400 mt-0.5">💳</span>
-                <a
-                  href={paymentUrl}
-                  className="text-purple-300 hover:text-purple-200 underline underline-offset-2 transition font-medium"
-                >
-                  לתשלום דמי הרישום ושכר הלימוד ←
-                </a>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+      {isTrial && (
+        <div className="text-right space-y-3 mb-8 p-4 rounded-xl" style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)' }}>
+          <h3 className="font-semibold text-purple-300 mb-3">מה הלאה?</h3>
+          <div className="flex items-start gap-3 text-sm text-slate-300">
+            <span className="text-purple-400 mt-0.5">📞</span>
+            <span>נחזור אליך בהקדם לתיאום שיעור הניסיון</span>
+          </div>
+          <div className="flex items-start gap-3 text-sm text-slate-300">
+            <span className="text-purple-400 mt-0.5">🎹</span>
+            <span>שיעור הניסיון אינו כרוך בתשלום</span>
+          </div>
+        </div>
+      )}
+
+      {!isInterview && !isTrial && isValidPaymentUrl && (
+        <div className="mb-4 p-3 rounded-xl text-sm text-amber-300 space-y-1" style={{ background: 'rgba(217,119,6,0.15)', border: '1px solid rgba(217,119,6,0.5)' }}>
+          <div className="flex items-center gap-2">
+            <span>💳</span>
+            <span><strong>נדרש תשלום</strong> — דמי רישום ושכר לימוד</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span>⚠️</span>
+            <span className="font-bold">ללא תשלום לא יישמר המקום</span>
+          </div>
+        </div>
+      )}
+
+      {!isInterview && !isTrial && !isValidPaymentUrl && (
+        <div className="flex items-center gap-2 p-3 rounded-xl mb-4 text-sm text-red-300" style={{ background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.4)' }}>
+          <span>⚠️</span>
+          <span>יש לשלם לפני ה-10 בספטמבר</span>
+        </div>
+      )}
+
+      {!isInterview && !isTrial && isValidPaymentUrl && (
+        <a
+          href={paymentUrl}
+          className="w-full block mb-6 text-center text-white font-bold py-4 text-lg rounded-xl transition hover:opacity-90"
+          style={{ background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)' }}
+        >
+          לתשלום דמי הרישום ושכר הלימוד ←
+        </a>
+      )}
 
       <Link href="/register" className="text-sm text-purple-400 hover:text-purple-300 transition">
         הרשמה נוספת ←
