@@ -729,7 +729,7 @@ export default function AdminTable() {
                                       disabled={!newGroupName.trim() || !newGroupType}
                                       className="text-xs px-3 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed"
                                     >
-                                      צור קבוצה
+                                      צור שיעור
                                     </button>
                                     <button
                                       type="button"
@@ -753,13 +753,13 @@ export default function AdminTable() {
                                     }
                                   }}
                                 >
-                                  <option value="">— הוסף לקבוצה בנוכחות —</option>
+                                  <option value="">— הוסף שיעור בנוכחות —</option>
                                   {groups.map(g => (
                                     <option key={g.id} value={g.id}>
                                       {g.name}{g.is_mangan_school && g.school_name ? ` (${g.school_name})` : ''}
                                     </option>
                                   ))}
-                                  <option value="__new__">➕ צור קבוצה חדשה</option>
+                                  <option value="__new__">➕ צור שיעור חדש</option>
                                 </select>
                               )}
                               {(() => {
