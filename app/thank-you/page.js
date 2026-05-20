@@ -10,9 +10,11 @@ function ThankYouContent() {
   const isTrial = searchParams.get('type') === 'trial';
   const isInterview = searchParams.get('type') === 'interview';
 
+  const isValidPaymentUrl = paymentUrl && paymentUrl.startsWith('https://www.hugim.org.il/');
+
   return (
     <div className="relative z-10 glass p-10 max-w-md w-full text-center">
-      <div className="text-6xl mb-5">{isInterview ? '📞' : isTrial ? '🎵' : '🎉'}</div>
+      <div className="text-6xl mb-5">{isInterview ? '🎵' : isTrial ? '🎹' : '🎉'}</div>
       <h1 className="text-3xl font-bold mb-3">
         <span className="gradient-text">
           {isInterview ? 'קיבלנו את בקשתך!' : isTrial ? 'קיבלנו את בקשתך!' : 'הרשמתך התקבלה!'}
@@ -22,8 +24,8 @@ function ThankYouContent() {
         {isInterview
           ? 'כדי להשלים את ההרשמה, יש לקיים תחילה שיחת היכרות.'
           : isTrial
-          ? 'תודה על התעניינותך בקונסרבטוריון המוזיקה.'
-          : <>תודה על ההרשמה לקונסרבטוריון המוזיקה.<br />ניצור איתך קשר בהקדם לתיאום שיחת התאמה.</>
+          ? 'תודה על התעניינות בקונסרבטוריון המוזיקה.'
+          : <>תודה על ההרשמה לקונסרבטוריון המוזיקה.<br />ניצור איתך קשר בהקדם.</>
         }
       </p>
 
@@ -34,10 +36,10 @@ function ThankYouContent() {
           <>
             <div className="flex items-start gap-3 text-sm text-slate-300">
               <span className="text-purple-400 mt-0.5">📞</span>
-              <span>נחזור אליך במועד שבחרת לשיחת היכרות עם המזכירה</span>
+              <span>נחזור אליך במועד שבחרת לשיחת היכרות</span>
             </div>
             <div className="flex items-start gap-3 text-sm text-slate-300">
-              <span className="text-purple-400 mt-0.5">✅</span>
+              <span className="text-purple-400 mt-0.5">…</span>
               <span>לאחר שיחת ההיכרות תוכלו להשלים את ההרשמה המלאה</span>
             </div>
           </>
@@ -48,7 +50,7 @@ function ThankYouContent() {
               <span>נחזור אליך בהקדם לתיאום שיעור הניסיון</span>
             </div>
             <div className="flex items-start gap-3 text-sm text-slate-300">
-              <span className="text-purple-400 mt-0.5">🎵</span>
+              <span className="text-purple-400 mt-0.5">🎹</span>
               <span>שיעור הניסיון אינו כרוך בתשלום</span>
             </div>
           </>
@@ -66,36 +68,20 @@ function ThankYouContent() {
               <span className="text-purple-400 mt-0.5">🎵</span>
               <span>לאחר השיחה נשבץ אותך לקבוצה המתאימה</span>
             </div>
+            {isValidPaymentUrl && (
+              <div className="flex items-start gap-3 text-sm text-slate-300 pt-2 mt-1 border-t border-purple-500/20">
+                <span className="text-purple-400 mt-0.5">💳</span>
+                <a
+                  href={paymentUrl}
+                  className="text-purple-300 hover:text-purple-200 underline underline-offset-2 transition font-medium"
+                >
+                  לתשלום דמי הרישום ושכר הלימוד ←
+                </a>
+              </div>
+            )}
           </>
         )}
       </div>
-
-      {!isInterview && !isTrial && paymentUrl && (
-        <div className="mb-4 space-y-2">
-          <div className="flex items-center gap-2 p-3 rounded-xl text-sm text-amber-300" style={{ background: 'rgba(217,119,6,0.15)', border: '1px solid rgba(217,119,6,0.5)' }}>
-            <span>💳</span>
-            <span><strong>נדרש תשלום</strong> — דמי רישום ושכר לימוד</span>
-          </div>
-          <p className="text-center text-sm font-bold text-red-400">ללא תשלום לא יישמר מקום</p>
-        </div>
-      )}
-
-      {!isInterview && !isTrial && !paymentUrl && (
-        <div className="flex items-center gap-2 p-3 rounded-xl mb-4 text-sm text-red-300" style={{ background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.4)' }}>
-          <span>🗓️</span>
-          <span>לא יחויב תשלום לפני ה-10 לספטמבר</span>
-        </div>
-      )}
-
-      {!isInterview && !isTrial && paymentUrl && (
-        <a
-          href={paymentUrl}
-          className="w-full block mb-6 text-center text-white font-bold py-4 text-lg rounded-xl transition hover:opacity-90"
-          style={{ background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)' }}
-        >
-          לתשלום דמי הרישום ושכר הלימוד ←
-        </a>
-      )}
 
       <Link href="/register" className="text-sm text-purple-400 hover:text-purple-300 transition">
         הרשמה נוספת ←
