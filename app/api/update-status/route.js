@@ -4,12 +4,12 @@ import { authOptions } from '../auth/[...nextauth]/route';
 import { getSupabaseClient } from '../../../lib/supabase';
 import { sendToMake } from '../../../lib/makeWebhook';
 import { sendAssignmentEmail } from '../../../lib/email';
+import { syncRegistrationToAttendance } from '../../../lib/syncToAttendance';
 
 export async function POST(request) {
-  // Auth guard
   const session = await getServerSession(authOptions);
   if (!session) {
-    return NextResponse.json({ error: 'אינך מורשה' }, { status: 401 });
+    return NextResponse.json({ error: 'אין הרשאה' }, { status: 401 });
   }
 
   try {
@@ -22,7 +22,6 @@ export async function POST(request) {
 
     const supabase = getSupabaseClient();
 
-    // Build update object
     const updateData = {
       status: newStatus,
       updated_at: new Date().toISOString(),
@@ -44,7 +43,19 @@ export async function POST(request) {
       return NextResponse.json({ error: 'שגיאה בעדכון' }, { status: 500 });
     }
 
-    // Log message
+    // Sync to attendance app
+    try {
+      const { data: updatedReg } = await supabase
+        .from('registrations')
+        .select('id, teacher, assigned_day, assigned_time, student_name, instruments, parent_phone, selected_course, status, registration_status, group_id')
+        .eq('id', id)
+        .single();
+      if (updatedReg) await syncRegistrationToAttendance(supabase, updatedReg);
+    } catch (syncErr) {
+      console.error('Attendance sync error:', syncErr.message);
+    }
+
+    // ✅ תיקון 2: log רק אחרי שהעדכון הצליח
     await supabase.from('message_log').insert([
       {
         registration_id: id,
@@ -53,18 +64,28 @@ export async function POST(request) {
       },
     ]);
 
-    // Deactivate student in attendance app when registration is cancelled
+    // ✅ תיקון 3: ביטול לפי שם + group_id ביחד
     if (newStatus === 'בוטל') {
       const { data: cancelledReg } = await supabase
-        .from('registrations').select('student_name').eq('id', id).single();
+        .from('registrations')
+        .select('student_name, group_id')
+        .eq('id', id)
+        .single();
+
       if (cancelledReg?.student_name) {
-        await supabase.from('students')
+        let query = supabase
+          .from('students')
           .update({ is_active: false, registration_status: 'בוטל' })
           .eq('name', cancelledReg.student_name);
+
+        if (cancelledReg.group_id) {
+          query = query.eq('group_id', cancelledReg.group_id);
+        }
+
+        await query;
       }
     }
 
-    // Auto-add to students table if group selected (always, not just on שובץ)
     if (groupId) {
       const { data: reg } = await supabase
         .from('registrations')
@@ -73,7 +94,6 @@ export async function POST(request) {
         .single();
 
       if (reg) {
-        // Check if student already in this group
         const { data: existing } = await supabase
           .from('students')
           .select('id')
@@ -96,7 +116,6 @@ export async function POST(request) {
       }
     }
 
-    // If assigned, notify Make
     if (newStatus === 'שובץ') {
       const { data: reg } = await supabase
         .from('registrations')
@@ -118,20 +137,22 @@ export async function POST(request) {
         });
 
         try {
-          await sendAssignmentEmail({
-            parentName: reg.parent_name,
-            studentName: reg.student_name,
-            parentEmail: reg.parent_email,
-            teacher: teacher || reg.teacher,
-            assignedDay: assignedDay || reg.assigned_day,
-            assignedTime: assignedTime || reg.assigned_time,
-            orchestra: reg.orchestra,
-          });
+          // ✅ תיקון: שולחים מייל רק אם יש מורה
+          if (teacher || reg.teacher) {
+            await sendAssignmentEmail({
+              parentName: reg.parent_name,
+              studentName: reg.student_name,
+              parentEmail: reg.parent_email,
+              teacher: teacher || reg.teacher,
+              assignedDay: assignedDay || reg.assigned_day,
+              assignedTime: assignedTime || reg.assigned_time,
+              orchestra: reg.orchestra,
+            });
+          }
         } catch (emailErr) {
           console.error('Assignment email error:', emailErr.message);
         }
 
-        // Update message_log status
         await supabase
           .from('message_log')
           .update({ status: 'sent', sent_at: new Date().toISOString() })
