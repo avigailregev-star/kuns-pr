@@ -786,7 +786,7 @@ export default function AdminTable() {
                           </div>
 
                           {/* Notes */}
-                          <div className="sm:col-span-2">
+                          <div className={row.availability_notes ? '' : 'sm:col-span-2'}>
                             <h4 className="font-semibold text-gray-700 mb-2">הערות מנהל</h4>
                             <textarea
                               className="admin-input h-20 resize-none"
@@ -796,6 +796,14 @@ export default function AdminTable() {
                               placeholder="הוסף הערות פנימיות..."
                             />
                           </div>
+                          {row.availability_notes && (
+                            <div>
+                              <h4 className="font-semibold text-gray-700 mb-2">הערות זמינות</h4>
+                              <div className="admin-input h-20 overflow-y-auto text-sm text-gray-600 bg-amber-50 border-amber-200">
+                                {row.availability_notes}
+                              </div>
+                            </div>
+                          )}
 
                           {/* Message log */}
                           {row.message_log && row.message_log.length > 0 && (

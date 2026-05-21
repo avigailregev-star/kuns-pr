@@ -54,6 +54,7 @@ export async function POST(request) {
       selectedTime,
       unavailableDays,
       preferredSlot,
+      availabilityNotes,
     } = body;
 
     if (!studentName || !parentName || !parentPhone || !parentEmail) {
@@ -78,6 +79,7 @@ export async function POST(request) {
           has_accommodations: hasAccommodations || false,
           attended_open_day: false,
           preferred_slot: preferredSlot || null,
+          availability_notes: availabilityNotes || null,
           status: 'ממתין לשיחת היכרות',
           instruments: [],
           unavailable_days: [],
@@ -251,6 +253,7 @@ export async function POST(request) {
         selected_course: selectedCourse || null,
         unavailable_days: unavailableDays || [],
         preferred_slot: preferredSlot || null,
+        availability_notes: availabilityNotes || null,
         status: initialStatus,
         orchestra: orchestraGroup || null,
         teacher: selectedTeacher || null,

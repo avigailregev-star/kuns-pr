@@ -98,6 +98,7 @@ export default function RegistrationForm() {
     selectedTime: '',
     unavailableDays: [],
     preferredSlot: '',
+    availabilityNotes: '',
     agreed: false,
   });
 
@@ -605,6 +606,16 @@ export default function RegistrationForm() {
                       {!allDaysFull && (
                         <p className="text-xs text-slate-400 text-center">שעה מדויקת תינתן בהמשך</p>
                       )}
+                      <div>
+                        <label className="field-label">הערות לגבי זמינות <span className="text-slate-500 font-normal">(לא חובה)</span></label>
+                        <textarea
+                          className="form-input resize-none h-20"
+                          value={form.availabilityNotes}
+                          onChange={(e) => update('availabilityNotes', e.target.value)}
+                          placeholder="למשל: לא זמין בין 17:00-18:00, מועדף בוקר..."
+                          dir="rtl"
+                        />
+                      </div>
                     </div>
                   );
                 }
@@ -650,6 +661,16 @@ export default function RegistrationForm() {
                     {!allDaysFull && (
                       <p className="text-xs text-slate-400 text-center">שעה מדויקת תינתן בהמשך</p>
                     )}
+                    <div>
+                      <label className="field-label">הערות לגבי זמינות <span className="text-slate-500 font-normal">(לא חובה)</span></label>
+                      <textarea
+                        className="form-input resize-none h-20"
+                        value={form.availabilityNotes}
+                        onChange={(e) => update('availabilityNotes', e.target.value)}
+                        placeholder="למשל: לא זמין בין 17:00-18:00, מועדף בוקר..."
+                        dir="rtl"
+                      />
+                    </div>
                   </div>
                 ) : null;
               })()}
