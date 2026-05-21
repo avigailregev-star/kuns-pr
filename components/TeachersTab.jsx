@@ -5,20 +5,80 @@ import TeacherForm from './TeacherForm';
 import ImportAssignments from './ImportAssignments';
 
 const DAY_NAMES_TEACHER = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+const HEBREW_TO_NUM = { 'א': 0, 'ב': 1, 'ג': 2, 'ד': 3, 'ה': 4, 'ו': 5, 'ז': 6 };
 
 function formatDayTeacher(assignedDay) {
   if (assignedDay == null || assignedDay === '') return null;
   const num = Number(assignedDay);
   if (!isNaN(num) && num >= 0 && num <= 6) return DAY_NAMES_TEACHER[num];
+  if (HEBREW_TO_NUM[assignedDay] !== undefined) return DAY_NAMES_TEACHER[HEBREW_TO_NUM[assignedDay]];
   return assignedDay;
 }
 
-function TeacherCard({ t, registrations, onEdit, onDelete }) {
+function dayToNum(assignedDay) {
+  if (assignedDay == null || assignedDay === '') return 99;
+  const num = Number(assignedDay);
+  if (!isNaN(num) && num >= 0 && num <= 6) return num;
+  return HEBREW_TO_NUM[assignedDay] ?? 99;
+}
+
+function TeacherCard({ t, registrations, onEdit, onDelete, onStudentUpdated }) {
   const [open, setOpen] = useState(false);
-  const students = registrations.filter(
-    r => r.teacher?.trim().toLowerCase() === t.name?.trim().toLowerCase() &&
-      !['בוטל', 'נדחה', 'רשימת המתנה'].includes(r.status)
-  );
+  const [editingId, setEditingId] = useState(null);
+  const [editDay, setEditDay] = useState('');
+  const [editTime, setEditTime] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const students = registrations
+    .filter(
+      r => r.teacher?.trim().toLowerCase() === t.name?.trim().toLowerCase() &&
+        !['בוטל', 'נדחה', 'רשימת המתנה'].includes(r.status)
+    )
+    .sort((a, b) => {
+      const dayDiff = dayToNum(a.assigned_day) - dayToNum(b.assigned_day);
+      if (dayDiff !== 0) return dayDiff;
+      return (a.assigned_time || '').localeCompare(b.assigned_time || '');
+    });
+
+  function startEdit(s) {
+    const n = dayToNum(s.assigned_day);
+    setEditDay(n === 99 ? '' : String(n));
+    setEditTime(s.assigned_time || '');
+    setEditingId(s.id);
+  }
+
+  async function saveEdit(s) {
+    setSaving(true);
+    await fetch('/api/update-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: s.id,
+        newStatus: s.status,
+        assignedDay: editDay !== '' ? editDay : null,
+        assignedTime: editTime || null,
+      }),
+    });
+    setSaving(false);
+    setEditingId(null);
+    onStudentUpdated();
+  }
+
+  async function removeAssignment(s) {
+    if (!confirm(`להסיר את שיבוץ ${s.student_name}?`)) return;
+    await fetch('/api/update-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: s.id,
+        newStatus: 'חדש',
+        teacher: null,
+        assignedDay: null,
+        assignedTime: null,
+      }),
+    });
+    onStudentUpdated();
+  }
 
   return (
     <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
@@ -60,13 +120,65 @@ function TeacherCard({ t, registrations, onEdit, onDelete }) {
           ) : (
             <div className="space-y-2">
               {students.map(s => (
-                <div key={s.id} className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-gray-800">{s.student_name}</span>
-                  <span className="text-gray-500 text-xs">
-                    {s.selected_course || (Array.isArray(s.instruments) ? s.instruments.join(', ') : s.instruments) || '—'}
-                    {formatDayTeacher(s.assigned_day) != null ? ` · יום ${formatDayTeacher(s.assigned_day)}` : ''}
-                    {s.assigned_time ? ` ${s.assigned_time}` : ''}
-                  </span>
+                <div key={s.id} className="text-sm">
+                  {editingId === s.id ? (
+                    <div className="flex items-center gap-2 flex-wrap bg-white border border-purple-200 rounded px-3 py-2">
+                      <span className="font-medium text-gray-800">{s.student_name}</span>
+                      <select
+                        value={editDay}
+                        onChange={e => setEditDay(e.target.value)}
+                        className="border border-gray-300 rounded px-2 py-1 text-xs"
+                        dir="rtl"
+                      >
+                        <option value="">— יום —</option>
+                        {DAY_NAMES_TEACHER.map((name, i) => (
+                          <option key={i} value={String(i)}>יום {name}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="time"
+                        value={editTime}
+                        onChange={e => setEditTime(e.target.value)}
+                        className="border border-gray-300 rounded px-2 py-1 text-xs"
+                      />
+                      <button
+                        onClick={() => saveEdit(s)}
+                        disabled={saving}
+                        className="text-xs bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 disabled:opacity-50"
+                      >
+                        שמור
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        className="text-xs text-gray-500 hover:text-gray-700"
+                      >
+                        ביטול
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between group">
+                      <span className="font-medium text-gray-800">{s.student_name}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-gray-500 text-xs">
+                          {s.selected_course || (Array.isArray(s.instruments) ? s.instruments.join(', ') : s.instruments) || '—'}
+                          {formatDayTeacher(s.assigned_day) != null ? ` · יום ${formatDayTeacher(s.assigned_day)}` : ''}
+                          {s.assigned_time ? ` ${s.assigned_time}` : ''}
+                        </span>
+                        <button
+                          onClick={() => startEdit(s)}
+                          className="text-xs text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          ערוך
+                        </button>
+                        <button
+                          onClick={() => removeAssignment(s)}
+                          className="text-xs text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          הסר
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -179,6 +291,7 @@ export default function TeachersTab() {
                 registrations={registrations}
                 onEdit={() => setEditing(t)}
                 onDelete={() => handleDelete(t.id)}
+                onStudentUpdated={fetchAll}
               />
             )}
           </div>
