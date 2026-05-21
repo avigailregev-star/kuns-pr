@@ -196,6 +196,8 @@ export default function TeachersTab() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [showImport, setShowImport] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState(null);
 
   useEffect(() => {
     fetchAll();
@@ -236,6 +238,19 @@ export default function TeachersTab() {
     fetchTeachers();
   }
 
+  async function handleSyncAll() {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch('/api/sync-all', { method: 'POST' });
+      const json = await res.json();
+      setSyncResult(json);
+    } catch {
+      setSyncResult({ error: 'שגיאה בסינכרון' });
+    }
+    setSyncing(false);
+  }
+
   async function handleDelete(id) {
     if (!confirm('למחוק מורה זה?')) return;
     await fetch(`/api/teachers/${id}`, { method: 'DELETE' });
@@ -250,6 +265,13 @@ export default function TeachersTab() {
         <h2 className="text-xl font-bold text-gray-800">מורים</h2>
         <div className="flex gap-2">
           <button
+            onClick={handleSyncAll}
+            disabled={syncing}
+            className="text-sm border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          >
+            {syncing ? 'מסנכרן...' : 'סנכרן לנוכחות'}
+          </button>
+          <button
             onClick={() => setShowImport(v => !v)}
             className="text-sm border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50"
           >
@@ -263,6 +285,14 @@ export default function TeachersTab() {
           </button>
         </div>
       </div>
+
+      {syncResult && (
+        <div className={`text-sm px-3 py-2 rounded-lg ${syncResult.error ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+          {syncResult.error
+            ? syncResult.error
+            : `סונכרנו ${syncResult.synced} תלמידים בהצלחה${syncResult.failed ? ` · ${syncResult.failed} נכשלו` : ''}`}
+        </div>
+      )}
 
       {showImport && (
         <ImportAssignments onDone={() => { setShowImport(false); fetchAll(); }} />
