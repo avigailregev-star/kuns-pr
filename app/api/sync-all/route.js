@@ -16,7 +16,8 @@ export async function POST() {
     .select('id, teacher, assigned_day, assigned_time, student_name, instruments, parent_phone, selected_course, status, registration_status, group_id')
     .not('teacher', 'is', null)
     .not('assigned_day', 'is', null)
-    .not('assigned_time', 'is', null);
+    .not('assigned_time', 'is', null)
+    .is('group_id', null);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
