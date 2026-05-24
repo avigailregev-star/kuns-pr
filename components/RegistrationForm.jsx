@@ -144,7 +144,6 @@ export default function RegistrationForm() {
     }
     if (currentStepId === 'course' && !isInterviewFlow) {
       if (!form.selectedCourse) return 'יש לבחור קורס';
-      if (showOrchestraCheckbox && !form.orchestra_confirmed) return 'יש לאשר השתתפות בתזמורת';
     }
     if (currentStepId === 'agreement') {
       if (!form.agreed) return 'יש לקרוא ולאשר את ההסכם';
@@ -522,17 +521,6 @@ export default function RegistrationForm() {
                 </div>
               )}
 
-              {showOrchestraCheckbox && (
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.orchestra_confirmed}
-                    onChange={(e) => update('orchestra_confirmed', e.target.checked)}
-                    className="w-4 h-4 rounded accent-purple-500"
-                  />
-                  <span className="text-sm text-slate-200">אני מאשר/ת השתתפות בתזמורת *</span>
-                </label>
-              )}
 
               {['continue', 'new', 'adult'].includes(form.type) &&
                 !(form.type === 'new' && form.attendedOpenDay === false) &&
