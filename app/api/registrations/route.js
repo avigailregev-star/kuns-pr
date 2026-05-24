@@ -37,9 +37,21 @@ export async function DELETE(request) {
     if (!id) return NextResponse.json({ error: 'מזהה חסר' }, { status: 400 });
 
     const supabase = getSupabaseClient();
+
+    // מצא שם תלמיד לפני המחיקה
+    const { data: reg } = await supabase
+      .from('registrations').select('student_name').eq('id', id).single();
+
     await supabase.from('message_log').delete().eq('registration_id', id);
     const { error } = await supabase.from('registrations').delete().eq('id', id);
     if (error) return NextResponse.json({ error: 'שגיאה במחיקה' }, { status: 500 });
+
+    // הסר תלמיד מאפליקציית הנוכחות
+    if (reg?.student_name) {
+      await supabase.from('students')
+        .update({ is_active: false })
+        .eq('name', reg.student_name);
+    }
 
     return NextResponse.json({ success: true });
   } catch (err) {
