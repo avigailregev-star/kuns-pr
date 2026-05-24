@@ -110,6 +110,7 @@ export default function AdminTable() {
   const [creatingGroupFor, setCreatingGroupFor] = useState(null);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupType, setNewGroupType] = useState('');
+  const [editingDetails, setEditingDetails] = useState({});
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -234,6 +235,23 @@ export default function AdminTable() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, admin_notes: notes }),
     });
+  }
+
+  async function saveDetails(id) {
+    const details = editingDetails[id];
+    if (!details) return;
+    setUpdating(id);
+    try {
+      await fetch('/api/registrations', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...details, updated_at: new Date().toISOString() }),
+      });
+      setRows(prev => prev.map(r => r.id === id ? { ...r, ...details } : r));
+      setEditingDetails(prev => { const n = { ...prev }; delete n[id]; return n; });
+    } finally {
+      setUpdating(null);
+    }
   }
 
   async function deleteRegistration(id, studentName) {
@@ -418,17 +436,93 @@ export default function AdminTable() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {/* Contact */}
                           <div>
-                            <h4 className="font-semibold text-gray-700 mb-2">פרטי קשר</h4>
-                            <p className="text-sm text-gray-600">📧 {row.parent_email}</p>
-                            <p className="text-sm text-gray-600">
-                              📅 שיחה טלפונית בזמן רצוי: {row.preferred_slot || '—'}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              🚫 ימים לא פנויים:{' '}
-                              {Array.isArray(row.unavailable_days) && row.unavailable_days.length > 0
-                                ? row.unavailable_days.map(d => `יום ${d}`).join(', ')
-                                : 'ללא הגבלה'}
-                            </p>
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-semibold text-gray-700">פרטי קשר</h4>
+                              {!editingDetails[row.id] && (
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingDetails(prev => ({ ...prev, [row.id]: {
+                                    student_name: row.student_name,
+                                    parent_name: row.parent_name,
+                                    parent_phone: row.parent_phone,
+                                    parent_email: row.parent_email,
+                                  }}))}
+                                  className="text-xs text-blue-600 hover:underline"
+                                >
+                                  ✏️ ערוך
+                                </button>
+                              )}
+                            </div>
+                            {editingDetails[row.id] ? (
+                              <div className="space-y-2">
+                                <div>
+                                  <label className="text-xs text-gray-500">שם תלמיד/ה</label>
+                                  <input
+                                    className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm"
+                                    value={editingDetails[row.id].student_name || ''}
+                                    onChange={e => setEditingDetails(prev => ({ ...prev, [row.id]: { ...prev[row.id], student_name: e.target.value }}))}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500">שם הורה</label>
+                                  <input
+                                    className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm"
+                                    value={editingDetails[row.id].parent_name || ''}
+                                    onChange={e => setEditingDetails(prev => ({ ...prev, [row.id]: { ...prev[row.id], parent_name: e.target.value }}))}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500">טלפון</label>
+                                  <input
+                                    className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm"
+                                    dir="ltr"
+                                    value={editingDetails[row.id].parent_phone || ''}
+                                    onChange={e => setEditingDetails(prev => ({ ...prev, [row.id]: { ...prev[row.id], parent_phone: e.target.value }}))}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500">אימייל</label>
+                                  <input
+                                    className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm"
+                                    dir="ltr"
+                                    value={editingDetails[row.id].parent_email || ''}
+                                    onChange={e => setEditingDetails(prev => ({ ...prev, [row.id]: { ...prev[row.id], parent_email: e.target.value }}))}
+                                  />
+                                </div>
+                                <div className="flex gap-2 pt-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => saveDetails(row.id)}
+                                    disabled={updating === row.id}
+                                    className="text-xs px-3 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                                  >
+                                    שמור
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingDetails(prev => { const n = { ...prev }; delete n[row.id]; return n; })}
+                                    className="text-xs px-3 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                  >
+                                    ביטול
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <p className="text-sm text-gray-600">👤 {row.parent_name}</p>
+                                <p className="text-sm text-gray-600" dir="ltr">📞 {row.parent_phone}</p>
+                                <p className="text-sm text-gray-600">📧 {row.parent_email}</p>
+                                <p className="text-sm text-gray-600">
+                                  📅 שיחה טלפונית בזמן רצוי: {row.preferred_slot || '—'}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  🚫 ימים לא פנויים:{' '}
+                                  {Array.isArray(row.unavailable_days) && row.unavailable_days.length > 0
+                                    ? row.unavailable_days.map(d => `יום ${d}`).join(', ')
+                                    : 'ללא הגבלה'}
+                                </p>
+                              </>
+                            )}
                           </div>
 
                           {/* Auto-assignment suggestions for continuing students */}
