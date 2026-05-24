@@ -48,9 +48,12 @@ export async function DELETE(request) {
 
     // הסר תלמיד מאפליקציית הנוכחות
     if (reg?.student_name) {
-      await supabase.from('students')
+      const { data: updated, error: studErr } = await supabase
+        .from('students')
         .update({ is_active: false })
-        .eq('name', reg.student_name);
+        .eq('name', reg.student_name.trim())
+        .select('id, name');
+      console.log('student deactivate:', JSON.stringify(updated), studErr?.message);
     }
 
     return NextResponse.json({ success: true });
