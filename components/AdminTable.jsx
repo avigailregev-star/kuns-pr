@@ -236,6 +236,22 @@ export default function AdminTable() {
     });
   }
 
+  async function deleteRegistration(id, studentName) {
+    if (!confirm(`למחוק לחלוטין את הרישום של ${studentName}?\nפעולה זו אינה הפיכה.`)) return;
+    setUpdating(id);
+    try {
+      await fetch('/api/registrations', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      setRows(prev => prev.filter(r => r.id !== id));
+      setExpandedRow(null);
+    } finally {
+      setUpdating(null);
+    }
+  }
+
   async function updatePaymentStatus(id, newPaymentStatus) {
     setUpdating(id);
     try {
@@ -827,6 +843,13 @@ export default function AdminTable() {
 
                           {/* Save button + payment status buttons */}
                           <div className="sm:col-span-2 flex flex-wrap items-center gap-2 justify-end">
+                            <button
+                              onClick={() => deleteRegistration(row.id, row.student_name)}
+                              disabled={updating === row.id}
+                              className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-40 disabled:cursor-not-allowed ml-auto"
+                            >
+                              🗑 מחק רישום
+                            </button>
                             <button
                               onClick={() => updatePaymentStatus(row.id, 'Confirmed')}
                               disabled={updating === row.id || row.registration_status === 'Confirmed'}

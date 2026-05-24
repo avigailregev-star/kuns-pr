@@ -28,6 +28,25 @@ export async function GET() {
   }
 }
 
+export async function DELETE(request) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: 'אינך מורשה' }, { status: 401 });
+
+  try {
+    const { id } = await request.json();
+    if (!id) return NextResponse.json({ error: 'מזהה חסר' }, { status: 400 });
+
+    const supabase = getSupabaseClient();
+    await supabase.from('message_log').delete().eq('registration_id', id);
+    const { error } = await supabase.from('registrations').delete().eq('id', id);
+    if (error) return NextResponse.json({ error: 'שגיאה במחיקה' }, { status: 500 });
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    return NextResponse.json({ error: 'שגיאת שרת פנימית' }, { status: 500 });
+  }
+}
+
 export async function PATCH(request) {
   const session = await getServerSession(authOptions);
   if (!session) {
