@@ -608,24 +608,23 @@ export default function AdminTable() {
                                           const winStart = timeToMins(s.start_time);
                                           const winEnd = timeToMins(s.end_time);
                                           const occupied = [];
+                                          let hasOnlyGroupOccupied = true;
                                           for (const r of teacherAssignments) {
                                             if (String(r.assigned_day) !== String(s.day_of_week)) continue;
                                             const rStart = timeToMins(r.assigned_time);
                                             if (rStart == null) continue;
-                                            // Only individual lessons block the slot; group lessons are joinable
-                                            const rGroup = r.group_id ? groups.find(g => String(g.id) === String(r.group_id)) : null;
-                                            if (rGroup && !INDIVIDUAL_LESSON_TYPES.has(rGroup.lesson_type)) continue;
                                             occupied.push({ start: rStart, end: rStart + getLessonDuration(r.selected_course) });
+                                            const rGroup = r.group_id ? groups.find(g => String(g.id) === String(r.group_id)) : null;
+                                            if (!rGroup || INDIVIDUAL_LESSON_TYPES.has(rGroup.lesson_type)) hasOnlyGroupOccupied = false;
                                           }
                                           const tGroups = groups.filter(g => g.teacher_id === selectedTeacher?.id);
                                           for (const g of tGroups) {
-                                            // Only individual lesson groups block the slot
-                                            if (!INDIVIDUAL_LESSON_TYPES.has(g.lesson_type)) continue;
                                             const sched = (g.group_schedules || []).find(sc => String(sc.day_of_week) === String(s.day_of_week));
                                             if (!sched?.start_time) continue;
                                             const gStart = timeToMins(sched.start_time);
                                             const gEnd = sched.end_time ? timeToMins(sched.end_time) : gStart + 60;
                                             occupied.push({ start: gStart, end: gEnd });
+                                            if (INDIVIDUAL_LESSON_TYPES.has(g.lesson_type)) hasOnlyGroupOccupied = false;
                                           }
                                           occupied.sort((a, b) => a.start - b.start);
                                           let cursor = winStart ?? 0;
@@ -647,7 +646,7 @@ export default function AdminTable() {
                                             ? groups.find(g => String(g.id) === String(selectedGroupId))
                                                 ?.group_schedules?.find(sc => String(sc.day_of_week) === String(s.day_of_week))
                                             : null;
-                                          const isFull = !selectedGroupSched && winStart != null && winEnd != null && nextSlotStart === null;
+                                          const isFull = !selectedGroupSched && !hasOnlyGroupOccupied && winStart != null && winEnd != null && nextSlotStart === null;
                                           const nextTime = selectedGroupSched?.start_time
                                             ? selectedGroupSched.start_time
                                             : (nextSlotStart != null ? minsToTime(nextSlotStart) : s.start_time);
