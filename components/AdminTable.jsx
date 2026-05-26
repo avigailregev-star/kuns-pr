@@ -700,46 +700,54 @@ export default function AdminTable() {
                                       {(() => {
                                         const teacherGroups = groups.filter(g => g.teacher_id === selectedTeacher?.id);
                                         return availRanges.map(s => {
-                                          const dayStudents = teacherAssignments.filter(r => String(r.assigned_day) === String(s.day_of_week));
                                           const dayGroups = teacherGroups.filter(g =>
                                             g.group_schedules?.some(sched => String(sched.day_of_week) === String(s.day_of_week))
                                           );
+                                          const dayGroupIds = new Set(dayGroups.map(g => String(g.id)));
+                                          // Hide students already represented by a group badge
+                                          const dayStudents = teacherAssignments.filter(r =>
+                                            String(r.assigned_day) === String(s.day_of_week) &&
+                                            (!r.group_id || !dayGroupIds.has(String(r.group_id)))
+                                          );
                                           if (dayStudents.length === 0 && dayGroups.length === 0) return null;
+                                          const items = [
+                                            ...dayGroups.map(g => {
+                                              const sched = g.group_schedules?.find(sc => String(sc.day_of_week) === String(s.day_of_week));
+                                              return { key: g.id, time: sched?.start_time || '', type: 'group', group: g, sched };
+                                            }),
+                                            ...dayStudents.map(r => ({ key: r.id, time: r.assigned_time || '', type: 'student', reg: r })),
+                                          ].sort((a, b) => a.time.localeCompare(b.time));
                                           return (
                                             <div key={s.day_of_week} className="text-xs flex flex-wrap gap-1 items-center">
-                                              <span className="text-gray-500">יום {DAY_NAMES[s.day_of_week]}:</span>
-                                              {dayStudents.map(r => (
-                                                <span key={r.id} className="bg-amber-50 border border-amber-200 text-amber-700 px-1.5 py-0.5 rounded-md">
-                                                  {r.student_name}{r.assigned_time ? ` · ${r.assigned_time}` : ''}
+                                              <span className="text-gray-500 shrink-0">יום {DAY_NAMES[s.day_of_week]}:</span>
+                                              {items.map(item => item.type === 'group' ? (
+                                                <span key={item.key} className="bg-blue-50 border border-blue-200 text-blue-700 px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                                                  🎵 {item.group.name}{item.sched?.start_time ? ` · ${item.sched.start_time}` : ''}
+                                                  <button
+                                                    type="button"
+                                                    title="מחק קבוצה"
+                                                    onClick={async () => {
+                                                      if (!confirm(`למחוק את הקבוצה "${item.group.name}"?\nתלמידי הקבוצה יוסרו גם כן מאפליקציית הנוכחות.`)) return;
+                                                      const res = await fetch('/api/groups', {
+                                                        method: 'DELETE',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ id: item.group.id }),
+                                                      });
+                                                      if (res.ok) {
+                                                        setGroups(prev => prev.filter(x => x.id !== item.group.id));
+                                                      } else {
+                                                        const j = await res.json();
+                                                        alert(j.error || 'שגיאה במחיקה');
+                                                      }
+                                                    }}
+                                                    className="text-blue-300 hover:text-red-500 font-bold leading-none transition-colors"
+                                                  >×</button>
+                                                </span>
+                                              ) : (
+                                                <span key={item.key} className="bg-amber-50 border border-amber-200 text-amber-700 px-1.5 py-0.5 rounded-md">
+                                                  {item.reg.student_name}{item.reg.assigned_time ? ` · ${item.reg.assigned_time}` : ''}
                                                 </span>
                                               ))}
-                                              {dayGroups.map(g => {
-                                                const sched = g.group_schedules?.find(sc => String(sc.day_of_week) === String(s.day_of_week));
-                                                return (
-                                                  <span key={g.id} className="bg-blue-50 border border-blue-200 text-blue-700 px-1.5 py-0.5 rounded-md flex items-center gap-1">
-                                                    🎵 {g.name}{sched?.start_time ? ` · ${sched.start_time}` : ''}
-                                                    <button
-                                                      type="button"
-                                                      title="מחק קבוצה"
-                                                      onClick={async () => {
-                                                        if (!confirm(`למחוק את הקבוצה "${g.name}"?\nתלמידי הקבוצה יוסרו גם כן מאפליקציית הנוכחות.`)) return;
-                                                        const res = await fetch('/api/groups', {
-                                                          method: 'DELETE',
-                                                          headers: { 'Content-Type': 'application/json' },
-                                                          body: JSON.stringify({ id: g.id }),
-                                                        });
-                                                        if (res.ok) {
-                                                          setGroups(prev => prev.filter(x => x.id !== g.id));
-                                                        } else {
-                                                          const j = await res.json();
-                                                          alert(j.error || 'שגיאה במחיקה');
-                                                        }
-                                                      }}
-                                                      className="text-blue-300 hover:text-red-500 font-bold leading-none transition-colors"
-                                                    >×</button>
-                                                  </span>
-                                                );
-                                              })}
                                             </div>
                                           );
                                         });
