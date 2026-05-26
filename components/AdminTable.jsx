@@ -7,6 +7,7 @@ import { getLessonDuration } from '../lib/lessonDuration';
 import { freeMinutesOnDay } from '../lib/teacherCapacity';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+const INDIVIDUAL_LESSON_TYPES = new Set(['individual_45', 'individual_60', 'melodies_individual']);
 
 function timeToMins(t) {
   if (!t) return null;
@@ -611,10 +612,15 @@ export default function AdminTable() {
                                             if (String(r.assigned_day) !== String(s.day_of_week)) continue;
                                             const rStart = timeToMins(r.assigned_time);
                                             if (rStart == null) continue;
+                                            // Only individual lessons block the slot; group lessons are joinable
+                                            const rGroup = r.group_id ? groups.find(g => String(g.id) === String(r.group_id)) : null;
+                                            if (rGroup && !INDIVIDUAL_LESSON_TYPES.has(rGroup.lesson_type)) continue;
                                             occupied.push({ start: rStart, end: rStart + getLessonDuration(r.selected_course) });
                                           }
                                           const tGroups = groups.filter(g => g.teacher_id === selectedTeacher?.id);
                                           for (const g of tGroups) {
+                                            // Only individual lesson groups block the slot
+                                            if (!INDIVIDUAL_LESSON_TYPES.has(g.lesson_type)) continue;
                                             const sched = (g.group_schedules || []).find(sc => String(sc.day_of_week) === String(s.day_of_week));
                                             if (!sched?.start_time) continue;
                                             const gStart = timeToMins(sched.start_time);
@@ -636,8 +642,15 @@ export default function AdminTable() {
                                               nextSlotStart = cursor;
                                             }
                                           }
-                                          const isFull = winStart != null && winEnd != null && nextSlotStart === null;
-                                          const nextTime = nextSlotStart != null ? minsToTime(nextSlotStart) : s.start_time;
+                                          const selectedGroupId = selectedGroups[row.id];
+                                          const selectedGroupSched = selectedGroupId
+                                            ? groups.find(g => String(g.id) === String(selectedGroupId))
+                                                ?.group_schedules?.find(sc => String(sc.day_of_week) === String(s.day_of_week))
+                                            : null;
+                                          const isFull = !selectedGroupSched && winStart != null && winEnd != null && nextSlotStart === null;
+                                          const nextTime = selectedGroupSched?.start_time
+                                            ? selectedGroupSched.start_time
+                                            : (nextSlotStart != null ? minsToTime(nextSlotStart) : s.start_time);
                                           let gapEnd = winEnd;
                                           if (nextSlotStart != null) {
                                             for (const occ of occupied) {

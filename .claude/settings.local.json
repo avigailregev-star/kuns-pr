@@ -8,7 +8,9 @@
       "Read(//c/Users/HP/**)",
       "WebSearch",
       "Bash(curl -s \"https://www.hugim.org.il/rest/courses?KodMatnas=904\")",
-      "WebFetch(domain:www.matnas-dimona.org.il)"
+      "WebFetch(domain:www.matnas-dimona.org.il)",
+      "Bash(\"C:/Users/HP/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/brainstorming/scripts/start-server.sh\" --project-dir \"c:/Users/HP/Desktop/kuns_pro\")",
+      "Bash(xargs cat)"
     ]
   }
 }
