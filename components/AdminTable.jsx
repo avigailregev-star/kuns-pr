@@ -690,12 +690,19 @@ export default function AdminTable() {
                                         })}
                                       </div>
                                       {row.assigned_day != null && row.assigned_day !== '' && (
-                                        <input
-                                          type="time"
-                                          className="admin-input w-full"
-                                          value={row.assigned_time || ''}
-                                          onChange={(e) => updateAssignment(row.id, 'assigned_time', e.target.value)}
-                                        />
+                                        <div className="flex gap-2 items-center">
+                                          <input
+                                            type="time"
+                                            className="admin-input flex-1"
+                                            value={row.assigned_time || ''}
+                                            onChange={(e) => updateAssignment(row.id, 'assigned_time', e.target.value)}
+                                          />
+                                          {row.assigned_time && (
+                                            <span className="text-xs text-gray-400 shrink-0">
+                                              עד {minsToTime(timeToMins(row.assigned_time) + getLessonDuration(row.selected_course))}
+                                            </span>
+                                          )}
+                                        </div>
                                       )}
                                       {(() => {
                                         const teacherGroups = groups.filter(g => g.teacher_id === selectedTeacher?.id);
