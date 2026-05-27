@@ -114,6 +114,13 @@ export async function POST(request) {
             console.error('Students insert error:', studentError.message, studentError.details);
           }
         }
+
+        // Update registration with group_id and group name as selected_course
+        const { data: grp } = await supabase.from('groups').select('name').eq('id', groupId).single();
+        await supabase.from('registrations').update({
+          group_id: groupId,
+          ...(grp?.name ? { selected_course: grp.name } : {}),
+        }).eq('id', id);
       }
     }
 

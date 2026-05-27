@@ -197,6 +197,14 @@ export default function AdminTable() {
       }
       setSaved(row.id);
       setTimeout(() => setSaved(null), 3000);
+      const selGroupId = selectedGroups[row.id];
+      if (selGroupId) {
+        const grp = groups.find(g => String(g.id) === String(selGroupId));
+        setRows(prev => prev.map(r => r.id === row.id
+          ? { ...r, group_id: selGroupId, ...(grp?.name ? { selected_course: grp.name } : {}) }
+          : r
+        ));
+      }
       await refreshTeachers();
     } catch {
       alert('שגיאת רשת — בדוק חיבור ונסה שוב');
