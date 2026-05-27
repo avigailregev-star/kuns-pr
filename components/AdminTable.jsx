@@ -410,6 +410,13 @@ export default function AdminTable() {
                       {Array.isArray(row.instruments) && row.instruments.length > 0
                         ? row.instruments.join(', ')
                         : row.selected_course || '—'}
+                      {row.teacher && row.assigned_day != null && (
+                        <div className="mt-0.5 text-green-700 font-medium">
+                          {row.teacher} · יום {DAY_NAMES[Number(row.assigned_day)]}
+                          {row.assigned_time ? ` ${row.assigned_time.slice(0,5)}` : ''}
+                          {row.assigned_end_time ? `–${row.assigned_end_time.slice(0,5)}` : ''}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <StatusSelect
