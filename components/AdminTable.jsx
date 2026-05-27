@@ -722,7 +722,7 @@ export default function AdminTable() {
                                               <span className="text-gray-500 shrink-0">יום {DAY_NAMES[s.day_of_week]}:</span>
                                               {items.map(item => item.type === 'group' ? (
                                                 <span key={item.key} className="bg-blue-50 border border-blue-200 text-blue-700 px-1.5 py-0.5 rounded-md flex items-center gap-1">
-                                                  🎵 {item.group.name}{item.sched?.start_time ? ` · ${item.sched.start_time}` : ''}
+                                                  🎵 {item.group.name}{item.sched?.start_time ? ` · ${item.sched.start_time}${item.sched.end_time ? `–${item.sched.end_time.slice(0,5)}` : ''}` : ''}
                                                   <button
                                                     type="button"
                                                     title="מחק קבוצה"
