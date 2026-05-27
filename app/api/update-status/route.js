@@ -14,7 +14,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { id, newStatus, teacher, assignedDay, assignedTime, adminNotes, groupId } = body;
+    const { id, newStatus, teacher, assignedDay, assignedTime, assignedEndTime, adminNotes, groupId } = body;
 
     if (!id || !newStatus) {
       return NextResponse.json({ error: 'חסרים שדות' }, { status: 400 });
@@ -29,6 +29,7 @@ export async function POST(request) {
     if (teacher !== undefined) updateData.teacher = teacher;
     if (assignedDay !== undefined) updateData.assigned_day = assignedDay;
     if (assignedTime !== undefined) updateData.assigned_time = assignedTime;
+    if (assignedEndTime !== undefined) updateData.assigned_end_time = assignedEndTime;
     if (adminNotes !== undefined) updateData.admin_notes = adminNotes;
     if (body.orchestra !== undefined) updateData.orchestra = body.orchestra;
     if (body.theoryDay !== undefined) updateData.theory_day = body.theoryDay;

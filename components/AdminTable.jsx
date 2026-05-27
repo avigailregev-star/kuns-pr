@@ -183,6 +183,7 @@ export default function AdminTable() {
           teacher: row.teacher,
           assignedDay: row.assigned_day,
           assignedTime: row.assigned_time,
+          assignedEndTime: row.assigned_end_time || (row.assigned_time ? minsToTime(timeToMins(row.assigned_time) + getLessonDuration(row.selected_course)) : undefined),
           adminNotes: row.admin_notes,
           groupId: selectedGroups[row.id] || null,
           orchestra: orchestraAuto,
@@ -698,9 +699,15 @@ export default function AdminTable() {
                                             onChange={(e) => updateAssignment(row.id, 'assigned_time', e.target.value)}
                                           />
                                           {row.assigned_time && (
-                                            <span className="text-xs text-gray-400 shrink-0">
-                                              עד {minsToTime(timeToMins(row.assigned_time) + getLessonDuration(row.selected_course))}
-                                            </span>
+                                            <>
+                                              <span className="text-xs text-gray-400 shrink-0">עד</span>
+                                              <input
+                                                type="time"
+                                                className="admin-input flex-1"
+                                                value={row.assigned_end_time || minsToTime(timeToMins(row.assigned_time) + getLessonDuration(row.selected_course))}
+                                                onChange={(e) => updateAssignment(row.id, 'assigned_end_time', e.target.value)}
+                                              />
+                                            </>
                                           )}
                                         </div>
                                       )}
