@@ -20,7 +20,7 @@ export async function POST(request) {
     const supabase = getSupabaseClient();
 
     // Block overlapping group schedules for the same teacher on the same day
-    if (teacher_id != null && assigned_day != null && assigned_time) {
+    if (teacher_id != null && assigned_day != null && assigned_time != null && assigned_time !== '') {
       const { data: existing } = await supabase
         .from('groups')
         .select('lesson_type, group_schedules(day_of_week, start_time, end_time)')

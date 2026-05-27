@@ -208,13 +208,17 @@ export default function AdminTable() {
   async function handleCreateGroup(rowId, teacherName, assignedDay, assignedTime) {
     if (!newGroupName.trim() || !newGroupType) return;
     const teacher = teachers.find(t => t.name === teacherName);
+    if (!teacher?.id) {
+      alert('יש לבחור מורה לפני יצירת קבוצה');
+      return;
+    }
     const res = await fetch('/api/groups', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: newGroupName.trim(),
         lesson_type: newGroupType,
-        teacher_id: teacher?.id || null,
+        teacher_id: teacher.id,
         assigned_day: assignedDay ?? null,
         assigned_time: assignedTime ?? null,
       }),
