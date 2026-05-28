@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getSupabaseClient } from '../../../../lib/supabase';
 import { buildUsedMinutesMap } from '../../../../lib/teacherCapacity';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
