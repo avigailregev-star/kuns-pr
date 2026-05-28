@@ -100,6 +100,7 @@ export default function RegistrationForm() {
     preferredSlot: '',
     availabilityNotes: '',
     agreed: false,
+    waitingListRequested: false,
   });
 
   useEffect(() => {
@@ -115,7 +116,28 @@ export default function RegistrationForm() {
     update('selectedTeacher', matched?.name || '');
     update('selectedDay', '');
     update('selectedTime', '');
+    update('waitingListRequested', false);
   }, [form.selectedCourse, teachersList]);
+
+  const selectedTeacherAllFull = (() => {
+    if (!form.selectedTeacher || !form.selectedCourse) return false;
+    const teacher = teachersList.find(t => t.name === form.selectedTeacher);
+    if (!teacher) return false;
+    const dur = getLessonDuration(form.selectedCourse);
+    const ranges = teacher.teacher_availability_ranges || [];
+    if (ranges.length > 0) {
+      return ranges.every(s => {
+        const used = teacher.used_minutes_per_day?.[s.day_of_week] || 0;
+        if (!s.start_time || !s.end_time) return false;
+        const [sh, sm] = s.start_time.split(':').map(Number);
+        const [eh, em] = s.end_time.split(':').map(Number);
+        return ((eh * 60 + em) - (sh * 60 + sm) - used) < dur;
+      });
+    }
+    const days = teacher.available_days || [];
+    const hours = teacher.available_hours || {};
+    return days.length > 0 && days.every(d => freeMinutesOnDay(hours, d, teacher.used_minutes_per_day?.[d]) < dur);
+  })();
 
   const steps = FLOWS[form.type].map((id) => ({ id, ...STEP_DEFS[id] }));
   const currentStepId = steps[step]?.id;
@@ -144,6 +166,7 @@ export default function RegistrationForm() {
     }
     if (currentStepId === 'course' && !isInterviewFlow) {
       if (!form.selectedCourse) return 'יש לבחור קורס';
+      if (selectedTeacherAllFull && !form.waitingListRequested) return 'יש לאשר הרשמה לרשימת המתנה כדי להמשיך';
     }
     if (currentStepId === 'agreement') {
       if (!form.agreed) return 'יש לקרוא ולאשר את ההסכם';
@@ -533,21 +556,9 @@ export default function RegistrationForm() {
                   .slice().sort((a, b) => a.day_of_week - b.day_of_week);
 
                 if (availRanges.length > 0) {
-                  const allDaysFull = availRanges.every(s => {
-                    const usedMins = teacher?.used_minutes_per_day?.[s.day_of_week] || 0;
-                    if (!s.start_time || !s.end_time) return false;
-                    const [sh, sm] = s.start_time.split(':').map(Number);
-                    const [eh, em] = s.end_time.split(':').map(Number);
-                    return ((eh * 60 + em) - (sh * 60 + sm) - usedMins) < lessonDuration;
-                  });
                   return (
                     <div className="space-y-3 pt-2 border-t border-white/10">
                       <label className="field-label">יום השיעור הקבוע</label>
-                      {allDaysFull && (
-                        <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 text-center">
-                          ⚠️ כל הימים הזמינים מלאים — תירשמ/י ותועבר/י אוטומטית לרשימת המתנה
-                        </p>
-                      )}
                       <div className="grid grid-cols-3 gap-2">
                         {availRanges.map(s => {
                           const usedMins = teacher?.used_minutes_per_day?.[s.day_of_week] || 0;
@@ -591,7 +602,23 @@ export default function RegistrationForm() {
                           );
                         })}
                       </div>
-                      {!allDaysFull && (
+                      {selectedTeacherAllFull ? (
+                        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3">
+                          <p className="text-sm text-amber-300 text-center font-medium">⚠️ כל הימים אצל המורה תפוסים כרגע</p>
+                          <p className="text-xs text-slate-400 text-center">ניתן להירשם לרשימת המתנה ונדאג ליידע אותך כשיתפנה מקום</p>
+                          <button
+                            type="button"
+                            onClick={() => update('waitingListRequested', !form.waitingListRequested)}
+                            className={`w-full p-3 rounded-xl border text-sm font-semibold transition-all ${
+                              form.waitingListRequested
+                                ? 'border-green-400/70 bg-green-500/15 text-green-300'
+                                : 'border-white/20 bg-white/5 text-slate-300 hover:border-amber-400/50 hover:text-white'
+                            }`}
+                          >
+                            {form.waitingListRequested ? '✓ נרשמתי לרשימת המתנה' : 'הירשם/י לרשימת המתנה'}
+                          </button>
+                        </div>
+                      ) : (
                         <p className="text-xs text-slate-400 text-center">שעה מדויקת תינתן בהמשך</p>
                       )}
                       <div>
@@ -611,17 +638,9 @@ export default function RegistrationForm() {
                 // Old system: available_days (Hebrew letters)
                 const days = teacher?.available_days || [];
                 const hours = teacher?.available_hours || {};
-                const allDaysFull = days.length > 0 && days.every(
-                  d => freeMinutesOnDay(hours, d, teacher?.used_minutes_per_day?.[d]) < lessonDuration
-                );
                 return days.length > 0 ? (
                   <div className="space-y-3 pt-2 border-t border-white/10">
                     <label className="field-label">יום השיעור הקבוע</label>
-                    {allDaysFull && (
-                      <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 text-center">
-                        ⚠️ כל הימים הזמינים מלאים — תירשמ/י ותועבר/י אוטומטית לרשימת המתנה
-                      </p>
-                    )}
                     <div className="grid grid-cols-3 gap-2">
                       {days.map(d => {
                         const free = freeMinutesOnDay(hours, d, teacher?.used_minutes_per_day?.[d]);
@@ -646,7 +665,23 @@ export default function RegistrationForm() {
                         );
                       })}
                     </div>
-                    {!allDaysFull && (
+                    {selectedTeacherAllFull ? (
+                      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3">
+                        <p className="text-sm text-amber-300 text-center font-medium">⚠️ כל הימים אצל המורה תפוסים כרגע</p>
+                        <p className="text-xs text-slate-400 text-center">ניתן להירשם לרשימת המתנה ונדאג ליידע אותך כשיתפנה מקום</p>
+                        <button
+                          type="button"
+                          onClick={() => update('waitingListRequested', !form.waitingListRequested)}
+                          className={`w-full p-3 rounded-xl border text-sm font-semibold transition-all ${
+                            form.waitingListRequested
+                              ? 'border-green-400/70 bg-green-500/15 text-green-300'
+                              : 'border-white/20 bg-white/5 text-slate-300 hover:border-amber-400/50 hover:text-white'
+                          }`}
+                        >
+                          {form.waitingListRequested ? '✓ נרשמתי לרשימת המתנה' : 'הירשם/י לרשימת המתנה'}
+                        </button>
+                      </div>
+                    ) : (
                       <p className="text-xs text-slate-400 text-center">שעה מדויקת תינתן בהמשך</p>
                     )}
                     <div>
