@@ -111,7 +111,10 @@ export default function RegistrationForm() {
     }
     const matched =
       teachersList.find((t) => (t.courses || []).includes(form.selectedCourse)) ||
-      teachersList.find((t) => form.selectedCourse.includes(t.name));
+      teachersList.find((t) => {
+        const firstName = t.name?.split(' ')[0];
+        return firstName && form.selectedCourse.includes(firstName);
+      });
     update('selectedTeacher', matched?.name || '');
     update('selectedDay', '');
     update('selectedTime', '');
