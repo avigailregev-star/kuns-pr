@@ -100,7 +100,6 @@ export default function RegistrationForm() {
     preferredSlot: '',
     availabilityNotes: '',
     agreed: false,
-    waitingListRequested: false,
   });
 
   useEffect(() => {
@@ -116,7 +115,6 @@ export default function RegistrationForm() {
     update('selectedTeacher', matched?.name || '');
     update('selectedDay', '');
     update('selectedTime', '');
-    update('waitingListRequested', false);
   }, [form.selectedCourse, teachersList]);
 
   const selectedTeacherAllFull = (() => {
@@ -166,7 +164,6 @@ export default function RegistrationForm() {
     }
     if (currentStepId === 'course' && !isInterviewFlow) {
       if (!form.selectedCourse) return 'יש לבחור קורס';
-      if (selectedTeacherAllFull && !form.waitingListRequested) return 'יש לאשר הרשמה לרשימת המתנה כדי להמשיך';
     }
     if (currentStepId === 'agreement') {
       if (!form.agreed) return 'יש לקרוא ולאשר את ההסכם';
@@ -603,21 +600,9 @@ export default function RegistrationForm() {
                         })}
                       </div>
                       {selectedTeacherAllFull ? (
-                        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3">
-                          <p className="text-sm text-amber-300 text-center font-medium">⚠️ כל הימים אצל המורה תפוסים כרגע</p>
-                          <p className="text-xs text-slate-400 text-center">ניתן להירשם לרשימת המתנה ונדאג ליידע אותך כשיתפנה מקום</p>
-                          <button
-                            type="button"
-                            onClick={() => update('waitingListRequested', !form.waitingListRequested)}
-                            className={`w-full p-3 rounded-xl border text-sm font-semibold transition-all ${
-                              form.waitingListRequested
-                                ? 'border-green-400/70 bg-green-500/15 text-green-300'
-                                : 'border-white/20 bg-white/5 text-slate-300 hover:border-amber-400/50 hover:text-white'
-                            }`}
-                          >
-                            {form.waitingListRequested ? '✓ נרשמתי לרשימת המתנה' : 'הירשם/י לרשימת המתנה'}
-                          </button>
-                        </div>
+                        <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 text-center">
+                          ⚠️ כל הימים אצל המורה תפוסים כרגע — הרישום שלך יישמר ברשימת המתנה ונדאג ליידע אותך כשיתפנה מקום
+                        </p>
                       ) : (
                         <p className="text-xs text-slate-400 text-center">שעה מדויקת תינתן בהמשך</p>
                       )}
