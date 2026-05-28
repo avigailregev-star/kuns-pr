@@ -19,5 +19,7 @@ export async function GET() {
     used_minutes_per_day: usedMap[t.name] || {},
   }));
 
-  return NextResponse.json({ data: enriched });
+  return NextResponse.json({ data: enriched }, {
+    headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+  });
 }
