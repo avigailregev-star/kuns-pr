@@ -544,6 +544,12 @@ export default function RegistrationForm() {
                 </div>
               )}
 
+              {/* DEBUG - remove after fix */}
+              {form.selectedCourse && (
+                <div style={{ fontSize: 11, color: '#aaa', background: '#111', padding: 6, borderRadius: 6 }}>
+                  type={form.type} | teacher=&quot;{form.selectedTeacher}&quot; | teachers={teachersList.length}
+                </div>
+              )}
 
               {['continue', 'new', 'adult'].includes(form.type) &&
                 !(form.type === 'new' && form.attendedOpenDay === false) &&
