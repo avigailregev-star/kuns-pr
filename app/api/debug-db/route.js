@@ -11,14 +11,17 @@ async function q(supabase, select) {
 export async function GET() {
   try {
     const supabase = getSupabaseClient();
-    const [a, b, c, d, e] = await Promise.all([
-      q(supabase, 'id, name'),
-      q(supabase, 'id, name, instrument_type'),
-      q(supabase, 'id, name, available_hours'),
-      q(supabase, 'id, name, max_students'),
-      q(supabase, 'id, name, teacher_availability_ranges(day_of_week, start_time, end_time)'),
-    ]);
-    return NextResponse.json({ a_name_only: a, b_instrument_type: b, c_available_hours: c, d_max_students: d, e_ranges: e });
+
+    // Full combined query - identical to public API
+    const full = await q(supabase, 'id, name, instrument_type, available_days, available_hours, max_students, courses, teacher_availability_ranges(day_of_week, start_time, end_time)');
+
+    // Without ranges join
+    const noRanges = await q(supabase, 'id, name, instrument_type, available_days, available_hours, max_students, courses');
+
+    // Without available_hours + ranges
+    const noHours = await q(supabase, 'id, name, instrument_type, available_days, max_students, courses, teacher_availability_ranges(day_of_week, start_time, end_time)');
+
+    return NextResponse.json({ full, noRanges, noHours });
   } catch (ex) {
     return NextResponse.json({ exception: ex instanceof Error ? ex.message : String(ex) });
   }
