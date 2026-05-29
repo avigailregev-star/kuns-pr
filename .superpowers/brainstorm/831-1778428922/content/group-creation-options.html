@@ -1,0 +1,96 @@
+<h2>איפה ליצור קבוצה חדשה?</h2>
+<p class="subtitle">שתי גישות — בחרי את מה שמרגיש נכון</p>
+
+<div class="cards" style="direction:rtl">
+
+  <div class="card" data-choice="modal" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f8f5ff;padding:16px;border-radius:8px;font-size:13px;font-family:Arial">
+      <!-- Mockup of inline modal approach -->
+      <div style="background:white;border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;opacity:0.4">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:600">ישראל ישראלי</span>
+          <span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:12px;font-size:11px">חדש</span>
+        </div>
+        <div style="font-size:11px;color:#6b7280;margin-top:4px">ויולה · 05225</div>
+      </div>
+
+      <!-- Modal overlay -->
+      <div style="background:rgba(0,0,0,0.15);border-radius:8px;padding:2px">
+        <div style="background:white;border:1px solid #d1d5db;border-radius:8px;padding:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <span style="font-weight:700;font-size:13px">➕ קבוצה חדשה</span>
+            <span style="color:#9ca3af;cursor:pointer;font-size:16px">✕</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <input style="border:1px solid #d1d5db;border-radius:6px;padding:6px 10px;font-size:12px;width:100%;box-sizing:border-box" placeholder="שם הקבוצה" />
+            <select style="border:1px solid #d1d5db;border-radius:6px;padding:6px 10px;font-size:12px;width:100%;box-sizing:border-box">
+              <option>— סוג שיעור —</option>
+              <option>נגינה פרטנית</option>
+              <option>תזמורת</option>
+              <option>תיאוריה</option>
+            </select>
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#374151">
+              <input type="checkbox" id="mangan" />
+              <label for="mangan">בית ספר מנגן</label>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:4px">
+              <button style="flex:1;background:#7c3aed;color:white;border:none;border-radius:6px;padding:7px;font-size:12px;cursor:pointer">צור קבוצה</button>
+              <button style="flex:1;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:6px;padding:7px;font-size:12px;cursor:pointer">ביטול</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>אפשרות א׳ — פופאפ בתוך הרישום</h3>
+      <p>כפתור "+ קבוצה חדשה" ליד הדרופדאון הקיים. לחיצה עליו פותחת חלון קטן להזנת שם הקבוצה ופרטיה — בלי לצאת מהרישום. הקבוצה נוצרת ומיד נבחרת.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="tab" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f0fdf4;padding:16px;border-radius:8px;font-size:13px;font-family:Arial">
+      <!-- Tab mockup -->
+      <div style="display:flex;gap:0;border-bottom:2px solid #e5e7eb;margin-bottom:12px">
+        <div style="padding:6px 14px;font-size:12px;color:#9ca3af;cursor:pointer">רישומים</div>
+        <div style="padding:6px 14px;font-size:12px;color:#9ca3af;cursor:pointer">מורים</div>
+        <div style="padding:6px 14px;font-size:12px;color:#7c3aed;font-weight:700;border-bottom:2px solid #7c3aed;margin-bottom:-2px">קבוצות</div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-weight:700;font-size:13px">ניהול קבוצות</span>
+        <button style="background:#7c3aed;color:white;border:none;border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer">+ קבוצה חדשה</button>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;justify-content:space-between;align-items:center;background:white;border:1px solid #e5e7eb;border-radius:6px;padding:7px 10px">
+          <div>
+            <div style="font-size:12px;font-weight:600">המורה פנינה</div>
+            <div style="font-size:10px;color:#6b7280">נגינה פרטנית</div>
+          </div>
+          <div style="display:flex;gap:4px">
+            <span style="font-size:10px;color:#6b7280">✏️</span>
+            <span style="font-size:10px;color:#ef4444">🗑</span>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;background:white;border:1px solid #e5e7eb;border-radius:6px;padding:7px 10px">
+          <div>
+            <div style="font-size:12px;font-weight:600">תזמורת ב׳</div>
+            <div style="font-size:10px;color:#6b7280">תזמורת · מנגן (רמת גן)</div>
+          </div>
+          <div style="display:flex;gap:4px">
+            <span style="font-size:10px;color:#6b7280">✏️</span>
+            <span style="font-size:10px;color:#ef4444">🗑</span>
+          </div>
+        </div>
+        <div style="background:#f9fafb;border:1px dashed #d1d5db;border-radius:6px;padding:7px 10px;text-align:center;font-size:11px;color:#9ca3af">
+          + הוסף קבוצה חדשה
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>אפשרות ב׳ — טאב "קבוצות" נפרד</h3>
+      <p>טאב שלישי בלוח הבקרה (לצד רישומים ומורים) לניהול מלא של כל הקבוצות — יצירה, עריכה ומחיקה. ניהול ריכוזי, אבל דורש מעבר בין טאבים.</p>
+    </div>
+  </div>
+
+</div>
