@@ -88,9 +88,16 @@ function TeacherCard({ t, registrations, onEdit, onDelete, onStudentUpdated }) {
           <p className="text-sm text-gray-500">
             {t.instrument_type}
             {t.instrument_type ? ' · ' : ''}
-            {(t.available_days || []).length > 0
-              ? (t.available_days || []).map((d) => `יום ${d}`).join(', ')
-              : 'אין ימים מוגדרים'}
+            {(() => {
+              const oldDays = t.available_days || [];
+              const ranges = t.teacher_availability_ranges || [];
+              if (oldDays.length > 0) return oldDays.map(d => `יום ${d}`).join(', ');
+              if (ranges.length > 0) {
+                const unique = [...new Set(ranges.map(r => r.day_of_week))].sort((a, b) => a - b);
+                return unique.map(d => `יום ${DAY_NAMES_TEACHER[d]}`).join(', ');
+              }
+              return 'אין ימים מוגדרים';
+            })()}
           </p>
         </div>
         <div className="flex items-center gap-3">
