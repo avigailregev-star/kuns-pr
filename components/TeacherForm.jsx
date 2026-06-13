@@ -30,9 +30,13 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
   const [error, setError] = useState('');
 
   // Courses that don't auto-match by first name — these need explicit assignment
-  const firstName = name.trim().split(' ')[0].toLowerCase();
+  const nameParts = name.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const assignableCourses = COURSE_GROUPS.flatMap((g) => g.courses).filter(
-    (course) => !firstName || !course.toLowerCase().includes(firstName)
+    (course) => {
+      if (nameParts.length === 0) return true;
+      const cl = course.toLowerCase();
+      return !nameParts.every(part => cl.includes(part));
+    }
   );
 
   function toggleDay(day) {

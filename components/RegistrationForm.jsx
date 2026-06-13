@@ -109,11 +109,18 @@ export default function RegistrationForm() {
       update('selectedTime', '');
       return;
     }
-    const matched =
-      teachersList.find((t) => (t.courses || []).includes(form.selectedCourse)) ||
-      teachersList.find((t) =>
-        (t.name?.split(' ') ?? []).some(part => part && form.selectedCourse.includes(part))
-      );
+    const byCourse = teachersList.find((t) => (t.courses || []).includes(form.selectedCourse));
+    const byName = (() => {
+      const scored = teachersList
+        .map(t => {
+          const parts = (t.name?.split(' ') ?? []).filter(p => p && form.selectedCourse.includes(p));
+          return { t, score: parts.length };
+        })
+        .filter(x => x.score > 0)
+        .sort((a, b) => b.score - a.score);
+      return scored[0]?.t || null;
+    })();
+    const matched = byCourse || byName;
     update('selectedTeacher', matched?.name || '');
     update('selectedDay', '');
     update('selectedTime', '');

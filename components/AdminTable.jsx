@@ -129,10 +129,18 @@ export default function AdminTable() {
       const teachersList = teachersJson.data || [];
       const regs = (regJson.data || []).map(row => {
         if (row.teacher) return row;
-        const matched = teachersList.find(t =>
+        const byCourse = teachersList.find(t =>
           Array.isArray(t.courses) && t.courses.includes(row.selected_course)
         );
-        return matched ? { ...row, teacher: matched.name } : row;
+        if (byCourse) return { ...row, teacher: byCourse.name };
+        const scored = teachersList
+          .map(t => {
+            const parts = (t.name?.split(' ') ?? []).filter(p => p && (row.selected_course || '').includes(p));
+            return { t, score: parts.length };
+          })
+          .filter(x => x.score > 0)
+          .sort((a, b) => b.score - a.score);
+        return scored[0]?.t ? { ...row, teacher: scored[0].t.name } : row;
       });
       setRows(regs);
       setGroups(groupsJson.data || []);
