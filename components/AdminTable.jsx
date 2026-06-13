@@ -126,9 +126,17 @@ export default function AdminTable() {
         groupsRes.json(),
         teachersRes.json(),
       ]);
-      setRows(regJson.data || []);
+      const teachersList = teachersJson.data || [];
+      const regs = (regJson.data || []).map(row => {
+        if (row.teacher) return row;
+        const matched = teachersList.find(t =>
+          Array.isArray(t.courses) && t.courses.includes(row.selected_course)
+        );
+        return matched ? { ...row, teacher: matched.name } : row;
+      });
+      setRows(regs);
       setGroups(groupsJson.data || []);
-      setTeachers(teachersJson.data || []);
+      setTeachers(teachersList);
     } catch (e) {
       console.error(e);
     } finally {

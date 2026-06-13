@@ -543,6 +543,13 @@ export default function RegistrationForm() {
                 </div>
               )}
 
+              {form.selectedCourse && form.selectedTeacher && (
+                <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)' }}>
+                  <span className="text-sm text-slate-300">מורה:</span>
+                  <span className="text-sm font-semibold text-green-400">{form.selectedTeacher}</span>
+                </div>
+              )}
+
 {['continue', 'new', 'adult'].includes(form.type) &&
                 !(form.type === 'new' && form.attendedOpenDay === false) &&
                 form.selectedTeacher && (() => {
