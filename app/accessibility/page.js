@@ -52,7 +52,7 @@ export default function AccessibilityPage() {
           <div className="mt-3 p-4 bg-purple-50 rounded-xl border border-purple-100">
             <p className="font-medium text-gray-800">רכז נגישות — קונסרבטוריון הבית למוסיקה</p>
             <p className="mt-1">טלפון: <a href="tel:086551283" className="text-purple-700 font-medium">08-6551283</a></p>
-            <p>דוא"ל: <a href="mailto:avigailregev@gmail.com" className="text-purple-700 font-medium">avigailregev@gmail.com</a></p>
+            <p>דוא"ל: <a href="mailto:consdimona@gmail.com" className="text-purple-700 font-medium">consdimona@gmail.com</a></p>
             <p className="text-sm text-gray-500 mt-2">נשתדל להגיב תוך 5 ימי עסקים.</p>
           </div>
         </Section>

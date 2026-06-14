@@ -100,7 +100,7 @@ export default function TermsPage() {
           <p>
             קונסרבטוריון הבית למוסיקה, הגפן 1, דימונה<br />
             טלפון: 08-6551283<br />
-            דוא"ל: avigailregev@gmail.com
+            דוא"ל: consdimona@gmail.com
           </p>
         </Section>
 

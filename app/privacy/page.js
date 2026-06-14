@@ -12,7 +12,7 @@ export default function PrivacyPage() {
         <Section title="1. מי אנחנו">
           <p>
             קונסרבטוריון הבית למוסיקה, הגפן 1, דימונה.<br />
-            טלפון: 08-6551283 | דוא"ל: avigailregev@gmail.com
+            טלפון: 08-6551283 | דוא"ל: consdimona@gmail.com
           </p>
           <p className="mt-2">
             אנו מחויבים להגן על הפרטיות של התלמידים, ההורים והמשתמשים באתר זה,
@@ -81,7 +81,7 @@ export default function PrivacyPage() {
             <li>קבלת עותק של המידע בפורמט קריא</li>
           </ul>
           <p className="mt-2">
-            לממש זכויות אלו, פנו אלינו בדוא"ל: avigailregev@gmail.com
+            לממש זכויות אלו, פנו אלינו בדוא"ל: consdimona@gmail.com
           </p>
         </Section>
 
@@ -97,7 +97,7 @@ export default function PrivacyPage() {
             לכל שאלה בנושא פרטיות, פנו אלינו:<br />
             קונסרבטוריון הבית למוסיקה, הגפן 1, דימונה<br />
             טלפון: 08-6551283<br />
-            דוא"ל: avigailregev@gmail.com
+            דוא"ל: consdimona@gmail.com
           </p>
         </Section>
 
