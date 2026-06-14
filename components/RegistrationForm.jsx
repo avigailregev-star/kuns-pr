@@ -767,6 +767,12 @@ export default function RegistrationForm() {
           שלב {step + 1} מתוך {steps.length}
         </p>
       </form>
+
+      <div className="mt-8 text-center text-xs text-slate-600 space-x-4 flex flex-wrap justify-center gap-x-4 gap-y-1">
+        <a href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-slate-400 underline">תנאי שימוש</a>
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-slate-400 underline">מדיניות פרטיות</a>
+        <a href="/accessibility" target="_blank" rel="noopener noreferrer" className="hover:text-slate-400 underline">הצהרת נגישות</a>
+      </div>
     </div>
   );
 }

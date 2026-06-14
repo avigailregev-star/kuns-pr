@@ -84,7 +84,14 @@ export default function AgreementScroll({ onAgree, agreed }) {
           className="w-4 h-4 accent-purple-500"
         />
         <span className="text-sm font-medium text-slate-300">
-          קראתי ואני מסכים/ה לתנאי ההרשמה
+          קראתי ואני מסכים/ה לתנאי ההרשמה,{' '}
+          <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-purple-400 underline hover:text-purple-300" onClick={(e) => e.stopPropagation()}>
+            תנאי השימוש
+          </a>
+          {' '}ו
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-purple-400 underline hover:text-purple-300" onClick={(e) => e.stopPropagation()}>
+            מדיניות הפרטיות
+          </a>
         </span>
         {agreed && <span className="mr-auto text-purple-400">✓</span>}
       </label>
