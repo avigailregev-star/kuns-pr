@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import InstrumentPicker from './InstrumentPicker';
 import DaysPicker from './DaysPicker';
 import AgreementScroll from './AgreementScroll';
-import { getPaymentLink, getCoursePrice, COURSE_GROUPS, PAYMENT_LINKS } from '../lib/paymentLinks';
+import { getPaymentLink, getCurrentPriceInfo, COURSE_GROUPS, PAYMENT_LINKS } from '../lib/paymentLinks';
 import { getLessonDuration } from '../lib/lessonDuration';
 import { freeMinutesOnDay } from '../lib/teacherCapacity';
 
@@ -543,12 +543,33 @@ export default function RegistrationForm() {
                 </>
               )}
 
-              {form.selectedCourse && getCoursePrice(form.selectedCourse) && (
-                <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.25)' }}>
-                  <span className="text-sm text-slate-300">עלות שנתית:</span>
-                  <span className="text-lg font-bold text-purple-300">{getCoursePrice(form.selectedCourse)}</span>
-                </div>
-              )}
+              {form.selectedCourse && (() => {
+                const priceInfo = getCurrentPriceInfo(form.selectedCourse);
+                if (!priceInfo) return null;
+                return (
+                  <div className="p-3 rounded-xl" style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.25)' }}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-300">עלות שנתית:</span>
+                      <div className="flex items-center gap-2">
+                        {priceInfo.isDiscounted && (
+                          <span className="text-sm text-red-400 line-through">
+                            {priceInfo.regularPrice.toLocaleString()} ₪
+                          </span>
+                        )}
+                        <span className="text-lg font-bold text-purple-300">
+                          ({priceInfo.currentPrice.toLocaleString()} ₪)
+                        </span>
+                      </div>
+                    </div>
+                    {priceInfo.isDiscounted && (
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-xs text-amber-400">{priceInfo.discountLabel}</span>
+                        <span className="text-xs text-slate-400">תחילת תשלום בחודש ספטמבר</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {form.selectedCourse && form.selectedTeacher && (
                 <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)' }}>
