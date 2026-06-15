@@ -549,22 +549,18 @@ export default function RegistrationForm() {
                 return (
                   <div className="p-3 rounded-xl" style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.25)' }}>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-300">עלות שנתית:</span>
-                      <div className="flex items-center gap-2">
-                        {priceInfo.isDiscounted && (
-                          <span className="text-sm text-red-400 line-through">
-                            {priceInfo.regularPrice.toLocaleString()} ₪
-                          </span>
-                        )}
-                        <span className="text-lg font-bold text-purple-300">
-                          ({priceInfo.currentPrice.toLocaleString()} ₪)
-                        </span>
-                      </div>
+                      <span className="text-sm text-slate-300">מחיר מלא:</span>
+                      <span className={`text-lg font-bold ${priceInfo.isDiscounted ? 'text-red-400 line-through' : 'text-purple-300'}`}>{priceInfo.regularPrice.toLocaleString()} ₪</span>
                     </div>
                     {priceInfo.isDiscounted && (
                       <div className="flex items-center justify-between mt-1">
-                        <span className="text-xs text-amber-400">{priceInfo.discountLabel}</span>
-                        <span className="text-xs text-slate-400">תחילת תשלום בחודש ספטמבר</span>
+                        <span className="text-sm text-slate-300">לאחר הנחה ({priceInfo.discountLabel}):</span>
+                        <span className="text-sm font-semibold text-green-400">{priceInfo.currentPrice.toLocaleString()} ₪</span>
+                      </div>
+                    )}
+                    {priceInfo.isDiscounted && (
+                      <div className="mt-2 p-2 rounded-lg text-xs text-amber-300" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
+                        ⚠️ בדיאלוג התשלום יופיע המחיר המלא — ההנחה תיזקף על ידי המזכירות בחודש ספטמבר
                       </div>
                     )}
                   </div>
