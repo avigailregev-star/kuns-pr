@@ -560,7 +560,7 @@ export default function RegistrationForm() {
                     )}
                     {priceInfo.isDiscounted && (
                       <div className="mt-2 p-2 rounded-lg text-xs text-amber-300" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
-                        ⚠️ בדיאלוג התשלום יופיע המחיר המלא — ההנחה תיזקף על ידי המזכירות בחודש ספטמבר
+                        בדף הסדרת התשלום יופיע המחיר המלא - ההנחה תיזקף על ידי המזכירות בחודש ספטמבר
                       </div>
                     )}
                   </div>
