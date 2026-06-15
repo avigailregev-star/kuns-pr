@@ -178,8 +178,8 @@ export default function RegistrationForm() {
       if (!form.studentName.trim()) return 'יש להזין שם תלמיד/ה';
       if (!form.parentName.trim())  return 'יש להזין שם הורה';
       if (!form.parentPhone.trim()) return 'יש להזין מספר טלפון';
-      if (!form.parentEmail.trim() || !form.parentEmail.includes('@'))
-        return 'יש להזין כתובת אימייל תקינה';
+      if (!form.parentEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.parentEmail))
+        return 'יש להזין כתובת אימייל תקינה (לדוגמה: name@gmail.com)';
       if (form.type === 'new' && form.attendedOpenDay === null)
         return 'יש לענות על שאלת יום הפתוח';
     }
