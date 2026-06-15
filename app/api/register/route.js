@@ -272,6 +272,7 @@ export async function POST(request) {
     const registrationId = data?.id;
 
     try {
+      console.log('[EMAIL] Attempting to send to:', parentEmail, '| login set:', !!process.env.BREVO_SMTP_LOGIN);
       await sendConfirmationEmail({
         parentName,
         studentName,
@@ -281,8 +282,9 @@ export async function POST(request) {
         preferredSlot,
         orchestra: orchestraGroup,
       });
+      console.log('[EMAIL] Sent OK to:', parentEmail);
     } catch (emailError) {
-      console.error('Email error:', emailError.message);
+      console.error('[EMAIL] FAILED to:', parentEmail, '| error:', emailError.message, '| code:', emailError.code, '| response:', emailError.response);
     }
 
     try {
