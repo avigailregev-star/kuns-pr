@@ -27,9 +27,12 @@ function ThankYouContent() {
           ? 'כדי להשלים את ההרשמה, יש לקיים תחילה שיחת היכרות.'
           : isTrial
           ? 'תודה על התעניינות בקונסרבטוריון המוזיקה.'
-          : <>תודה על ההרשמה לקונסרבטוריון המוזיקה.<br />ניצור איתך קשר בהקדם.</>
+          : null
         }
       </p>
+      {!isInterview && !isTrial && (
+        <p className="text-2xl font-bold text-white mb-8">אבל רגע, עוד לא סיימנו...</p>
+      )}
 
       {isInterview && (
         <div className="text-right space-y-3 mb-8 p-4 rounded-xl" style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)' }}>
