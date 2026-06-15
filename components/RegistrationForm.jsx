@@ -27,10 +27,26 @@ const GRADE_OPTIONS = [
   'גן', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'יא', 'יב',
 ];
 
-// עדכן רשימה זו עם שמות בתי הספר הרלוונטיים
 const SCHOOL_OPTIONS = [
-  // 'שם בית ספר 1',
-  // 'שם בית ספר 2',
+  'אחווה',
+  'אמיר',
+  'מנחם בגין',
+  'בן עטר',
+  'גבריאל',
+  'הרצוג',
+  'יצחק שדה',
+  'נווה עמרם',
+  'נועם חיים',
+  'עמי אסף',
+  'יצחק רבין',
+  'תיכון דרכא אחווה',
+  'תיכון דרכא אפלמן',
+  'תיכון דרכא זינמן',
+  'תיכון דרכא ליהמן',
+  'תיכון דרכא מח״ט',
+  'אולפנת צביה דימונה',
+  'היל״ה - קידום נוער',
+  'ישיבת צביה דימונה',
   'אחר',
 ];
 
@@ -327,13 +343,24 @@ export default function RegistrationForm() {
 
               <div>
                 <label className="field-label">שם בית הספר</label>
-                <select className="form-input" value={form.schoolName}
+                <select
+                  className="form-input"
+                  value={SCHOOL_OPTIONS.slice(0,-1).includes(form.schoolName) ? form.schoolName : form.schoolName ? 'אחר' : ''}
                   onChange={(e) => update('schoolName', e.target.value)}>
                   <option value="">— בחרו בית ספר —</option>
                   {SCHOOL_OPTIONS.map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
+                {!SCHOOL_OPTIONS.slice(0,-1).includes(form.schoolName) && form.schoolName !== '' && (
+                  <input
+                    type="text"
+                    className="form-input mt-2"
+                    placeholder="הזינו שם בית הספר"
+                    value={form.schoolName === 'אחר' ? '' : form.schoolName}
+                    onChange={(e) => update('schoolName', e.target.value || 'אחר')}
+                  />
+                )}
               </div>
 
               <div className="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-white/5">
