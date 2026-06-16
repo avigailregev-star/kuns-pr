@@ -27,7 +27,7 @@ export default function RegisterPage() {
         {/* Top Header */}
         <div className="text-center mb-10">
           <div className="mb-6">
-            <img src="/logo.png" alt="קונסרבטוריון המוזיקה" className="h-52 mx-auto" />
+            <img src="/logo.png" alt="קונסרבטוריון המוזיקה" className="h-72 mx-auto" />
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold mb-3 leading-tight">
             <span className="gradient-text">הרשמה לקונסרבטוריון</span>
