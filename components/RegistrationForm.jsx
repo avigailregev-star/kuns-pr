@@ -12,7 +12,7 @@ import { freeMinutesOnDay } from '../lib/teacherCapacity';
 const MELODIES_COURSE_NAMES = Object.keys(PAYMENT_LINKS).filter((name) => name.includes('מנגינות'));
 
 const PROGRAM_CATEGORIES = [
-  { value: 'melodies',      label: 'מנגינות (שנה א, ב, ג)', desc: 'תוכנית שעות בית הספר' },
+  { value: 'melodies',      label: 'מנגינות (שנה ב, ג, ד)', desc: 'תוכנית שעות בית הספר' },
   { value: 'conservatory',  label: 'קונסרבטוריון',           desc: 'לימודי כלי נגינה פרטיים' },
 ];
 
@@ -379,7 +379,7 @@ export default function RegistrationForm() {
               <div>
                 <label className="field-label">סוג הרשמה</label>
                 <div className="grid grid-cols-2 gap-2 mt-1">
-                  {PROGRAM_CATEGORIES.map((cat) => (
+                  {PROGRAM_CATEGORIES.filter((cat) => !(cat.value === 'melodies' && (form.grade === 'א' || form.grade === 'גן'))).map((cat) => (
                     <button
                       key={cat.value}
                       type="button"
