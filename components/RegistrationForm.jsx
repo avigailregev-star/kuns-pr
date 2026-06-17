@@ -306,7 +306,7 @@ export default function RegistrationForm() {
               </div>
 
               <div>
-                <label className="field-label">טלפון *</label>
+                <label className="field-label">טלפון הורה *</label>
                 <input type="tel" className="form-input" value={form.parentPhone}
                   onChange={(e) => update('parentPhone', e.target.value)} placeholder="05X-XXXXXXX" dir="ltr" />
               </div>
