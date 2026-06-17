@@ -83,13 +83,16 @@ function ThankYouContent() {
       )}
 
       {!isInterview && !isTrial && isValidPaymentUrl && (
-        <a
-          href={paymentUrl}
-          className="w-full block mb-6 text-center text-white font-bold py-4 text-lg rounded-xl transition hover:opacity-90"
-          style={{ background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)' }}
-        >
-          לתשלום דמי הרישום ושכר הלימוד ←
-        </a>
+        <>
+          <a
+            href={paymentUrl}
+            className="w-full block mb-3 text-center text-white font-bold py-4 text-lg rounded-xl transition hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)' }}
+          >
+            לתשלום דמי הרישום ושכר הלימוד ←
+          </a>
+          <p className="text-sm text-slate-400 mb-6 text-center">לתשלום במזומן פנו למתנ&quot;ס</p>
+        </>
       )}
 
       <Link href="/register" className="text-sm text-purple-400 hover:text-purple-300 transition">
