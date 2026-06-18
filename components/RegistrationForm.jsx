@@ -1,21 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import InstrumentPicker from './InstrumentPicker';
 import DaysPicker from './DaysPicker';
 import AgreementScroll from './AgreementScroll';
-import { getPaymentLink, getCourseNames, getCoursePrice } from '../lib/paymentLinks';
+import { getPaymentLink, getCoursePrice, COURSE_GROUPS, PAYMENT_LINKS } from '../lib/paymentLinks';
 
-const COURSE_NAMES = getCourseNames();
-const MELODIES_COURSE_NAMES = COURSE_NAMES.filter((name) => name.includes('מנגינות'));
+const MELODIES_COURSE_NAMES = Object.keys(PAYMENT_LINKS).filter((name) => name.includes('מנגינות'));
 
 const REGISTRATION_TYPES = [
-  { value: 'new',      label: 'מתחיל/ה',       desc: 'תלמיד/ה חדש/ה ללימודי כלי נגינה' },
-  { value: 'continue', label: 'ממשיך/ה',        desc: 'המשך לימודים מהשנה הקודמת' },
-  { value: 'adult',    label: 'בוגר/ת',          desc: 'מבוגרים המעוניינים ללמוד' },
-  { value: 'trial',    label: 'שיעור ניסיון',    desc: 'שיעור אחד לפני הרשמה' },
-  { value: 'melodies', label: 'מנגינות',         desc: 'תוכנית שעות בית הספר' },
+  { value: 'melodies', label: 'מנגינות (שנה א, ב, ג)', desc: 'תוכנית שעות בית הספר' },
+  { value: 'new',      label: 'מתחיל/ה',               desc: 'תלמיד/ה חדש/ה ללימודי כלי נגינה' },
+  { value: 'continue', label: 'ממשיך/ה',                desc: 'המשך לימודים מהשנה הקודמת' },
+  { value: 'adult',    label: 'בוגר/ת',                 desc: 'מבוגרים המעוניינים ללמוד' },
+  { value: 'trial',    label: 'שיעור ניסיון',           desc: 'שיעור אחד לפני הרשמה' },
 ];
 
 const SLOT_OPTIONS = [
@@ -43,11 +42,21 @@ const FLOWS = {
   melodies: ['personal', 'course',              'agreement'],
 };
 
+const DAYS_HE = ['א', 'ב', 'ג', 'ד', 'ה', 'ו'];
+
 export default function RegistrationForm() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [teachersList, setTeachersList] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/teachers/public')
+      .then(r => r.json())
+      .then(j => setTeachersList(j.data || []))
+      .catch(() => {});
+  }, []);
 
   const [form, setForm] = useState({
     studentName: '',
@@ -57,6 +66,9 @@ export default function RegistrationForm() {
     type: 'new',
     instruments: [],
     selectedCourse: '',
+    continueTeacher: '',
+    continueDay: '',
+    continueTime: '',
     unavailableDays: [],
     preferredSlot: '',
     agreed: false,
@@ -84,6 +96,8 @@ export default function RegistrationForm() {
     }
     if (currentStepId === 'course') {
       if (!form.selectedCourse) return 'יש לבחור קורס';
+      if (form.type === 'continue' && !form.continueTeacher && !form.preferredSlot)
+        return 'יש לבחור מורה או מועד רצוי לשיחת התאמה';
     }
     if (currentStepId === 'agreement') {
       if (!form.agreed) return 'יש לקרוא ולאשר את ההסכם';
@@ -131,8 +145,6 @@ export default function RegistrationForm() {
       setLoading(false);
     }
   }
-
-  const courseList = form.type === 'melodies' ? MELODIES_COURSE_NAMES : COURSE_NAMES;
 
   return (
     <div className="max-w-lg mx-auto">
@@ -274,9 +286,18 @@ export default function RegistrationForm() {
                   onChange={(e) => update('selectedCourse', e.target.value)}
                 >
                   <option value="">— בחרו קורס —</option>
-                  {courseList.map((name) => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
+                  {form.type === 'melodies' ? (
+                    MELODIES_COURSE_NAMES.map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))
+                  ) : (
+                    COURSE_GROUPS.flatMap((group) => [
+                      <option key={`__header__${group.label}`} disabled>── {group.label} ──</option>,
+                      ...group.courses.map((name) => (
+                        <option key={name} value={name}>&nbsp;&nbsp;{name}</option>
+                      )),
+                    ])
+                  )}
                 </select>
               </div>
 
@@ -288,15 +309,50 @@ export default function RegistrationForm() {
               )}
 
               {form.type === 'continue' && (
-                <div>
-                  <label className="field-label">מועד רצוי לשיחת התאמה *</label>
-                  <select className="form-input mt-1" value={form.preferredSlot}
-                    onChange={(e) => update('preferredSlot', e.target.value)}>
-                    <option value="">— בחרו מועד מועדף —</option>
-                    {SLOT_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
+                <div className="space-y-4 pt-2 border-t border-white/10">
+                  <p className="text-sm text-purple-300 font-medium">שיבוץ אוטומטי (אם ידוע)</p>
+
+                  <div>
+                    <label className="field-label">שם המורה שלי</label>
+                    <select className="form-input mt-1" value={form.continueTeacher}
+                      onChange={(e) => update('continueTeacher', e.target.value)}>
+                      <option value="">— בחרו מורה (אופציונלי) —</option>
+                      {teachersList.map(t => (
+                        <option key={t.id} value={t.name}>{t.name}{t.instrument_type ? ` (${t.instrument_type})` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {form.continueTeacher && (
+                    <div className="flex gap-3">
+                      <div className="flex-1">
+                        <label className="field-label">יום השיעור הקבוע</label>
+                        <select className="form-input mt-1" value={form.continueDay}
+                          onChange={(e) => update('continueDay', e.target.value)}>
+                          <option value="">— יום —</option>
+                          {DAYS_HE.map(d => <option key={d} value={d}>יום {d}</option>)}
+                        </select>
+                      </div>
+                      <div className="flex-1">
+                        <label className="field-label">שעת השיעור</label>
+                        <input type="time" className="form-input mt-1" value={form.continueTime}
+                          onChange={(e) => update('continueTime', e.target.value)} />
+                      </div>
+                    </div>
+                  )}
+
+                  {!form.continueTeacher && (
+                    <div>
+                      <label className="field-label">מועד רצוי לשיחת התאמה *</label>
+                      <select className="form-input mt-1" value={form.preferredSlot}
+                        onChange={(e) => update('preferredSlot', e.target.value)}>
+                        <option value="">— בחרו מועד מועדף —</option>
+                        {SLOT_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -3,6 +3,7 @@ import { getSupabaseClient } from '../../../lib/supabase';
 import { appendRegistrationRow } from '../../../lib/googleSheets';
 import { sendToMake } from '../../../lib/makeWebhook';
 import { sendConfirmationEmail } from '../../../lib/email';
+import { getOrchestraForInstruments, getOrchestraFromCourse } from '../../../lib/autoAssign';
 
 export async function POST(request) {
   try {
@@ -15,6 +16,9 @@ export async function POST(request) {
       type,
       instruments,
       selectedCourse,
+      continueTeacher,
+      continueDay,
+      continueTime,
       unavailableDays,
       preferredSlot,
     } = body;
@@ -23,6 +27,13 @@ export async function POST(request) {
     if (!studentName || !parentName || !parentPhone || !parentEmail) {
       return NextResponse.json({ error: 'חסרים שדות חובה' }, { status: 400 });
     }
+
+    // Auto-assign orchestra/choir for continuing students (by course name, since they don't pick instruments)
+    const orchestra = type === 'continue' ? getOrchestraFromCourse(selectedCourse) : null;
+
+    // Auto-assign for continuing students who provided their teacher/day/time
+    const autoAssign = type === 'continue' && continueTeacher;
+    const initialStatus = autoAssign ? 'שובץ' : 'חדש';
 
     // 1. Save to Supabase
     const supabase = getSupabaseClient();
@@ -38,8 +49,12 @@ export async function POST(request) {
           instruments,
           selected_course: selectedCourse || null,
           unavailable_days: unavailableDays,
-          preferred_slot: preferredSlot,
-          status: 'חדש',
+          preferred_slot: preferredSlot || null,
+          status: initialStatus,
+          orchestra: orchestra || null,
+          teacher: continueTeacher || null,
+          assigned_day: continueDay || null,
+          assigned_time: continueTime || null,
         },
       ])
       .select('id')
@@ -54,7 +69,7 @@ export async function POST(request) {
 
     // 2. Send confirmation email
     try {
-      await sendConfirmationEmail({ parentName, studentName, parentEmail, instruments, preferredSlot });
+      await sendConfirmationEmail({ parentName, studentName, parentEmail, instruments, preferredSlot, orchestra });
     } catch (emailError) {
       console.error('Email error:', emailError.message);
     }
