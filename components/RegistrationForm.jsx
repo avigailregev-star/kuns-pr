@@ -547,7 +547,11 @@ export default function RegistrationForm() {
                       onChange={(e) => { setSelectedGroup(e.target.value); update('selectedCourse', ''); }}
                     >
                       <option value="">— בחרו מחלקה —</option>
-                      {COURSE_GROUPS.map((group) => (
+                      {COURSE_GROUPS.filter((group) =>
+                        form.type === 'melodies'
+                          ? group.label.includes('מנגינות')
+                          : !group.label.includes('מנגינות')
+                      ).map((group) => (
                         <option key={group.label} value={group.label}>{group.label}</option>
                       ))}
                     </select>
