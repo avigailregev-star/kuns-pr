@@ -920,26 +920,54 @@ export default function AdminTable() {
                                   </div>
                                 </div>
                               ) : (
-                                <select
-                                  className="admin-input"
-                                  value={selectedGroups[row.id] || ''}
-                                  onChange={(e) => {
-                                    if (e.target.value === '__new__') {
-                                      setCreatingGroupFor(row.id);
-                                      setNewGroupName('');
-                                    } else {
-                                      setSelectedGroups(prev => ({ ...prev, [row.id]: e.target.value }));
-                                    }
-                                  }}
-                                >
-                                  <option value="">— הוסף שיעור בנוכחות —</option>
-                                  {groups.map(g => (
-                                    <option key={g.id} value={g.id}>
-                                      {g.name}{g.is_mangan_school && g.school_name ? ` (${g.school_name})` : ''}
-                                    </option>
-                                  ))}
-                                  <option value="__new__">➕ צור שיעור חדש</option>
-                                </select>
+                                <div className="flex items-center gap-2">
+                                  <select
+                                    className="admin-input flex-1"
+                                    value={selectedGroups[row.id] || ''}
+                                    onChange={(e) => {
+                                      if (e.target.value === '__new__') {
+                                        setCreatingGroupFor(row.id);
+                                        setNewGroupName('');
+                                      } else {
+                                        setSelectedGroups(prev => ({ ...prev, [row.id]: e.target.value }));
+                                      }
+                                    }}
+                                  >
+                                    <option value="">— הוסף שיעור בנוכחות —</option>
+                                    {groups.map(g => (
+                                      <option key={g.id} value={g.id}>
+                                        {g.name}{g.is_mangan_school && g.school_name ? ` (${g.school_name})` : ''}
+                                      </option>
+                                    ))}
+                                    <option value="__new__">➕ צור שיעור חדש</option>
+                                  </select>
+                                  {selectedGroups[row.id] && (() => {
+                                    const grp = groups.find(g => String(g.id) === String(selectedGroups[row.id]));
+                                    if (!grp) return null;
+                                    return (
+                                      <button
+                                        type="button"
+                                        title="מחק קבוצה"
+                                        onClick={async () => {
+                                          if (!confirm(`למחוק את הקבוצה "${grp.name}"?\nתלמידי הקבוצה יוסרו גם כן מאפליקציית הנוכחות.`)) return;
+                                          const res = await fetch('/api/groups', {
+                                            method: 'DELETE',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ id: grp.id }),
+                                          });
+                                          if (res.ok) {
+                                            setGroups(prev => prev.filter(x => x.id !== grp.id));
+                                            setSelectedGroups(prev => { const n = { ...prev }; delete n[row.id]; return n; });
+                                          } else {
+                                            const j = await res.json();
+                                            alert(j.error || 'שגיאה במחיקה');
+                                          }
+                                        }}
+                                        className="text-red-400 hover:text-red-600 text-lg font-bold px-1 transition-colors"
+                                      >🗑</button>
+                                    );
+                                  })()}
+                                </div>
                               )}
                               {(() => {
                                 const selId = selectedGroups[row.id];
