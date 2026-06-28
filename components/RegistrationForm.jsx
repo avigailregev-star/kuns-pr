@@ -301,19 +301,19 @@ export default function RegistrationForm() {
                 <div>
                   <label htmlFor="studentName" className="field-label">שם התלמיד/ה *</label>
                   <input id="studentName" type="text" className="form-input" value={form.studentName}
-                    onChange={(e) => update('studentName', e.target.value)} placeholder="שם פרטי ומשפחה" />
+                    onChange={(e) => update('studentName', e.target.value)} placeholder="שם פרטי ומשפחה" aria-required="true" />
                 </div>
                 <div>
                   <label htmlFor="parentName" className="field-label">שם ההורה *</label>
                   <input id="parentName" type="text" className="form-input" value={form.parentName}
-                    onChange={(e) => update('parentName', e.target.value)} placeholder="שם פרטי ומשפחה" />
+                    onChange={(e) => update('parentName', e.target.value)} placeholder="שם פרטי ומשפחה" aria-required="true" />
                 </div>
               </div>
 
               <div>
                 <label htmlFor="parentPhone" className="field-label">טלפון הורה *</label>
                 <input id="parentPhone" type="tel" className="form-input" value={form.parentPhone}
-                  onChange={(e) => update('parentPhone', e.target.value)} placeholder="05X-XXXXXXX" dir="ltr" />
+                  onChange={(e) => update('parentPhone', e.target.value)} placeholder="05X-XXXXXXX" dir="ltr" aria-required="true" />
               </div>
 
               <div>
@@ -325,7 +325,7 @@ export default function RegistrationForm() {
               <div>
                 <label htmlFor="parentEmail" className="field-label">אימייל *</label>
                 <input id="parentEmail" type="email" className="form-input" value={form.parentEmail}
-                  onChange={(e) => update('parentEmail', e.target.value)} placeholder="example@email.com" dir="ltr" />
+                  onChange={(e) => update('parentEmail', e.target.value)} placeholder="example@email.com" dir="ltr" aria-required="true" />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -474,6 +474,7 @@ export default function RegistrationForm() {
                 <select
                   id="preferredSlot"
                   className="form-input mt-1"
+                  aria-required="true"
                   value={form.preferredSlot}
                   onChange={(e) => update('preferredSlot', e.target.value)}
                 >
@@ -796,8 +797,8 @@ export default function RegistrationForm() {
 
           {/* Error */}
           {error && (
-            <div className="mt-5 p-3 rounded-xl border border-red-500/30 bg-red-500/10 text-red-300 text-sm flex items-center gap-2">
-              <span>⚠️</span> {error}
+            <div role="alert" className="mt-5 p-3 rounded-xl border border-red-500/30 bg-red-500/10 text-red-300 text-sm flex items-center gap-2">
+              <span aria-hidden="true">⚠️</span> {error}
             </div>
           )}
         </div>
