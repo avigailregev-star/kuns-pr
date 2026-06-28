@@ -5,7 +5,21 @@ import { COURSE_GROUPS } from '../lib/paymentLinks';
 
 const DAYS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו'];
 const RANGE_DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
-const INSTRUMENT_TYPES = ['קשת', 'נשיפה', 'פסנתר', 'שירה', 'אחר'];
+const INSTRUMENT_TYPES = [
+  'כינור',
+  'חליל צד',
+  'חצוצרה',
+  'סקסופון',
+  'קלרינט',
+  'פסנתר',
+  'תופים',
+  'פיתוח קול',
+  'גיטרה',
+  'בגלמה',
+  'עוד',
+  "קמנצ'ה",
+  'אחר',
+];
 
 export default function TeacherForm({ initial = {}, onSave, onCancel }) {
   const [name, setName] = useState(initial.name || '');

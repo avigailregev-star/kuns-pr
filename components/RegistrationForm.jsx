@@ -528,7 +528,7 @@ export default function RegistrationForm() {
                 <p className="text-slate-400 text-sm">
                   {form.type === 'melodies'
                     ? 'בחרו את תוכנית מנגינות המתאימה לבית הספר'
-                    : 'בחרו כלי שבו תרצו להמשיך'}
+                    : 'בחרו מחלקה שבו תרצו להמשיך'}
                 </p>
               </div>
 
@@ -549,13 +549,13 @@ export default function RegistrationForm() {
               ) : (
                 <>
                   <div>
-                    <label className="field-label">כלי *</label>
+                    <label className="field-label">מחלקה *</label>
                     <select
                       className="form-input mt-1"
                       value={selectedGroup}
                       onChange={(e) => { setSelectedGroup(e.target.value); update('selectedCourse', ''); }}
                     >
-                      <option value="">— בחרו כלי —</option>
+                      <option value="">— בחרו מחלקה —</option>
                       {COURSE_GROUPS.filter((group) =>
                         form.type === 'melodies'
                           ? group.label.includes('מנגינות')
