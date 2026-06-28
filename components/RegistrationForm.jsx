@@ -131,9 +131,10 @@ export default function RegistrationForm() {
     }
     const byCourse = teachersList.find((t) => (t.courses || []).includes(form.selectedCourse));
     const byName = (() => {
+      const courseWords = new Set(form.selectedCourse.split(/[\s\-–,]+/).filter(Boolean));
       const scored = teachersList
         .map(t => {
-          const parts = (t.name?.split(' ') ?? []).filter(p => p && form.selectedCourse.includes(p));
+          const parts = (t.name?.split(' ') ?? []).filter(p => p && courseWords.has(p));
           return { t, score: parts.length };
         })
         .filter(x => x.score > 0)
