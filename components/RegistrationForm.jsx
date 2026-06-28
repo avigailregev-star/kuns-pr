@@ -11,6 +11,10 @@ import { freeMinutesOnDay } from '../lib/teacherCapacity';
 
 const MELODIES_COURSE_NAMES = Object.keys(PAYMENT_LINKS).filter((name) => name.includes('מנגינות'));
 
+const FIXED_COURSE_DAYS = {
+  "מקהלת צעירים ב-ו": 3, // יום רביעי
+};
+
 const PROGRAM_CATEGORIES = [
   { value: 'melodies',      label: 'מנגינות (שנה ב, ג, ד)', desc: 'תוכנית שעות בית הספר' },
   { value: 'conservatory',  label: 'קונסרבטוריון',           desc: 'לימודי כלי נגינה פרטיים' },
@@ -138,7 +142,8 @@ export default function RegistrationForm() {
     })();
     const matched = byCourse || byName;
     update('selectedTeacher', matched?.name || '');
-    update('selectedDay', '');
+    const fixedDay = FIXED_COURSE_DAYS[form.selectedCourse];
+    update('selectedDay', fixedDay != null ? fixedDay : '');
     update('selectedTime', '');
   }, [form.selectedCourse, teachersList]);
 
@@ -616,9 +621,15 @@ export default function RegistrationForm() {
                   .slice().sort((a, b) => a.day_of_week - b.day_of_week);
 
                 if (availRanges.length > 0) {
+                  const fixedDay = FIXED_COURSE_DAYS[form.selectedCourse];
                   return (
                     <div className="space-y-3 pt-2 border-t border-white/10">
                       <label className="field-label">יום השיעור הקבוע</label>
+                      {fixedDay != null ? (
+                        <div className="p-3 rounded-xl border border-purple-400/40 bg-purple-500/10 text-center">
+                          <span className="text-sm text-white font-semibold">יום {DAY_NAMES_FULL[fixedDay]}</span>
+                        </div>
+                      ) : (
                       <div className="grid grid-cols-3 gap-2">
                         {availRanges.map(s => {
                           const usedMins = teacher?.used_minutes_per_day?.[s.day_of_week] || 0;
@@ -662,6 +673,7 @@ export default function RegistrationForm() {
                           );
                         })}
                       </div>
+                      )}
                       {selectedTeacherAllFull ? (
                         <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 text-center">
                           ⚠️ כל הימים אצל המורה תפוסים כרגע — הרישום שלך יישמר ברשימת המתנה ונדאג ליידע אותך כשיתפנה מקום
