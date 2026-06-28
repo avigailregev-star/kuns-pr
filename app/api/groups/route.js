@@ -106,7 +106,7 @@ export async function DELETE(request) {
     const { error } = await supabase.from('groups').delete().eq('id', id);
     if (error) {
       console.error('Group delete error:', error.message);
-      return NextResponse.json({ error: 'שגיאה במחיקת קבוצה' }, { status: 500 });
+      return NextResponse.json({ error: `שגיאה במחיקת קבוצה: ${error.message}` }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
