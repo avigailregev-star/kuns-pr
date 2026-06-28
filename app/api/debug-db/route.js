@@ -6,22 +6,28 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const supabase = getSupabaseClient();
-    const { data: rangesData } = await supabase
+
+    // Query 1: no join — should return ALL teachers
+    const { data: noJoin } = await supabase
       .from('teachers')
-      .select('id, name, teacher_availability_ranges(day_of_week)')
+      .select('id, name')
       .order('name');
-    const { data: daysData } = await supabase
+
+    // Query 2: with join — this is what public API uses
+    const { data: withJoin, error: joinError } = await supabase
       .from('teachers')
-      .select('id, available_days');
-    const daysMap = Object.fromEntries((daysData ?? []).map(t => [t.id, t.available_days ?? []]));
+      .select('id, name, instrument_type, max_students, teacher_availability_ranges(day_of_week, start_time, end_time)')
+      .order('name');
+
+    const noJoinNames = (noJoin ?? []).map(t => t.name);
+    const withJoinNames = (withJoin ?? []).map(t => t.name);
+    const missing = noJoinNames.filter(n => !withJoinNames.includes(n));
 
     return NextResponse.json({
-      teachers: (rangesData ?? []).map(t => ({
-        name: t.name,
-        old_days: daysMap[t.id] ?? [],
-        new_ranges: t.teacher_availability_ranges?.length ?? 0,
-        has_any: (daysMap[t.id]?.length > 0) || (t.teacher_availability_ranges?.length > 0),
-      }))
+      total_no_join: noJoinNames.length,
+      total_with_join: withJoinNames.length,
+      missing_from_join: missing,
+      join_error: joinError?.message ?? null,
     });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) });
