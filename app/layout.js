@@ -10,6 +10,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="he" dir="rtl">
       <head>
+        <script src="https://cdn.userway.org/widget.js" data-account="zpav1AGGkJ" async></script>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
