@@ -92,7 +92,7 @@ export default function RegistrationForm() {
   const [selectedGroup, setSelectedGroup] = useState('');
 
   useEffect(() => {
-    fetch('/api/teachers/public')
+    fetch('/api/teachers/public', { cache: 'no-store' })
       .then(r => r.json())
       .then(j => setTeachersList(j.data || []))
       .catch(() => {});
