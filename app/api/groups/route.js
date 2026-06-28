@@ -96,8 +96,11 @@ export async function DELETE(request) {
     // Clear group_id from registrations (FK constraint)
     await supabase.from('registrations').update({ group_id: null }).eq('group_id', id);
 
-    // Delete students in this group (if table exists)
+    // Delete students in this group
     await supabase.from('students').delete().eq('group_id', id);
+
+    // Delete lessons in this group (lessons_group_id_fkey)
+    await supabase.from('lessons').delete().eq('group_id', id);
 
     // Delete group schedules
     await supabase.from('group_schedules').delete().eq('group_id', id);
