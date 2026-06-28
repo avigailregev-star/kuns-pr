@@ -51,6 +51,7 @@ export async function POST(request) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!data) return NextResponse.json({ error: 'המורה לא נשמר — ייתכן שגיאת הרשאות במסד הנתונים' }, { status: 500 });
 
   if (Array.isArray(availability_ranges) && availability_ranges.length > 0 && data?.id) {
     await supabase.from('teacher_availability_ranges').insert(
