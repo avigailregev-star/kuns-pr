@@ -299,44 +299,44 @@ export default function RegistrationForm() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="field-label">שם התלמיד/ה *</label>
-                  <input type="text" className="form-input" value={form.studentName}
+                  <label htmlFor="studentName" className="field-label">שם התלמיד/ה *</label>
+                  <input id="studentName" type="text" className="form-input" value={form.studentName}
                     onChange={(e) => update('studentName', e.target.value)} placeholder="שם פרטי ומשפחה" />
                 </div>
                 <div>
-                  <label className="field-label">שם ההורה *</label>
-                  <input type="text" className="form-input" value={form.parentName}
+                  <label htmlFor="parentName" className="field-label">שם ההורה *</label>
+                  <input id="parentName" type="text" className="form-input" value={form.parentName}
                     onChange={(e) => update('parentName', e.target.value)} placeholder="שם פרטי ומשפחה" />
                 </div>
               </div>
 
               <div>
-                <label className="field-label">טלפון הורה *</label>
-                <input type="tel" className="form-input" value={form.parentPhone}
+                <label htmlFor="parentPhone" className="field-label">טלפון הורה *</label>
+                <input id="parentPhone" type="tel" className="form-input" value={form.parentPhone}
                   onChange={(e) => update('parentPhone', e.target.value)} placeholder="05X-XXXXXXX" dir="ltr" />
               </div>
 
               <div>
-                <label className="field-label">טלפון תלמיד/ה <span className="text-slate-500 font-normal">(לא חובה)</span></label>
-                <input type="tel" className="form-input" value={form.studentPhone}
+                <label htmlFor="studentPhone" className="field-label">טלפון תלמיד/ה <span className="text-slate-500 font-normal">(לא חובה)</span></label>
+                <input id="studentPhone" type="tel" className="form-input" value={form.studentPhone}
                   onChange={(e) => update('studentPhone', e.target.value)} placeholder="05X-XXXXXXX" dir="ltr" />
               </div>
 
               <div>
-                <label className="field-label">אימייל *</label>
-                <input type="email" className="form-input" value={form.parentEmail}
+                <label htmlFor="parentEmail" className="field-label">אימייל *</label>
+                <input id="parentEmail" type="email" className="form-input" value={form.parentEmail}
                   onChange={(e) => update('parentEmail', e.target.value)} placeholder="example@email.com" dir="ltr" />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="field-label">תאריך לידה</label>
-                  <input type="date" className="form-input" value={form.birthdate}
+                  <label htmlFor="birthdate" className="field-label">תאריך לידה</label>
+                  <input id="birthdate" type="date" className="form-input" value={form.birthdate}
                     onChange={(e) => update('birthdate', e.target.value)} dir="ltr" />
                 </div>
                 <div>
-                  <label className="field-label">כיתה</label>
-                  <select className="form-input" value={form.grade}
+                  <label htmlFor="grade" className="field-label">כיתה</label>
+                  <select id="grade" className="form-input" value={form.grade}
                     onChange={(e) => update('grade', e.target.value)}>
                     <option value="">— בחרו כיתה —</option>
                     {GRADE_OPTIONS.map((g) => (
@@ -347,8 +347,9 @@ export default function RegistrationForm() {
               </div>
 
               <div>
-                <label className="field-label">שם בית הספר</label>
+                <label htmlFor="schoolName" className="field-label">שם בית הספר</label>
                 <select
+                  id="schoolName"
                   className="form-input"
                   value={SCHOOL_OPTIONS.slice(0,-1).includes(form.schoolName) ? form.schoolName : form.schoolName ? 'אחר' : ''}
                   onChange={(e) => update('schoolName', e.target.value)}>
@@ -469,8 +470,9 @@ export default function RegistrationForm() {
                 </p>
               </div>
               <div>
-                <label className="field-label">מועד מועדף לשיחה *</label>
+                <label htmlFor="preferredSlot" className="field-label">מועד מועדף לשיחה *</label>
                 <select
+                  id="preferredSlot"
                   className="form-input mt-1"
                   value={form.preferredSlot}
                   onChange={(e) => update('preferredSlot', e.target.value)}
@@ -682,8 +684,9 @@ export default function RegistrationForm() {
                         <p className="text-xs text-slate-400 text-center">שעה מדויקת תינתן בהמשך</p>
                       )}
                       <div>
-                        <label className="field-label">הערות לגבי זמינות <span className="text-slate-500 font-normal">(לא חובה)</span></label>
+                        <label htmlFor="availabilityNotes" className="field-label">הערות לגבי זמינות <span className="text-slate-500 font-normal">(לא חובה)</span></label>
                         <textarea
+                          id="availabilityNotes"
                           className="form-input resize-none h-20"
                           value={form.availabilityNotes}
                           onChange={(e) => update('availabilityNotes', e.target.value)}
