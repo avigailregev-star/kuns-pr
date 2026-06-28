@@ -93,12 +93,11 @@ export async function DELETE(request) {
 
     const supabase = getSupabaseClient();
 
-    // Delete students in this group first (FK constraint)
-    const { error: studErr } = await supabase.from('students').delete().eq('group_id', id);
-    if (studErr) {
-      console.error('Students delete error:', studErr.message);
-      return NextResponse.json({ error: 'שגיאה במחיקת תלמידים' }, { status: 500 });
-    }
+    // Clear group_id from registrations (FK constraint)
+    await supabase.from('registrations').update({ group_id: null }).eq('group_id', id);
+
+    // Delete students in this group (if table exists)
+    await supabase.from('students').delete().eq('group_id', id);
 
     // Delete group schedules
     await supabase.from('group_schedules').delete().eq('group_id', id);
