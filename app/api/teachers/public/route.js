@@ -13,11 +13,11 @@ export async function GET() {
   const [{ data, error }, { data: extraData }] = await Promise.all([
     supabase
       .from('teachers')
-      .select('id, name, instrument_type, available_days, max_students, teacher_availability_ranges(day_of_week, start_time, end_time)')
+      .select('id, name, instrument_type, max_students, teacher_availability_ranges(day_of_week, start_time, end_time)')
       .order('name'),
     supabase
       .from('teachers')
-      .select('id, available_hours, courses'),
+      .select('id, available_days, available_hours, courses'),
   ]);
 
   if (error) return NextResponse.json({ data: [] });
@@ -27,6 +27,7 @@ export async function GET() {
   const usedMap = await buildUsedMinutesMap(supabase);
   const enriched = (data || []).map(t => ({
     ...t,
+    available_days: extraMap[t.id]?.available_days ?? [],
     available_hours: extraMap[t.id]?.available_hours ?? {},
     courses: extraMap[t.id]?.courses ?? [],
     used_minutes_per_day: usedMap[t.name] || {},
