@@ -505,6 +505,7 @@ export default function RegistrationForm() {
               {form.type === 'trial' && (
                 <div>
                   <label className="field-label">מועד רצוי לשיחה טלפונית *</label>
+                  <p className="text-slate-400 text-xs mt-1 mb-1 text-right">שעות פתיחה במהלך חודשי הקיץ: ימים א-ה 10:00-14:00</p>
                   <select className="form-input mt-1" value={form.preferredSlot}
                     onChange={(e) => update('preferredSlot', e.target.value)}>
                     <option value="">— בחרו מועד מועדף —</option>
