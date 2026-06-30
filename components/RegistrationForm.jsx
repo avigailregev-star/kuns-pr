@@ -55,12 +55,11 @@ const SCHOOL_OPTIONS = [
 ];
 
 const SLOT_OPTIONS = [
-  'ימי א׳ בין 16:00–19:00',
-  'ימי ב׳ בין 15:00–18:00',
-  'ימי ג׳ בין 16:00–19:00',
-  'ימי ד׳ בין 15:00–18:00',
-  'ימי ה׳ בין 16:00–19:00',
-  'ימי ו׳ בין 09:00–13:00',
+  'ימי א׳ בין 10:00–14:00',
+  'ימי ב׳ בין 10:00–14:00',
+  'ימי ג׳ בין 10:00–14:00',
+  'ימי ד׳ בין 10:00–14:00',
+  'ימי ה׳ בין 10:00–14:00',
 ];
 
 const STEP_DEFS = {
@@ -505,7 +504,7 @@ export default function RegistrationForm() {
               {form.type === 'trial' && (
                 <div>
                   <label className="field-label">מועד רצוי לשיחה טלפונית *</label>
-                  <p className="text-slate-400 text-xs mt-1 mb-1 text-right">שעות פתיחה במהלך חודשי הקיץ: ימים א-ה 10:00-14:00</p>
+                  <p className="text-slate-400 text-xs mt-1 mb-1 text-right">זמני פתיחה במהלך הקיץ: ימים א׳–ה׳ 10:00–14:00</p>
                   <select className="form-input mt-1" value={form.preferredSlot}
                     onChange={(e) => update('preferredSlot', e.target.value)}>
                     <option value="">— בחרו מועד מועדף —</option>
@@ -601,7 +600,7 @@ export default function RegistrationForm() {
                     )}
                     {priceInfo.isDiscounted && (
                       <div className="mt-2 p-2 rounded-lg text-xs text-amber-300" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
-                        בדף הסדרת התשלום יופיע המחיר המלא - ההנחה תיזקף על ידי המזכירות בחודש ספטמבר
+                        *החיוב יחל בחודש ספטמבר 2026<br />*ההנחה שניתנה בהרשמה המוקדמת תיזקף בהתאם
                       </div>
                     )}
                   </div>
