@@ -169,11 +169,11 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
                 </button>
                 {isOn && (
                   <>
-                    <input type="time" className="admin-input py-1 text-sm"
+                    <input type="time" dir="ltr" className="admin-input py-1 text-sm"
                       value={availabilityRanges[day].start_time}
                       onChange={(e) => setRangeTime(day, 'start_time', e.target.value)} />
                     <span className="text-gray-400 text-sm">עד</span>
-                    <input type="time" className="admin-input py-1 text-sm"
+                    <input type="time" dir="ltr" className="admin-input py-1 text-sm"
                       value={availabilityRanges[day].end_time}
                       onChange={(e) => setRangeTime(day, 'end_time', e.target.value)} />
                   </>

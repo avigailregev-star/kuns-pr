@@ -729,6 +729,7 @@ export default function AdminTable() {
                                         <div className="flex gap-2 items-center">
                                           <input
                                             type="time"
+                                            dir="ltr"
                                             className="admin-input flex-1"
                                             value={row.assigned_time || ''}
                                             onChange={(e) => updateAssignment(row.id, 'assigned_time', e.target.value)}
@@ -738,6 +739,7 @@ export default function AdminTable() {
                                               <span className="text-xs text-gray-400 shrink-0">עד</span>
                                               <input
                                                 type="time"
+                                                dir="ltr"
                                                 className="admin-input flex-1"
                                                 value={row.assigned_end_time || minsToTime(timeToMins(row.assigned_time) + getLessonDuration(row.selected_course))}
                                                 onChange={(e) => updateAssignment(row.id, 'assigned_end_time', e.target.value)}
@@ -843,6 +845,7 @@ export default function AdminTable() {
                                       {row.assigned_day && (
                                         <input
                                           type="time"
+                                          dir="ltr"
                                           className="admin-input w-full"
                                           value={row.assigned_time || ''}
                                           min={hours[row.assigned_day]?.from}

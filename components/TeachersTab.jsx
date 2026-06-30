@@ -144,6 +144,7 @@ function TeacherCard({ t, registrations, onEdit, onDelete, onStudentUpdated }) {
                       </select>
                       <input
                         type="time"
+                        dir="ltr"
                         value={editTime}
                         onChange={e => setEditTime(e.target.value)}
                         className="border border-gray-300 rounded px-2 py-1 text-xs"
