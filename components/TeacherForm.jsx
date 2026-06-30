@@ -23,7 +23,10 @@ const INSTRUMENT_TYPES = [
 
 export default function TeacherForm({ initial = {}, onSave, onCancel }) {
   const [name, setName] = useState(initial.name || '');
-  const [instrumentType, setInstrumentType] = useState(initial.instrument_type || '');
+  const [instrumentTypes, setInstrumentTypes] = useState(() => {
+    const v = initial.instrument_type || '';
+    return v ? v.split(',').map(s => s.trim()).filter(Boolean) : [];
+  });
   const [availableDays, setAvailableDays] = useState(initial.available_days || []);
   const [availableHours, setAvailableHours] = useState(initial.available_hours || {});
   const [maxStudents, setMaxStudents] = useState(
@@ -86,7 +89,7 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!name.trim() || !instrumentType) {
+    if (!name.trim() || instrumentTypes.length === 0) {
       setError('שם וסוג כלי הם שדות חובה');
       return;
     }
@@ -95,7 +98,7 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
     try {
       await onSave({
         name,
-        instrument_type: instrumentType,
+        instrument_type: instrumentTypes.join(', '),
         available_days: availableDays,
         available_hours: availableHours,
         max_students: maxStudents !== '' ? parseInt(maxStudents, 10) : null,
@@ -113,24 +116,41 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 p-4 border border-gray-200 rounded-lg bg-white">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">שם המורה *</label>
-          <input
-            type="text"
-            className="admin-input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="שם פרטי ומשפחה"
-          />
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">שם המורה *</label>
+        <input
+          type="text"
+          className="admin-input"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="שם פרטי ומשפחה"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">כלים שהמורה מלמד *</label>
+        <div className="max-h-44 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1 bg-gray-50">
+          {INSTRUMENT_TYPES.map((inst) => {
+            const id = `inst-${inst}`;
+            return (
+              <div key={inst} className="flex items-center gap-2 hover:bg-white px-2 py-1 rounded">
+                <input
+                  type="checkbox"
+                  id={id}
+                  checked={instrumentTypes.includes(inst)}
+                  onChange={() => setInstrumentTypes((prev) =>
+                    prev.includes(inst) ? prev.filter((i) => i !== inst) : [...prev, inst]
+                  )}
+                  className="accent-purple-500 cursor-pointer"
+                />
+                <label htmlFor={id} className="text-sm text-gray-700 cursor-pointer select-none">{inst}</label>
+              </div>
+            );
+          })}
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">סוג כלי *</label>
-          <select className="admin-input" value={instrumentType} onChange={(e) => setInstrumentType(e.target.value)}>
-            <option value="">— בחר —</option>
-            {INSTRUMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </div>
+        {instrumentTypes.length > 0 && (
+          <p className="text-xs text-purple-600 mt-1">נבחרו: {instrumentTypes.join(', ')}</p>
+        )}
+      </div>
       </div>
 
       <div>

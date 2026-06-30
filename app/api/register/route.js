@@ -105,7 +105,7 @@ export async function POST(request) {
       const { data: matchingTeachers } = await supabase
         .from('teachers')
         .select('id, name, instrument_type, available_days, available_hours, max_students')
-        .eq('instrument_type', primaryInstrument);
+        .ilike('instrument_type', `%${primaryInstrument}%`);
 
       if (!matchingTeachers || matchingTeachers.length === 0) {
         initialStatus = 'רשימת המתנה';
