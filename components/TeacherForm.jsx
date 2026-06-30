@@ -151,7 +151,6 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
           <p className="text-xs text-purple-600 mt-1">נבחרו: {instrumentTypes.join(', ')}</p>
         )}
       </div>
-      </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
