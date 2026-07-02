@@ -228,9 +228,8 @@ export async function POST(request) {
         ? getOrchestraFromCourse(selectedCourse)
         : null;
 
-    // ── Auto-assign continuing students ─────────────────────────────────────
-    const autoAssign = type === 'continue' && selectedTeacher;
-    if (autoAssign && initialStatus !== 'רשימת המתנה') initialStatus = 'שובץ';
+    // ── Continuing students start as 'חדש' — admin assigns manually ─────────
+    const autoAssign = false;
 
     // ── Save to Supabase ─────────────────────────────────────────────────────
     const supabase = getSupabaseClient();
