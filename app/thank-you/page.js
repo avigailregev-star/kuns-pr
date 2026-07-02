@@ -114,17 +114,17 @@ function ThankYouContent() {
 
       {!isInterview && !isTrial && (
         cashDone ? (
-          <div className="w-full mb-6 p-4 rounded-xl text-center text-green-300 font-semibold" style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)' }}>
-            ✓ תודה, נא גשו למתנ&quot;ס להשלמת התשלום
+          <div className="w-full mb-6 p-3 rounded-xl text-center text-slate-300 text-sm" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)' }}>
+            ✓ תודה אנא גשו למזכירות המרכזים הקהילתיים להסדרת תשלום
           </div>
         ) : (
           <button
             onClick={handleCash}
             disabled={cashLoading}
-            className="w-full block mb-6 text-center text-white font-bold py-4 text-lg rounded-xl transition hover:opacity-90 disabled:opacity-60"
-            style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)' }}
+            className="w-full block mb-6 text-center text-slate-300 text-sm py-3 rounded-xl transition hover:text-white disabled:opacity-60"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)' }}
           >
-            {cashLoading ? '...' : 'לתשלום במזומן לחץ כאן'}
+            {cashLoading ? '...' : 'לתשלום במזומן אנא סמנו כאן'}
           </button>
         )
       )}
