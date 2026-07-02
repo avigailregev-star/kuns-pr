@@ -104,6 +104,7 @@ export default function AdminTable() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [clearingTimes, setClearingTimes] = useState(false);
   const [updating, setUpdating] = useState(null);
   const [saved, setSaved] = useState(null);
   const [expandedRow, setExpandedRow] = useState(null);
@@ -284,6 +285,20 @@ export default function AdminTable() {
     }
   }
 
+  async function clearUnassignedTimes() {
+    if (!confirm('פעולה זו תנקה את שדה השעה מכל הרשומות בסטטוס "חדש".\nהנרשמים עצמם לא יימחקו. להמשיך?')) return;
+    setClearingTimes(true);
+    try {
+      const res = await fetch('/api/admin/clear-times', { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) { alert(json.error || 'שגיאה'); return; }
+      alert(`נוקו שעות מ-${json.cleared} רשומות`);
+      await fetchData();
+    } finally {
+      setClearingTimes(false);
+    }
+  }
+
   async function deleteRegistration(id, studentName) {
     if (!confirm(`למחוק לחלוטין את הרישום של ${studentName}?\nפעולה זו אינה הפיכה.`)) return;
     setUpdating(id);
@@ -374,6 +389,13 @@ export default function AdminTable() {
           className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
         >
           🔄 רענן
+        </button>
+        <button
+          onClick={clearUnassignedTimes}
+          disabled={clearingTimes}
+          className="px-4 py-2 border border-orange-300 text-orange-700 rounded-lg hover:bg-orange-50 text-sm disabled:opacity-50"
+        >
+          {clearingTimes ? 'מנקה...' : '🧹 נקה שעות מרשומות חדש'}
         </button>
         <button
           onClick={() => exportToCSV(filtered)}
