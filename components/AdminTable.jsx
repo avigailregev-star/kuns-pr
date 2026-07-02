@@ -426,6 +426,11 @@ export default function AdminTable() {
                           טרם שיחת היכרות
                         </span>
                       )}
+                      {row.has_accommodations && (
+                        <span className="mr-1 text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded-full font-medium">
+                          התאמות
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-500">
                       <div>{row.parent_name}</div>
