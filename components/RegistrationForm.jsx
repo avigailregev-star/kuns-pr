@@ -659,7 +659,7 @@ export default function RegistrationForm() {
                               onClick={() => {
                                 if (!isFull) {
                                   update('selectedDay', s.day_of_week);
-                                  update('selectedTime', nextTime || s.start_time || '');
+                                  update('selectedTime', '');
                                 }
                               }}
                               className={`p-2 rounded-xl border text-sm text-center transition-all ${
