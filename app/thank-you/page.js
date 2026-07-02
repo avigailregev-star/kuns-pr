@@ -2,15 +2,35 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 
 function ThankYouContent() {
   const searchParams = useSearchParams();
   const paymentUrl = searchParams.get('paymentUrl');
   const isTrial = searchParams.get('type') === 'trial';
   const isInterview = searchParams.get('type') === 'interview';
+  const rid = searchParams.get('rid');
+
+  const [cashDone, setCashDone] = useState(false);
+  const [cashLoading, setCashLoading] = useState(false);
 
   const isValidPaymentUrl = paymentUrl && paymentUrl.startsWith('https://www.hugim.org.il/');
+
+  async function handleCash() {
+    setCashLoading(true);
+    try {
+      if (rid) {
+        await fetch('/api/mark-cash', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: rid }),
+        });
+      }
+    } finally {
+      setCashLoading(false);
+      setCashDone(true);
+    }
+  }
 
   return (
     <div className="relative z-10 glass p-10 max-w-md w-full text-center">
@@ -93,7 +113,20 @@ function ThankYouContent() {
       )}
 
       {!isInterview && !isTrial && (
-        <p className="text-sm text-slate-400 mb-6 text-center">לתשלום במזומן פנו למתנ&quot;ס</p>
+        cashDone ? (
+          <div className="w-full mb-6 p-4 rounded-xl text-center text-green-300 font-semibold" style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)' }}>
+            ✓ תודה, נא גשו למתנ&quot;ס להשלמת התשלום
+          </div>
+        ) : (
+          <button
+            onClick={handleCash}
+            disabled={cashLoading}
+            className="w-full block mb-6 text-center text-white font-bold py-4 text-lg rounded-xl transition hover:opacity-90 disabled:opacity-60"
+            style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)' }}
+          >
+            {cashLoading ? '...' : 'לתשלום במזומן לחץ כאן'}
+          </button>
+        )
       )}
 
       <Link href="/register" className="text-sm text-purple-400 hover:text-purple-300 transition">

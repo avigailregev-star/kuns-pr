@@ -239,6 +239,7 @@ export default function RegistrationForm() {
       if (!res.ok) { setError(json.error || 'אירעה שגיאה. נסה שוב.'); return; }
 
       const params = new URLSearchParams();
+      if (json.id) params.set('rid', json.id);
       if (form.type === 'new' && form.attendedOpenDay === false) {
         params.set('type', 'interview');
       } else {
