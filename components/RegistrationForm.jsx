@@ -8,6 +8,7 @@ import AgreementScroll from './AgreementScroll';
 import { getPaymentLink, getCurrentPriceInfo, COURSE_GROUPS, PAYMENT_LINKS } from '../lib/paymentLinks';
 import { getLessonDuration } from '../lib/lessonDuration';
 import { freeMinutesOnDay } from '../lib/teacherCapacity';
+import { filterRangesByCourse } from '../lib/teacherCourseDayFilter';
 
 const MELODIES_COURSE_NAMES = Object.keys(PAYMENT_LINKS).filter((name) => name.includes('מנגינות'));
 
@@ -152,7 +153,7 @@ export default function RegistrationForm() {
     const teacher = teachersList.find(t => t.name === form.selectedTeacher);
     if (!teacher) return false;
     const dur = getLessonDuration(form.selectedCourse);
-    const ranges = teacher.teacher_availability_ranges || [];
+    const ranges = filterRangesByCourse(teacher.teacher_availability_ranges || [], form.selectedCourse);
     if (ranges.length > 0) {
       return ranges.every(s => {
         const used = teacher.used_minutes_per_day?.[s.day_of_week] || 0;
@@ -622,7 +623,7 @@ export default function RegistrationForm() {
                 const lessonDuration = getLessonDuration(form.selectedCourse);
 
                 // New system: teacher_availability_ranges
-                const availRanges = (teacher?.teacher_availability_ranges || [])
+                const availRanges = filterRangesByCourse(teacher?.teacher_availability_ranges || [], form.selectedCourse)
                   .slice().sort((a, b) => a.day_of_week - b.day_of_week);
 
                 if (availRanges.length > 0) {
