@@ -2,6 +2,7 @@ import RegistrationForm from '../../components/RegistrationForm';
 
 export const metadata = {
   title: 'הרשמה לקונסרבטוריון',
+  description: 'מערכת רישום מקוונת',
 };
 
 export default function RegisterPage() {
