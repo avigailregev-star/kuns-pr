@@ -616,7 +616,7 @@ export default function RegistrationForm() {
                 </div>
               )}
 
-{['continue', 'new', 'adult'].includes(form.type) &&
+{['continue', 'new', 'adult', 'melodies'].includes(form.type) &&
                 !(form.type === 'new' && form.attendedOpenDay === false) &&
                 form.selectedTeacher && (() => {
                 const teacher = teachersList.find(t => t.name === form.selectedTeacher);
