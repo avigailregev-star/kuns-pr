@@ -563,6 +563,12 @@ async function deleteRegistration(id, studentName) {
                                     ? row.unavailable_days.map(d => `יום ${d}`).join(', ')
                                     : 'ללא הגבלה'}
                                 </p>
+                                <p className="text-sm text-gray-600">
+                                  🏫 בית ספר: {row.school_name || '—'}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  🎓 כיתה: {row.grade || '—'}
+                                </p>
                               </>
                             )}
                           </div>
