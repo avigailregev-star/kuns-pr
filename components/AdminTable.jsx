@@ -37,8 +37,8 @@ function exportToCSV(rows) {
     Array.isArray(r.instruments) ? r.instruments.join('; ') : r.instruments || '',
     r.status || '',
     r.teacher || '',
-    r.assigned_day || '',
-    r.assigned_time || '',
+    r.assigned_day != null && r.assigned_day !== '' ? (DAY_NAMES[Number(r.assigned_day)] ?? r.assigned_day) : '',
+    r.assigned_time ? r.assigned_time.slice(0, 5) : '',
     r.admin_notes || '',
   ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
 
