@@ -43,7 +43,9 @@ function exportToCSV(rows) {
     r.parent_phone || '',
     r.parent_email || '',
     getTypeLabel(r),
-    Array.isArray(r.instruments) ? r.instruments.join('; ') : r.instruments || '',
+    Array.isArray(r.instruments)
+      ? (r.instruments.length > 0 ? r.instruments.join('; ') : (r.selected_course || ''))
+      : (r.instruments || r.selected_course || ''),
     r.status || '',
     r.teacher || '',
     r.assigned_day != null && r.assigned_day !== '' ? (DAY_NAMES[Number(r.assigned_day)] ?? r.assigned_day) : '',
@@ -83,7 +85,9 @@ function printTable(rows) {
           <td>${r.parent_name || ''}</td>
           <td>${r.parent_phone || ''}</td>
           <td>${getTypeLabel(r)}</td>
-          <td>${Array.isArray(r.instruments) ? r.instruments.join(', ') : r.instruments || ''}</td>
+          <td>${Array.isArray(r.instruments)
+            ? (r.instruments.length > 0 ? r.instruments.join(', ') : (r.selected_course || ''))
+            : (r.instruments || r.selected_course || '')}</td>
           <td>${r.status || ''}</td>
           <td>${r.teacher || ''}</td>
         </tr>`).join('')}
