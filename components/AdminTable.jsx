@@ -155,6 +155,13 @@ export default function AdminTable() {
       setRows(regs);
       setGroups(groupsJson.data || []);
       setTeachers(teachersList);
+      setSelectedGroups(prev => {
+        const next = { ...prev };
+        for (const r of regs) {
+          if (r.group_id != null) next[r.id] = String(r.group_id);
+        }
+        return next;
+      });
     } catch (e) {
       console.error(e);
     } finally {
