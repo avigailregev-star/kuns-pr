@@ -5,7 +5,7 @@ import StatusSelect from './StatusSelect';
 import { getOrchestraForInstruments } from '../lib/autoAssign';
 import { getLessonDuration } from '../lib/lessonDuration';
 import { freeMinutesOnDay } from '../lib/teacherCapacity';
-import { LESSON_TYPE_OPTIONS, getLessonTypeValue, computeGroupName } from '../lib/groupNaming';
+import { LESSON_TYPE_OPTIONS, getLessonTypeValue, computeGroupName, matchesLessonType } from '../lib/groupNaming';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const INDIVIDUAL_LESSON_TYPES = new Set(['individual_45', 'individual_60', 'melodies_individual']);
@@ -927,7 +927,7 @@ async function deleteRegistration(id, studentName) {
                                 const selectedTeacherForGroups = teachers.find(t => t.name === row.teacher);
                                 const selectedType = groupTypeFilter[row.id] || '';
                                 const matchingGroups = selectedType
-                                  ? groups.filter(g => g.teacher_id === selectedTeacherForGroups?.id && g.name === selectedType)
+                                  ? groups.filter(g => g.teacher_id === selectedTeacherForGroups?.id && matchesLessonType(g.name, selectedType))
                                   : [];
 
                                 return (
