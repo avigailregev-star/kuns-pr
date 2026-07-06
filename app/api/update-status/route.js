@@ -5,6 +5,7 @@ import { getSupabaseClient } from '../../../lib/supabase';
 import { sendToMake } from '../../../lib/makeWebhook';
 import { sendAssignmentEmail } from '../../../lib/email';
 import { syncRegistrationToAttendance } from '../../../lib/syncToAttendance';
+import { getLessonDuration } from '../../../lib/lessonDuration';
 
 export async function POST(request) {
   const session = await getServerSession(authOptions);
@@ -21,6 +22,77 @@ export async function POST(request) {
     }
 
     const supabase = getSupabaseClient();
+
+    // Block overlapping schedules for the same teacher on the same day
+    if (teacher && assignedDay != null && assignedDay !== '' && assignedTime) {
+      const toM = t => { const [h, m] = t.split(':').map(Number); return h * 60 + (m || 0); };
+      const dayNum = Number(assignedDay);
+      const newStart = toM(assignedTime);
+      const newEnd = assignedEndTime ? toM(assignedEndTime) : newStart + getLessonDuration(undefined);
+
+      if (!isNaN(dayNum)) {
+        const excludedStatuses = ['בוטל', 'נדחה', 'רשימת המתנה', 'ממתין לשיחת היכרות'];
+
+        const { data: otherRegs, error: otherRegsErr } = await supabase
+          .from('registrations')
+          .select('id, student_name, assigned_day, assigned_time, assigned_end_time, selected_course, status')
+          .eq('teacher', teacher)
+          .neq('id', id);
+        if (otherRegsErr) console.error('schedule conflict check: registrations fetch error:', otherRegsErr.message);
+
+        for (const reg of (otherRegs || [])) {
+          if (excludedStatuses.includes(reg.status)) continue;
+          if (reg.assigned_day == null || reg.assigned_day === '' || !reg.assigned_time) continue;
+          if (Number(reg.assigned_day) !== dayNum) continue;
+          const regStart = toM(reg.assigned_time);
+          const regEnd = reg.assigned_end_time ? toM(reg.assigned_end_time) : regStart + getLessonDuration(reg.selected_course);
+          if (newStart < regEnd && regStart < newEnd) {
+            return NextResponse.json(
+              { error: `חיפוף בזמנים עם ${reg.student_name} באותו יום (${reg.assigned_time.slice(0, 5)})` },
+              { status: 409 }
+            );
+          }
+        }
+
+        const { data: teacherRow, error: teacherRowErr } = await supabase
+          .from('teachers')
+          .select('id')
+          .eq('name', teacher)
+          .maybeSingle();
+        if (teacherRowErr) console.error('schedule conflict check: teacher lookup error:', teacherRowErr.message);
+
+        if (teacherRow?.id) {
+          const { data: currentReg, error: currentRegErr } = await supabase
+            .from('registrations')
+            .select('group_id')
+            .eq('id', id)
+            .maybeSingle();
+          if (currentRegErr) console.error('schedule conflict check: current registration fetch error:', currentRegErr.message);
+          const currentGroupId = currentReg?.group_id;
+
+          const { data: teacherGroups, error: teacherGroupsErr } = await supabase
+            .from('groups')
+            .select('id, name, group_schedules(day_of_week, start_time, end_time)')
+            .eq('teacher_id', teacherRow.id);
+          if (teacherGroupsErr) console.error('schedule conflict check: teacher groups fetch error:', teacherGroupsErr.message);
+
+          for (const g of (teacherGroups || [])) {
+            if (currentGroupId && String(g.id) === String(currentGroupId)) continue;
+            for (const sched of (g.group_schedules || [])) {
+              if (Number(sched.day_of_week) !== dayNum || !sched.start_time) continue;
+              const schedStart = toM(sched.start_time);
+              const schedEnd = sched.end_time ? toM(sched.end_time) : schedStart + 60;
+              if (newStart < schedEnd && schedStart < newEnd) {
+                return NextResponse.json(
+                  { error: `חיפוף בזמנים עם הקבוצה "${g.name}" באותו יום (${sched.start_time})` },
+                  { status: 409 }
+                );
+              }
+            }
+          }
+        }
+      }
+    }
 
     const updateData = {
       status: newStatus,

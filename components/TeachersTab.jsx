@@ -55,6 +55,7 @@ function TeacherCard({ t, registrations, onEdit, onDelete, onStudentUpdated }) {
       body: JSON.stringify({
         id: s.id,
         newStatus: s.status,
+        teacher: t.name,
         assignedDay: editDay !== '' ? editDay : null,
         assignedTime: editTime || null,
       }),
