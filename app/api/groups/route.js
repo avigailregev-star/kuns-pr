@@ -11,7 +11,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { name, lesson_type, is_mangan_school, school_name, teacher_id, assigned_day, assigned_time } = body;
+    const { name, lesson_type, is_mangan_school, school_name, teacher_id, assigned_day, assigned_time, student_registration_ids } = body;
 
     if (!name?.trim()) {
       return NextResponse.json({ error: 'שם קבוצה הוא שדה חובה' }, { status: 400 });
@@ -72,6 +72,47 @@ export async function POST(request) {
         start_time: assigned_time,
       });
       if (schedErr) console.error('group_schedules insert error:', schedErr.message);
+    }
+
+    // Attach selected students to the new group
+    if (Array.isArray(student_registration_ids) && student_registration_ids.length > 0) {
+      let teacherName = null;
+      if (teacher_id != null) {
+        const { data: teacherRow } = await supabase
+          .from('teachers')
+          .select('name')
+          .eq('id', teacher_id)
+          .maybeSingle();
+        teacherName = teacherRow?.name || null;
+      }
+
+      const { data: regsToAttach } = await supabase
+        .from('registrations')
+        .select('id, student_name, instruments, parent_phone, group_id')
+        .in('id', student_registration_ids);
+
+      for (const reg of (regsToAttach || [])) {
+        if (reg.group_id && reg.group_id !== data.id) {
+          await supabase
+            .from('students')
+            .update({ is_active: false })
+            .eq('group_id', reg.group_id)
+            .eq('name', reg.student_name);
+        }
+
+        await supabase
+          .from('registrations')
+          .update({ group_id: data.id, teacher: teacherName, selected_course: data.name })
+          .eq('id', reg.id);
+
+        await supabase.from('students').insert({
+          group_id: data.id,
+          name: reg.student_name,
+          instrument: Array.isArray(reg.instruments) ? reg.instruments[0] : reg.instruments || null,
+          parent_phone: reg.parent_phone || null,
+          is_active: true,
+        });
+      }
     }
 
     return NextResponse.json({ data });
