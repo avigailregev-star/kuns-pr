@@ -124,7 +124,7 @@ export default function AdminTable() {
   const [creatingGroupFor, setCreatingGroupFor] = useState(null);
   const [newGroupStudents, setNewGroupStudents] = useState([]); // [{ id, name }]
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
-  const [newGroupType, setNewGroupType] = useState('');
+  const [groupTypeFilter, setGroupTypeFilter] = useState({}); // { [rowId]: label }
   const [editingDetails, setEditingDetails] = useState({});
 
   const fetchData = useCallback(async () => {
@@ -163,6 +163,17 @@ export default function AdminTable() {
         const next = { ...prev };
         for (const r of regs) {
           if (r.group_id != null) next[r.id] = String(r.group_id);
+        }
+        return next;
+      });
+      setGroupTypeFilter(prev => {
+        const next = { ...prev };
+        const groupsList = groupsJson.data || [];
+        for (const r of regs) {
+          if (r.group_id != null) {
+            const grp = groupsList.find(g => String(g.id) === String(r.group_id));
+            if (grp?.name) next[r.id] = grp.name;
+          }
         }
         return next;
       });
@@ -250,15 +261,15 @@ export default function AdminTable() {
     }
   }
 
-  async function handleCreateGroup(rowId, teacherName, assignedDay, assignedTime) {
-    if (!newGroupType || newGroupStudents.length === 0) return;
+  async function handleCreateGroup(rowId, teacherName, assignedDay, assignedTime, groupType) {
+    if (!groupType || newGroupStudents.length === 0) return;
     const teacher = teachers.find(t => t.name === teacherName);
     if (!teacher?.id) {
       alert('יש לבחור מורה לפני יצירת קבוצה');
       return;
     }
-    const groupName = computeGroupName(newGroupType, newGroupStudents.map(s => s.name));
-    const lessonTypeValue = getLessonTypeValue(newGroupType);
+    const groupName = computeGroupName(groupType, newGroupStudents.map(s => s.name));
+    const lessonTypeValue = getLessonTypeValue(groupType);
     const res = await fetch('/api/groups', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -281,7 +292,6 @@ export default function AdminTable() {
     setCreatingGroupFor(null);
     setNewGroupStudents([]);
     setStudentSearchQuery('');
-    setNewGroupType('');
     await fetchData();
   }
 
@@ -913,147 +923,161 @@ async function deleteRegistration(id, studentName) {
                                   </div>
                                 );
                               })()}
-                              {creatingGroupFor === row.id ? (
-                                <div className="space-y-2">
-                                  <select
-                                    autoFocus
-                                    className="admin-input w-full"
-                                    value={newGroupType}
-                                    onChange={(e) => setNewGroupType(e.target.value)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Escape') {
+                              {(() => {
+                                const selectedTeacherForGroups = teachers.find(t => t.name === row.teacher);
+                                const selectedType = groupTypeFilter[row.id] || '';
+                                const matchingGroups = selectedType
+                                  ? groups.filter(g => g.teacher_id === selectedTeacherForGroups?.id && g.name === selectedType)
+                                  : [];
+
+                                return (
+                                  <div className="space-y-2">
+                                    <select
+                                      className="admin-input w-full"
+                                      value={selectedType}
+                                      onChange={(e) => {
+                                        const value = e.target.value;
+                                        setGroupTypeFilter(prev => ({ ...prev, [row.id]: value }));
+                                        setSelectedGroups(prev => {
+                                          const next = { ...prev };
+                                          delete next[row.id];
+                                          return next;
+                                        });
                                         setCreatingGroupFor(null);
                                         setNewGroupStudents([]);
                                         setStudentSearchQuery('');
-                                        setNewGroupType('');
-                                      }
-                                    }}
-                                  >
-                                    <option value="">— סוג שיעור —</option>
-                                    {LESSON_TYPE_OPTIONS.map(o => (
-                                      <option key={o.label} value={o.label}>{o.label}</option>
-                                    ))}
-                                  </select>
-
-                                  <div className="flex flex-wrap gap-1">
-                                    {newGroupStudents.map(s => (
-                                      <span
-                                        key={s.id}
-                                        className="inline-flex items-center gap-1 text-xs bg-purple-50 border border-purple-200 text-purple-700 rounded-lg px-2 py-1"
-                                      >
-                                        {s.name}
-                                        <button
-                                          type="button"
-                                          onClick={() => setNewGroupStudents(prev => prev.filter(x => x.id !== s.id))}
-                                          className="text-purple-400 hover:text-purple-700"
-                                        >
-                                          ✕
-                                        </button>
-                                      </span>
-                                    ))}
-                                  </div>
-
-                                  <input
-                                    type="text"
-                                    list={`new-group-student-options-${row.id}`}
-                                    className="admin-input w-full"
-                                    placeholder="הקלד/י שם תלמיד/ה להוספה..."
-                                    value={studentSearchQuery}
-                                    onChange={(e) => {
-                                      const value = e.target.value;
-                                      const match = rows.find(r =>
-                                        r.student_name === value && !newGroupStudents.some(s => s.id === r.id)
-                                      );
-                                      if (match) {
-                                        setNewGroupStudents(prev => [...prev, { id: match.id, name: match.student_name }]);
-                                        setStudentSearchQuery('');
-                                      } else {
-                                        setStudentSearchQuery(value);
-                                      }
-                                    }}
-                                  />
-                                  <datalist id={`new-group-student-options-${row.id}`}>
-                                    {rows
-                                      .filter(r => r.student_name && !newGroupStudents.some(s => s.id === r.id))
-                                      .map(r => (
-                                        <option key={r.id} value={r.student_name} />
-                                      ))}
-                                  </datalist>
-
-                                  <div className="flex gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleCreateGroup(row.id, row.teacher, row.assigned_day, row.assigned_time)}
-                                      disabled={!newGroupType || newGroupStudents.length === 0}
-                                      className="text-xs px-3 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed"
-                                    >
-                                      צור שיעור
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setCreatingGroupFor(null);
-                                        setNewGroupStudents([]);
-                                        setStudentSearchQuery('');
-                                        setNewGroupType('');
                                       }}
-                                      className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50"
                                     >
-                                      ביטול
-                                    </button>
+                                      <option value="">— סוג שיעור —</option>
+                                      {LESSON_TYPE_OPTIONS.map(o => (
+                                        <option key={o.label} value={o.label}>{o.label}</option>
+                                      ))}
+                                    </select>
+
+                                    {selectedType && (
+                                      creatingGroupFor === row.id ? (
+                                        <div className="space-y-2">
+                                          <div className="flex flex-wrap gap-1">
+                                            {newGroupStudents.map(s => (
+                                              <span
+                                                key={s.id}
+                                                className="inline-flex items-center gap-1 text-xs bg-purple-50 border border-purple-200 text-purple-700 rounded-lg px-2 py-1"
+                                              >
+                                                {s.name}
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setNewGroupStudents(prev => prev.filter(x => x.id !== s.id))}
+                                                  className="text-purple-400 hover:text-purple-700"
+                                                >
+                                                  ✕
+                                                </button>
+                                              </span>
+                                            ))}
+                                          </div>
+
+                                          <input
+                                            type="text"
+                                            list={`new-group-student-options-${row.id}`}
+                                            className="admin-input w-full"
+                                            placeholder="הקלד/י שם תלמיד/ה להוספה..."
+                                            value={studentSearchQuery}
+                                            onChange={(e) => {
+                                              const value = e.target.value;
+                                              const match = rows.find(r =>
+                                                r.student_name === value && !newGroupStudents.some(s => s.id === r.id)
+                                              );
+                                              if (match) {
+                                                setNewGroupStudents(prev => [...prev, { id: match.id, name: match.student_name }]);
+                                                setStudentSearchQuery('');
+                                              } else {
+                                                setStudentSearchQuery(value);
+                                              }
+                                            }}
+                                          />
+                                          <datalist id={`new-group-student-options-${row.id}`}>
+                                            {rows
+                                              .filter(r => r.student_name && !newGroupStudents.some(s => s.id === r.id))
+                                              .map(r => (
+                                                <option key={r.id} value={r.student_name} />
+                                              ))}
+                                          </datalist>
+
+                                          <div className="flex gap-2">
+                                            <button
+                                              type="button"
+                                              onClick={() => handleCreateGroup(row.id, row.teacher, row.assigned_day, row.assigned_time, selectedType)}
+                                              disabled={newGroupStudents.length === 0}
+                                              className="text-xs px-3 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                                            >
+                                              צור שיעור
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setCreatingGroupFor(null);
+                                                setNewGroupStudents([]);
+                                                setStudentSearchQuery('');
+                                              }}
+                                              className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50"
+                                            >
+                                              ביטול
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center gap-2">
+                                          <select
+                                            className="admin-input flex-1"
+                                            value={selectedGroups[row.id] || ''}
+                                            onChange={(e) => {
+                                              if (e.target.value === '__new__') {
+                                                setCreatingGroupFor(row.id);
+                                                setNewGroupStudents([{ id: row.id, name: row.student_name }]);
+                                                setStudentSearchQuery('');
+                                              } else {
+                                                setSelectedGroups(prev => ({ ...prev, [row.id]: e.target.value }));
+                                              }
+                                            }}
+                                          >
+                                            <option value="">— הוסף שיעור בנוכחות —</option>
+                                            {matchingGroups.map(g => (
+                                              <option key={g.id} value={g.id}>
+                                                {g.name}{g.is_mangan_school && g.school_name ? ` (${g.school_name})` : ''}
+                                              </option>
+                                            ))}
+                                            <option value="__new__">➕ צור שיעור חדש</option>
+                                          </select>
+                                          {selectedGroups[row.id] && (() => {
+                                            const grp = groups.find(g => String(g.id) === String(selectedGroups[row.id]));
+                                            if (!grp) return null;
+                                            return (
+                                              <button
+                                                type="button"
+                                                title="מחק קבוצה"
+                                                onClick={async () => {
+                                                  if (!confirm(`למחוק את הקבוצה "${grp.name}"?\nתלמידי הקבוצה יוסרו גם כן מאפליקציית הנוכחות.`)) return;
+                                                  const res = await fetch('/api/groups', {
+                                                    method: 'DELETE',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ id: grp.id }),
+                                                  });
+                                                  if (res.ok) {
+                                                    setGroups(prev => prev.filter(x => x.id !== grp.id));
+                                                    setSelectedGroups(prev => { const n = { ...prev }; delete n[row.id]; return n; });
+                                                  } else {
+                                                    const j = await res.json();
+                                                    alert(j.error || 'שגיאה במחיקה');
+                                                  }
+                                                }}
+                                                className="text-red-400 hover:text-red-600 text-lg font-bold px-1 transition-colors"
+                                              >🗑</button>
+                                            );
+                                          })()}
+                                        </div>
+                                      ))}
                                   </div>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2">
-                                  <select
-                                    className="admin-input flex-1"
-                                    value={selectedGroups[row.id] || ''}
-                                    onChange={(e) => {
-                                      if (e.target.value === '__new__') {
-                                        setCreatingGroupFor(row.id);
-                                        setNewGroupStudents([{ id: row.id, name: row.student_name }]);
-                                        setStudentSearchQuery('');
-                                      } else {
-                                        setSelectedGroups(prev => ({ ...prev, [row.id]: e.target.value }));
-                                      }
-                                    }}
-                                  >
-                                    <option value="">— הוסף שיעור בנוכחות —</option>
-                                    {groups.map(g => (
-                                      <option key={g.id} value={g.id}>
-                                        {g.name}{g.is_mangan_school && g.school_name ? ` (${g.school_name})` : ''}
-                                      </option>
-                                    ))}
-                                    <option value="__new__">➕ צור שיעור חדש</option>
-                                  </select>
-                                  {selectedGroups[row.id] && (() => {
-                                    const grp = groups.find(g => String(g.id) === String(selectedGroups[row.id]));
-                                    if (!grp) return null;
-                                    return (
-                                      <button
-                                        type="button"
-                                        title="מחק קבוצה"
-                                        onClick={async () => {
-                                          if (!confirm(`למחוק את הקבוצה "${grp.name}"?\nתלמידי הקבוצה יוסרו גם כן מאפליקציית הנוכחות.`)) return;
-                                          const res = await fetch('/api/groups', {
-                                            method: 'DELETE',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ id: grp.id }),
-                                          });
-                                          if (res.ok) {
-                                            setGroups(prev => prev.filter(x => x.id !== grp.id));
-                                            setSelectedGroups(prev => { const n = { ...prev }; delete n[row.id]; return n; });
-                                          } else {
-                                            const j = await res.json();
-                                            alert(j.error || 'שגיאה במחיקה');
-                                          }
-                                        }}
-                                        className="text-red-400 hover:text-red-600 text-lg font-bold px-1 transition-colors"
-                                      >🗑</button>
-                                    );
-                                  })()}
-                                </div>
-                              )}
+                                );
+                              })()}
                               {(() => {
                                 const selId = selectedGroups[row.id];
                                 if (!selId) return null;
