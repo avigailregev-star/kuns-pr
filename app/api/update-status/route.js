@@ -33,11 +33,12 @@ export async function POST(request) {
       if (!isNaN(dayNum)) {
         const excludedStatuses = ['בוטל', 'נדחה', 'רשימת המתנה', 'ממתין לשיחת היכרות'];
 
-        const { data: otherRegs } = await supabase
+        const { data: otherRegs, error: otherRegsErr } = await supabase
           .from('registrations')
           .select('id, student_name, assigned_day, assigned_time, assigned_end_time, selected_course, status')
           .eq('teacher', teacher)
           .neq('id', id);
+        if (otherRegsErr) console.error('schedule conflict check: registrations fetch error:', otherRegsErr.message);
 
         for (const reg of (otherRegs || [])) {
           if (excludedStatuses.includes(reg.status)) continue;
@@ -53,17 +54,19 @@ export async function POST(request) {
           }
         }
 
-        const { data: teacherRow } = await supabase
+        const { data: teacherRow, error: teacherRowErr } = await supabase
           .from('teachers')
           .select('id')
           .eq('name', teacher)
           .maybeSingle();
+        if (teacherRowErr) console.error('schedule conflict check: teacher lookup error:', teacherRowErr.message);
 
         if (teacherRow?.id) {
-          const { data: teacherGroups } = await supabase
+          const { data: teacherGroups, error: teacherGroupsErr } = await supabase
             .from('groups')
             .select('name, group_schedules(day_of_week, start_time, end_time)')
             .eq('teacher_id', teacherRow.id);
+          if (teacherGroupsErr) console.error('schedule conflict check: teacher groups fetch error:', teacherGroupsErr.message);
 
           for (const g of (teacherGroups || [])) {
             for (const sched of (g.group_schedules || [])) {
