@@ -62,13 +62,22 @@ export async function POST(request) {
         if (teacherRowErr) console.error('schedule conflict check: teacher lookup error:', teacherRowErr.message);
 
         if (teacherRow?.id) {
+          const { data: currentReg, error: currentRegErr } = await supabase
+            .from('registrations')
+            .select('group_id')
+            .eq('id', id)
+            .maybeSingle();
+          if (currentRegErr) console.error('schedule conflict check: current registration fetch error:', currentRegErr.message);
+          const currentGroupId = currentReg?.group_id;
+
           const { data: teacherGroups, error: teacherGroupsErr } = await supabase
             .from('groups')
-            .select('name, group_schedules(day_of_week, start_time, end_time)')
+            .select('id, name, group_schedules(day_of_week, start_time, end_time)')
             .eq('teacher_id', teacherRow.id);
           if (teacherGroupsErr) console.error('schedule conflict check: teacher groups fetch error:', teacherGroupsErr.message);
 
           for (const g of (teacherGroups || [])) {
+            if (currentGroupId && String(g.id) === String(currentGroupId)) continue;
             for (const sched of (g.group_schedules || [])) {
               if (Number(sched.day_of_week) !== dayNum || !sched.start_time) continue;
               const schedStart = toM(sched.start_time);

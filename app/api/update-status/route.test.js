@@ -105,6 +105,7 @@ describe('POST /api/update-status — schedule conflict check', () => {
     const mockSupabase = createMockSupabase({
       registrations: [
         { data: [], error: null }, // no conflicting individual registrations
+        { data: { group_id: null }, error: null }, // current registration has no group of its own
       ],
       teachers: [
         { data: { id: 't1' }, error: null },
@@ -112,7 +113,7 @@ describe('POST /api/update-status — schedule conflict check', () => {
       groups: [
         {
           data: [
-            { name: 'מקהלה צעירה', group_schedules: [{ day_of_week: 1, start_time: '15:00', end_time: '16:00' }] },
+            { id: 'g-other', name: 'מקהלה צעירה', group_schedules: [{ day_of_week: 1, start_time: '15:00', end_time: '16:00' }] },
           ],
           error: null,
         },
@@ -133,13 +134,56 @@ describe('POST /api/update-status — schedule conflict check', () => {
     expect(res.status).toBe(409);
     expect(json.error).toContain('מקהלה צעירה');
 
-    expect(mockSupabase.from.mock.calls.map(c => c[0])).toEqual(['registrations', 'teachers', 'groups']);
+    expect(mockSupabase.from.mock.calls.map(c => c[0])).toEqual(['registrations', 'teachers', 'registrations', 'groups']);
+  });
+
+  test('proceeds to save when the only overlapping group is the registration\'s own auto-created group', async () => {
+    // Reproduces: after a student's first successful save, syncToAttendance auto-creates
+    // a "group" for their individual lesson at their own day/time, linked via group_id.
+    // Re-saving that same row must not treat that group as a conflict with itself.
+    const mockSupabase = createMockSupabase({
+      registrations: [
+        { data: [], error: null }, // no conflicting individual registrations
+        { data: { group_id: 'g1' }, error: null }, // current registration's own group_id
+        { error: null }, // the main registrations.update
+        { data: { id: 'r1', student_name: 'יוסי כהן', teacher: 'דנה כהן', assigned_day: 1, assigned_time: '15:30', selected_course: null, status: 'ממתין', registration_status: null, group_id: 'g1' }, error: null }, // post-update select for attendance sync
+      ],
+      teachers: [
+        { data: { id: 't1' }, error: null },
+      ],
+      groups: [
+        {
+          data: [
+            { id: 'g1', name: 'יוסי כהן', group_schedules: [{ day_of_week: 1, start_time: '15:30', end_time: '16:15' }] },
+          ],
+          error: null,
+        },
+      ],
+      message_log: [
+        { error: null },
+      ],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+
+    const res = await POST(makeRequest({
+      id: 'r1',
+      newStatus: 'ממתין',
+      teacher: 'דנה כהן',
+      assignedDay: 1,
+      assignedTime: '15:30',
+      assignedEndTime: '16:15',
+    }));
+
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.success).toBe(true);
   });
 
   test('proceeds to save when there is no conflict', async () => {
     const mockSupabase = createMockSupabase({
       registrations: [
         { data: [], error: null }, // no conflicting individual registrations
+        { data: { group_id: null }, error: null }, // current registration's own group_id
         { error: null }, // the main registrations.update
         { data: { student_name: 'יוסי כהן', teacher: 'דנה כהן', assigned_day: 1, assigned_time: '15:30', selected_course: null, status: 'ממתין', registration_status: null, group_id: null, id: 'r1' }, error: null }, // post-update select for attendance sync
       ],
