@@ -25,6 +25,14 @@ const TYPE_LABELS = {
   trial: 'ניסיון',
 };
 
+function getTypeLabel(row) {
+  if (row.type === 'melodies') {
+    const yearMatch = (row.selected_course || '').match(/שנה [א-ת]+['׳]?/);
+    return yearMatch ? `מנגינות ${yearMatch[0]}` : 'מנגינות';
+  }
+  return TYPE_LABELS[row.type] || row.type || '';
+}
+
 function exportToCSV(rows) {
   const headers = ['תאריך', 'תלמיד/ה', 'הורה', 'טלפון', 'אימייל', 'סוג', 'כלים', 'סטטוס', 'מורה', 'יום', 'שעה', 'הערות'];
   const csvRows = rows.map(r => [
@@ -33,7 +41,7 @@ function exportToCSV(rows) {
     r.parent_name || '',
     r.parent_phone || '',
     r.parent_email || '',
-    TYPE_LABELS[r.type] || r.type || '',
+    getTypeLabel(r),
     Array.isArray(r.instruments) ? r.instruments.join('; ') : r.instruments || '',
     r.status || '',
     r.teacher || '',
@@ -73,7 +81,7 @@ function printTable(rows) {
           <td>${r.student_name || ''}</td>
           <td>${r.parent_name || ''}</td>
           <td>${r.parent_phone || ''}</td>
-          <td>${TYPE_LABELS[r.type] || r.type || ''}</td>
+          <td>${getTypeLabel(r)}</td>
           <td>${Array.isArray(r.instruments) ? r.instruments.join(', ') : r.instruments || ''}</td>
           <td>${r.status || ''}</td>
           <td>${r.teacher || ''}</td>
@@ -437,7 +445,7 @@ async function deleteRegistration(id, studentName) {
                       <div className="text-xs" dir="ltr">{row.parent_phone}</div>
                     </td>
                     <td className="px-4 py-3 text-gray-500">
-                      {TYPE_LABELS[row.type] || row.type}
+                      {getTypeLabel(row)}
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
                       {Array.isArray(row.instruments) && row.instruments.length > 0
