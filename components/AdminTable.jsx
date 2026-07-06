@@ -166,6 +166,17 @@ export default function AdminTable() {
         }
         return next;
       });
+      setGroupTypeFilter(prev => {
+        const next = { ...prev };
+        const groupsList = groupsJson.data || [];
+        for (const r of regs) {
+          if (r.group_id != null) {
+            const grp = groupsList.find(g => String(g.id) === String(r.group_id));
+            if (grp?.name) next[r.id] = grp.name;
+          }
+        }
+        return next;
+      });
     } catch (e) {
       console.error(e);
     } finally {
