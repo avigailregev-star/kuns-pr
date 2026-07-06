@@ -951,34 +951,30 @@ async function deleteRegistration(id, studentName) {
 
                                   <input
                                     type="text"
+                                    list={`new-group-student-options-${row.id}`}
                                     className="admin-input w-full"
                                     placeholder="הקלד/י שם תלמיד/ה להוספה..."
                                     value={studentSearchQuery}
-                                    onChange={(e) => setStudentSearchQuery(e.target.value)}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      const match = rows.find(r =>
+                                        r.student_name === value && !newGroupStudents.some(s => s.id === r.id)
+                                      );
+                                      if (match) {
+                                        setNewGroupStudents(prev => [...prev, { id: match.id, name: match.student_name }]);
+                                        setStudentSearchQuery('');
+                                      } else {
+                                        setStudentSearchQuery(value);
+                                      }
+                                    }}
                                   />
-                                  {studentSearchQuery.trim() && (
-                                    <div className="border border-gray-200 rounded-lg max-h-40 overflow-y-auto">
-                                      {rows
-                                        .filter(r =>
-                                          r.student_name?.includes(studentSearchQuery.trim()) &&
-                                          !newGroupStudents.some(s => s.id === r.id)
-                                        )
-                                        .slice(0, 8)
-                                        .map(r => (
-                                          <button
-                                            key={r.id}
-                                            type="button"
-                                            onClick={() => {
-                                              setNewGroupStudents(prev => [...prev, { id: r.id, name: r.student_name }]);
-                                              setStudentSearchQuery('');
-                                            }}
-                                            className="block w-full text-right px-2 py-1 text-sm hover:bg-gray-50"
-                                          >
-                                            {r.student_name}
-                                          </button>
-                                        ))}
-                                    </div>
-                                  )}
+                                  <datalist id={`new-group-student-options-${row.id}`}>
+                                    {rows
+                                      .filter(r => r.student_name && !newGroupStudents.some(s => s.id === r.id))
+                                      .map(r => (
+                                        <option key={r.id} value={r.student_name} />
+                                      ))}
+                                  </datalist>
 
                                   <div className="flex gap-2">
                                     <button
