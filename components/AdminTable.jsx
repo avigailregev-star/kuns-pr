@@ -979,7 +979,7 @@ async function deleteRegistration(id, studentName) {
                                             type="text"
                                             list={`new-group-student-options-${row.id}`}
                                             className="admin-input w-full"
-                                            placeholder="הקלד/י שם תלמיד/ה להוספה..."
+                                            placeholder="הקלד/י שם תלמיד/ה להוספה... (מיועד למקהלות, תזמורות והרכבים בלבד)"
                                             value={studentSearchQuery}
                                             onChange={(e) => {
                                               const value = e.target.value;
