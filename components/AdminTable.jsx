@@ -6,6 +6,7 @@ import { getOrchestraForInstruments } from '../lib/autoAssign';
 import { getLessonDuration } from '../lib/lessonDuration';
 import { freeMinutesOnDay } from '../lib/teacherCapacity';
 import { LESSON_TYPE_OPTIONS, getLessonTypeValue, computeGroupName, matchesLessonType } from '../lib/groupNaming';
+import { assignRowColors, downloadExcelFile } from '../lib/excelExport';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const INDIVIDUAL_LESSON_TYPES = new Set(['individual_45', 'individual_60', 'melodies_individual']);
@@ -34,9 +35,9 @@ function getTypeLabel(row) {
   return TYPE_LABELS[row.type] || row.type || '';
 }
 
-function exportToCSV(rows) {
+async function exportToExcel(rows) {
   const headers = ['תאריך', 'תלמיד/ה', 'הורה', 'טלפון', 'אימייל', 'סוג', 'כלים', 'סטטוס', 'מורה', 'יום', 'שעה', 'הערות'];
-  const csvRows = rows.map(r => [
+  const dataRows = rows.map(r => [
     new Date(r.created_at).toLocaleDateString('he-IL'),
     r.student_name || '',
     r.parent_name || '',
@@ -51,17 +52,11 @@ function exportToCSV(rows) {
     r.assigned_day != null && r.assigned_day !== '' ? (DAY_NAMES[Number(r.assigned_day)] ?? r.assigned_day) : '',
     r.assigned_time ? r.assigned_time.slice(0, 5) : '',
     r.admin_notes || '',
-  ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+  ]);
 
-  const bom = '\uFEFF';
-  const csv = bom + [headers.join(','), ...csvRows].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `רישומים_${new Date().toLocaleDateString('he-IL').replace(/\//g, '-')}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const rowColors = assignRowColors(rows);
+  const filename = `רישומים_${new Date().toLocaleDateString('he-IL').replace(/\//g, '-')}.xlsx`;
+  await downloadExcelFile({ sheetName: 'רישומים', headers, rows: dataRows, rowColors, filename });
 }
 
 function printTable(rows) {
@@ -412,7 +407,7 @@ async function deleteRegistration(id, studentName) {
           🔄 רענן
         </button>
         <button
-          onClick={() => exportToCSV(filtered)}
+          onClick={() => exportToExcel(filtered)}
           className="px-4 py-2 border border-green-300 text-green-700 rounded-lg hover:bg-green-50 text-sm"
         >
           📊 ייצוא Excel
