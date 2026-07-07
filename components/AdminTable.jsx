@@ -6,6 +6,7 @@ import { getOrchestraForInstruments } from '../lib/autoAssign';
 import { getLessonDuration } from '../lib/lessonDuration';
 import { freeMinutesOnDay } from '../lib/teacherCapacity';
 import { LESSON_TYPE_OPTIONS, getLessonTypeValue, computeGroupName, matchesLessonType } from '../lib/groupNaming';
+import { filterRangesToFixedDay } from '../lib/fixedCourseDays';
 import { assignRowColors, downloadExcelFile } from '../lib/excelExport';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
@@ -665,9 +666,12 @@ async function deleteRegistration(id, studentName) {
                                 const hours = selectedTeacher?.available_hours || {};
 
                                 // Days from attendance app via teacher_availability_ranges
-                                const availRanges = (selectedTeacher?.teacher_availability_ranges || [])
-                                  .slice()
-                                  .sort((a, b) => a.day_of_week - b.day_of_week);
+                                const availRanges = filterRangesToFixedDay(
+                                  (selectedTeacher?.teacher_availability_ranges || [])
+                                    .slice()
+                                    .sort((a, b) => a.day_of_week - b.day_of_week),
+                                  row.selected_course
+                                );
 
                                 if (availRanges.length > 0) {
                                   const lessonDuration = getLessonDuration(row.selected_course);
