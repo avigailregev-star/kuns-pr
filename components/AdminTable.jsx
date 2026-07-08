@@ -757,6 +757,7 @@ async function deleteRegistration(id, studentName) {
                                                 if (isFull) return;
                                                 updateAssignment(row.id, 'assigned_day', s.day_of_week);
                                                 updateAssignment(row.id, 'assigned_time', fixedTime?.start_time || nextTime || s.start_time || '');
+                                                if (fixedTime?.end_time) updateAssignment(row.id, 'assigned_end_time', fixedTime.end_time);
                                               }}
                                               className={`px-3 py-1 rounded-lg text-sm border transition-all ${
                                                 isFull
@@ -785,27 +786,33 @@ async function deleteRegistration(id, studentName) {
                                         })}
                                       </div>
                                       {row.assigned_day != null && row.assigned_day !== '' && (
-                                        <div className="flex gap-2 items-center">
-                                          <input
-                                            type="time"
-                                            dir="ltr"
-                                            className="admin-input flex-1"
-                                            value={row.assigned_time || ''}
-                                            onChange={(e) => updateAssignment(row.id, 'assigned_time', e.target.value)}
-                                          />
-                                          {row.assigned_time && (
-                                            <>
-                                              <span className="text-xs text-gray-400 shrink-0">עד</span>
-                                              <input
-                                                type="time"
-                                                dir="ltr"
-                                                className="admin-input flex-1"
-                                                value={row.assigned_end_time || minsToTime(timeToMins(row.assigned_time) + getLessonDuration(row.selected_course))}
-                                                onChange={(e) => updateAssignment(row.id, 'assigned_end_time', e.target.value)}
-                                              />
-                                            </>
-                                          )}
-                                        </div>
+                                        fixedTime?.start_time ? (
+                                          <div className="p-2 rounded-lg bg-gray-50 border border-gray-200 text-sm text-gray-600 text-center">
+                                            שעה קבועה: {fixedTime.start_time}{fixedTime.end_time ? `–${fixedTime.end_time}` : ''}
+                                          </div>
+                                        ) : (
+                                          <div className="flex gap-2 items-center">
+                                            <input
+                                              type="time"
+                                              dir="ltr"
+                                              className="admin-input flex-1"
+                                              value={row.assigned_time || ''}
+                                              onChange={(e) => updateAssignment(row.id, 'assigned_time', e.target.value)}
+                                            />
+                                            {row.assigned_time && (
+                                              <>
+                                                <span className="text-xs text-gray-400 shrink-0">עד</span>
+                                                <input
+                                                  type="time"
+                                                  dir="ltr"
+                                                  className="admin-input flex-1"
+                                                  value={row.assigned_end_time || minsToTime(timeToMins(row.assigned_time) + getLessonDuration(row.selected_course))}
+                                                  onChange={(e) => updateAssignment(row.id, 'assigned_end_time', e.target.value)}
+                                                />
+                                              </>
+                                            )}
+                                          </div>
+                                        )
                                       )}
                                       {(() => {
                                         const teacherGroups = groups.filter(g => g.teacher_id === selectedTeacher?.id);
