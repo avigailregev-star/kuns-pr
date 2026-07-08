@@ -7,7 +7,7 @@ import { getLessonDuration } from '../lib/lessonDuration';
 import { freeMinutesOnDay } from '../lib/teacherCapacity';
 import { LESSON_TYPE_OPTIONS, getLessonTypeValue, computeGroupName, matchesLessonType } from '../lib/groupNaming';
 import { FIXED_COURSE_TIMES, filterRangesToFixedDay } from '../lib/fixedCourseDays';
-import { assignRowColors, downloadExcelFile } from '../lib/excelExport';
+import { assignRowColors, downloadExcelFile, paymentStatusLabel } from '../lib/excelExport';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const INDIVIDUAL_LESSON_TYPES = new Set(['individual_45', 'individual_60', 'melodies_individual']);
@@ -37,7 +37,7 @@ function getTypeLabel(row) {
 }
 
 async function exportToExcel(rows) {
-  const headers = ['תאריך', 'תלמיד/ה', 'הורה', 'טלפון', 'אימייל', 'סוג', 'כלים', 'סטטוס', 'מורה', 'יום', 'שעה', 'הערות'];
+  const headers = ['תאריך', 'תלמיד/ה', 'הורה', 'טלפון', 'אימייל', 'סוג', 'כלים', 'סטטוס', 'תשלום', 'מורה', 'יום', 'שעה', 'הערות'];
   const dataRows = rows.map(r => [
     new Date(r.created_at).toLocaleDateString('he-IL'),
     r.student_name || '',
@@ -49,6 +49,7 @@ async function exportToExcel(rows) {
       ? (r.instruments.length > 0 ? r.instruments.join('; ') : (r.selected_course || ''))
       : (r.instruments || r.selected_course || ''),
     r.status || '',
+    paymentStatusLabel(r.registration_status),
     r.teacher || '',
     r.assigned_day != null && r.assigned_day !== '' ? (DAY_NAMES[Number(r.assigned_day)] ?? r.assigned_day) : '',
     r.assigned_time ? r.assigned_time.slice(0, 5) : '',
@@ -96,14 +97,15 @@ function printTable(rows) {
   win.print();
 }
 
+const PAYMENT_STATUS_STYLES = {
+  Confirmed: 'bg-green-100 text-green-800',
+  Pending:   'bg-yellow-100 text-yellow-800',
+  Cancelled: 'bg-gray-100 text-gray-500',
+};
+
 function RegistrationStatusBadge({ status }) {
-  const map = {
-    Confirmed: { label: 'שולם', cls: 'bg-green-100 text-green-800' },
-    Pending:   { label: 'ממתין', cls: 'bg-yellow-100 text-yellow-800' },
-    Cancelled: { label: 'בוטל', cls: 'bg-gray-100 text-gray-500' },
-  };
-  const { label, cls } = map[status] || map.Pending;
-  return <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cls}`}>{label}</span>;
+  const cls = PAYMENT_STATUS_STYLES[status] || PAYMENT_STATUS_STYLES.Pending;
+  return <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cls}`}>{paymentStatusLabel(status)}</span>;
 }
 
 export default function AdminTable() {
