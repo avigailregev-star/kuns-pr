@@ -123,7 +123,7 @@ export async function POST(request) {
         .select('id, teacher, assigned_day, assigned_time, student_name, instruments, parent_phone, selected_course, status, registration_status, group_id')
         .eq('id', id)
         .single();
-      if (updatedReg) await syncRegistrationToAttendance(supabase, updatedReg);
+      if (updatedReg) await syncRegistrationToAttendance(supabase, updatedReg, groupId || null);
     } catch (syncErr) {
       console.error('Attendance sync error:', syncErr.message);
     }

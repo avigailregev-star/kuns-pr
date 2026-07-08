@@ -6,7 +6,7 @@ import { getOrchestraForInstruments } from '../lib/autoAssign';
 import { getLessonDuration } from '../lib/lessonDuration';
 import { freeMinutesOnDay } from '../lib/teacherCapacity';
 import { LESSON_TYPE_OPTIONS, getLessonTypeValue, computeGroupName, matchesLessonType } from '../lib/groupNaming';
-import { filterRangesToFixedDay } from '../lib/fixedCourseDays';
+import { FIXED_COURSE_TIMES, filterRangesToFixedDay } from '../lib/fixedCourseDays';
 import { assignRowColors, downloadExcelFile } from '../lib/excelExport';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
@@ -665,13 +665,22 @@ async function deleteRegistration(id, studentName) {
                                 const days = selectedTeacher?.available_days || [];
                                 const hours = selectedTeacher?.available_hours || {};
 
-                                // Days from attendance app via teacher_availability_ranges
+                                // Days from attendance app via teacher_availability_ranges.
+                                // When the admin is placing this student into a group (e.g. a
+                                // choir), the day being picked here is for that group, not for
+                                // the student's own registered course — prefer the group type.
+                                const fixedCourseKey = groupTypeFilter[row.id] || row.selected_course;
                                 const availRanges = filterRangesToFixedDay(
                                   (selectedTeacher?.teacher_availability_ranges || [])
                                     .slice()
                                     .sort((a, b) => a.day_of_week - b.day_of_week),
-                                  row.selected_course
+                                  fixedCourseKey
                                 );
+                                // The teacher's availability range for a fixed-day course covers
+                                // her whole working day (e.g. individual lessons around the group
+                                // lesson too), so it can't be used as the group's actual meeting
+                                // time — use the known fixed time instead when there is one.
+                                const fixedTime = FIXED_COURSE_TIMES[fixedCourseKey];
 
                                 if (availRanges.length > 0) {
                                   const lessonDuration = getLessonDuration(row.selected_course);
@@ -747,7 +756,7 @@ async function deleteRegistration(id, studentName) {
                                               onClick={() => {
                                                 if (isFull) return;
                                                 updateAssignment(row.id, 'assigned_day', s.day_of_week);
-                                                updateAssignment(row.id, 'assigned_time', nextTime || s.start_time || '');
+                                                updateAssignment(row.id, 'assigned_time', fixedTime?.start_time || nextTime || s.start_time || '');
                                               }}
                                               className={`px-3 py-1 rounded-lg text-sm border transition-all ${
                                                 isFull
@@ -760,6 +769,10 @@ async function deleteRegistration(id, studentName) {
                                               יום {DAY_NAMES[s.day_of_week] ?? s.day_of_week}
                                               {isFull ? (
                                                 <span className="text-xs mr-1 text-red-400">לא פנוי</span>
+                                              ) : fixedTime?.start_time ? (
+                                                <span className="text-xs opacity-60 mr-1">
+                                                  {fixedTime.start_time}{fixedTime.end_time ? `–${fixedTime.end_time}` : ''}
+                                                </span>
                                               ) : (
                                                 s.start_time && (
                                                   <span className="text-xs opacity-60 mr-1">

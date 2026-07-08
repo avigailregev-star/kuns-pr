@@ -6,7 +6,7 @@ import InstrumentPicker from './InstrumentPicker';
 import DaysPicker from './DaysPicker';
 import AgreementScroll from './AgreementScroll';
 import { getPaymentLink, getCurrentPriceInfo, COURSE_GROUPS, PAYMENT_LINKS } from '../lib/paymentLinks';
-import { FIXED_COURSE_DAYS } from '../lib/fixedCourseDays';
+import { FIXED_COURSE_DAYS, FIXED_COURSE_TIMES } from '../lib/fixedCourseDays';
 import { getLessonDuration } from '../lib/lessonDuration';
 import { freeMinutesOnDay } from '../lib/teacherCapacity';
 import { filterRangesByCourse } from '../lib/teacherCourseDayFilter';
@@ -625,7 +625,7 @@ export default function RegistrationForm() {
 
                 if (availRanges.length > 0) {
                   const fixedDay = FIXED_COURSE_DAYS[form.selectedCourse];
-                  const fixedRange = fixedDay != null ? availRanges.find(r => r.day_of_week === fixedDay) : null;
+                  const fixedTime = FIXED_COURSE_TIMES[form.selectedCourse];
                   return (
                     <div className="space-y-3 pt-2 border-t border-white/10">
                       <label className="field-label">יום השיעור הקבוע</label>
@@ -633,8 +633,8 @@ export default function RegistrationForm() {
                         <div className="p-3 rounded-xl border border-purple-400/40 bg-purple-500/10 text-center">
                           <span className="text-sm text-white font-semibold">
                             יום {DAY_NAMES_FULL[fixedDay]}
-                            {fixedRange?.start_time && (
-                              <> · {fixedRange.start_time.slice(0, 5)}{fixedRange.end_time ? `–${fixedRange.end_time.slice(0, 5)}` : ''}</>
+                            {fixedTime?.start_time && (
+                              <> · {fixedTime.start_time}{fixedTime.end_time ? `–${fixedTime.end_time}` : ''}</>
                             )}
                           </span>
                         </div>
