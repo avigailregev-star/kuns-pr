@@ -388,7 +388,7 @@ async function deleteRegistration(id, studentName) {
         <input
           type="text"
           placeholder="🔍 חיפוש לפי שם / טלפון..."
-          className="form-input flex-1"
+          className="admin-search-input flex-1"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
