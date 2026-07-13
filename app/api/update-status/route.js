@@ -218,8 +218,8 @@ export async function POST(request) {
 
         try {
           // ✅ תיקון: שולחים מייל רק אם יש מורה
-          // ניתן לכבות שליחת מייל אישור שיבוץ ע"י הגדרת SEND_ASSIGNMENT_EMAIL=false ב-.env.local
-          const assignmentEmailEnabled = process.env.SEND_ASSIGNMENT_EMAIL !== 'false';
+          // מייל אישור שיבוץ כבוי כברירת מחדל. להפעיל ע"י הגדרת SEND_ASSIGNMENT_EMAIL=true
+          const assignmentEmailEnabled = process.env.SEND_ASSIGNMENT_EMAIL === 'true';
           if (assignmentEmailEnabled && (teacher || reg.teacher)) {
             await sendAssignmentEmail({
               parentName: reg.parent_name,
