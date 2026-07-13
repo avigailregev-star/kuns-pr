@@ -37,7 +37,7 @@ function getTypeLabel(row) {
   return TYPE_LABELS[row.type] || row.type || '';
 }
 
-async function exportToExcel(rows) {
+function buildExportRows(rows) {
   const headers = ['תאריך', 'תלמיד/ה', 'הורה', 'טלפון', 'אימייל', 'סוג', 'כלים', 'סטטוס', 'תשלום', 'מורה', 'יום', 'שעה', 'הערות'];
   const dataRows = rows.map(r => [
     new Date(r.created_at).toLocaleDateString('he-IL'),
@@ -56,10 +56,26 @@ async function exportToExcel(rows) {
     r.assigned_time ? r.assigned_time.slice(0, 5) : '',
     r.admin_notes || '',
   ]);
+  return { headers, dataRows };
+}
 
+async function exportToExcel(rows) {
+  const { headers, dataRows } = buildExportRows(rows);
   const rowColors = assignRowColors(rows);
   const filename = `רישומים_${new Date().toLocaleDateString('he-IL').replace(/\//g, '-')}.xlsx`;
   await downloadExcelFile({ sheetName: 'רישומים', headers, rows: dataRows, rowColors, filename });
+}
+
+async function postRegistrationsToSheet(headers, rows) {
+  const res = await fetch('/api/registrations/export-to-sheet', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ headers, rows }),
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.error || 'שגיאה בייצוא לגיליון');
+  }
 }
 
 function printTable(rows) {
@@ -118,6 +134,7 @@ export default function AdminTable() {
   const [filterStatus, setFilterStatus] = useState('');
   const [updating, setUpdating] = useState(null);
   const [saved, setSaved] = useState(null);
+  const [sheetExporting, setSheetExporting] = useState(false);
   const [expandedRow, setExpandedRow] = useState(null);
   const [selectedGroups, setSelectedGroups] = useState({});
   const [creatingGroupFor, setCreatingGroupFor] = useState(null);
@@ -261,6 +278,19 @@ export default function AdminTable() {
       alert('שגיאת רשת — בדוק חיבור ונסה שוב');
     } finally {
       setUpdating(null);
+    }
+  }
+
+  async function handleExportToSheet() {
+    setSheetExporting(true);
+    try {
+      const { headers, dataRows } = buildExportRows(filtered);
+      await postRegistrationsToSheet(headers, dataRows);
+      alert('הייצוא לגיליון הושלם בהצלחה');
+    } catch (err) {
+      alert(err.message || 'שגיאת רשת — נסה שוב');
+    } finally {
+      setSheetExporting(false);
     }
   }
 
@@ -419,6 +449,13 @@ async function deleteRegistration(id, studentName) {
           className="px-4 py-2 border border-green-300 text-green-700 rounded-lg hover:bg-green-50 text-sm"
         >
           📊 ייצוא Excel
+        </button>
+        <button
+          onClick={handleExportToSheet}
+          disabled={sheetExporting}
+          className="px-4 py-2 border border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 text-sm disabled:opacity-50"
+        >
+          {sheetExporting ? '⏳ מייצא...' : '📤 ייצוא לגיליון גוגל'}
         </button>
         <button
           onClick={() => printTable(filtered)}
