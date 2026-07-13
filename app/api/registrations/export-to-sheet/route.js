@@ -11,13 +11,14 @@ export async function POST(request) {
 
   try {
     const { headers, rows } = await request.json();
-    if (!Array.isArray(headers) || !Array.isArray(rows)) {
+    if (!Array.isArray(headers) || headers.length === 0 || !Array.isArray(rows)) {
       return NextResponse.json({ error: 'חסרים headers/rows' }, { status: 400 });
     }
 
     await replaceExportSheet({ headers, rows });
     return NextResponse.json({ success: true });
   } catch (err) {
+    console.error('export-to-sheet error:', err);
     return NextResponse.json({ error: String(err.message || err) }, { status: 500 });
   }
 }
