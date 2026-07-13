@@ -11,6 +11,7 @@ import { assignRowColors, downloadExcelFile, paymentStatusLabel } from '../lib/e
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const INDIVIDUAL_LESSON_TYPES = new Set(['individual_45', 'individual_60', 'melodies_individual']);
+const LOCKED_ASSIGNMENT_STATUSES = ['נדחה', 'בוטל', 'רשימת המתנה'];
 
 function timeToMins(t) {
   if (!t) return null;
@@ -219,13 +220,16 @@ export default function AdminTable() {
     const orchestraAuto = row.type === 'continue'
       ? (row.orchestra || getOrchestraForInstruments(row.instruments))
       : undefined;
+    const newStatus = !LOCKED_ASSIGNMENT_STATUSES.includes(row.status) && (row.teacher || orchestraAuto)
+      ? 'שובץ'
+      : row.status;
     try {
       const res = await fetch('/api/update-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: row.id,
-          newStatus: row.status,
+          newStatus,
           teacher: row.teacher,
           assignedDay: row.assigned_day,
           assignedTime: row.assigned_time,
@@ -243,6 +247,7 @@ export default function AdminTable() {
       }
       setSaved(row.id);
       setTimeout(() => setSaved(null), 3000);
+      setRows(prev => prev.map(r => r.id === row.id ? { ...r, status: newStatus } : r));
       const selGroupId = selectedGroups[row.id];
       if (selGroupId) {
         const grp = groups.find(g => String(g.id) === String(selGroupId));
