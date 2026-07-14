@@ -1,6 +1,6 @@
 'use client';
 
-const INSTRUMENTS = [
+export const INSTRUMENTS = [
   {
     value: 'piano',
     label: 'פסנתר',
