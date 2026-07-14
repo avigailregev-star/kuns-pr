@@ -1,5 +1,6 @@
 import AdminTable from '../../../components/AdminTable';
 import TeachersTab from '../../../components/TeachersTab';
+import ScheduleGrid from '../../../components/ScheduleGrid';
 
 export const metadata = {
   title: 'לוח בקרה | ניהול קונסרבטוריון',
@@ -32,6 +33,16 @@ export default function AdminDashboard({ searchParams }) {
         >
           מורים
         </a>
+        <a
+          href="/admin?tab=schedule"
+          className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${
+            tab === 'schedule'
+              ? 'border-purple-600 text-purple-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          מערכת שעות
+        </a>
       </div>
 
       {tab === 'registrations' && (
@@ -42,6 +53,8 @@ export default function AdminDashboard({ searchParams }) {
       )}
 
       {tab === 'teachers' && <TeachersTab />}
+
+      {tab === 'schedule' && <ScheduleGrid />}
     </div>
   );
 }
