@@ -458,7 +458,7 @@ async function deleteRegistration(id, studentName) {
           onChange={(e) => setSearch(e.target.value)}
         />
         <select
-          className="form-input sm:w-40"
+          className="admin-input sm:w-40"
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
         >
@@ -468,7 +468,7 @@ async function deleteRegistration(id, studentName) {
           ))}
         </select>
         <select
-          className="form-input sm:w-40"
+          className="admin-input sm:w-40"
           value={filterInstrument}
           onChange={(e) => setFilterInstrument(e.target.value)}
         >
@@ -478,7 +478,7 @@ async function deleteRegistration(id, studentName) {
           ))}
         </select>
         <select
-          className="form-input sm:w-40"
+          className="admin-input sm:w-40"
           value={filterTeacher}
           onChange={(e) => setFilterTeacher(e.target.value)}
         >
@@ -488,7 +488,7 @@ async function deleteRegistration(id, studentName) {
           ))}
         </select>
         <select
-          className="form-input sm:w-40"
+          className="admin-input sm:w-40"
           value={filterPayment}
           onChange={(e) => setFilterPayment(e.target.value)}
         >
