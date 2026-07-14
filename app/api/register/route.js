@@ -153,13 +153,14 @@ export async function POST(request) {
 
       const { data: teacherRow } = await supabase
         .from('teachers')
-        .select('available_hours, teacher_availability_ranges(day_of_week, start_time, end_time)')
+        .select('available_hours, teacher_availability_ranges(day_of_week, start_time, end_time, closed_for_registration)')
         .eq('name', selectedTeacher)
         .single();
 
       const dayNum = Number(selectedDay);
       const isNumericDay = !isNaN(dayNum) && String(dayNum) === String(selectedDay);
       let free;
+      let dayClosed = false;
 
       if (isNumericDay) {
         const range = (teacherRow?.teacher_availability_ranges || [])
@@ -169,11 +170,16 @@ export async function POST(request) {
           const [eh, em] = range.end_time.split(':').map(Number);
           free = (eh * 60 + em) - (sh * 60 + sm) - usedMins;
         }
+        dayClosed = !!range?.closed_for_registration;
       } else {
         free = freeMinutesOnDay(teacherRow?.available_hours || {}, selectedDay, usedMins);
       }
 
-      if (free != null && free < lessonDuration) {
+      if (dayClosed) {
+        initialStatus = 'רשימת המתנה';
+        adminNotes = (adminNotes ? adminNotes + ' | ' : '') +
+          `⚠️ יום ${selectedDay} סגור להרשמות חדשות אצל ${selectedTeacher} — הוכנס לרשימת המתנה`;
+      } else if (free != null && free < lessonDuration) {
         initialStatus = 'רשימת המתנה';
         adminNotes = (adminNotes ? adminNotes + ' | ' : '') +
           `⚠️ יום ${selectedDay} מלא אצל ${selectedTeacher} — הוכנס לרשימת המתנה`;
@@ -185,7 +191,7 @@ export async function POST(request) {
       const supabase = getSupabaseClient();
       const { data: teacherFull } = await supabase
         .from('teachers')
-        .select('available_days, available_hours, teacher_availability_ranges(day_of_week, start_time, end_time)')
+        .select('available_days, available_hours, teacher_availability_ranges(day_of_week, start_time, end_time, closed_for_registration)')
         .eq('name', selectedTeacher)
         .single();
 
@@ -199,6 +205,7 @@ export async function POST(request) {
           let allFull = true;
           if (ranges.length > 0) {
             for (const r of ranges) {
+              if (r.closed_for_registration) continue; // closed days can't make allFull false
               const used = (usedMapFull[selectedTeacher] || {})[r.day_of_week] || 0;
               if (!r.start_time || !r.end_time) { allFull = false; break; }
               const [sh, sm] = r.start_time.split(':').map(Number);

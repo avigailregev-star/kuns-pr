@@ -18,7 +18,7 @@ export async function GET() {
   ] = await Promise.all([
     supabase.from('teachers').select('id, name').order('name'),
     supabase.from('teachers').select('id, instrument_type, available_days, max_students, available_hours, courses'),
-    supabase.from('teacher_availability_ranges').select('teacher_id, day_of_week, start_time, end_time'),
+    supabase.from('teacher_availability_ranges').select('teacher_id, day_of_week, start_time, end_time, closed_for_registration'),
   ]);
 
   if (error) return NextResponse.json({ data: [] });
@@ -28,7 +28,7 @@ export async function GET() {
   const rangesMap = {};
   for (const r of (ranges ?? [])) {
     if (!rangesMap[r.teacher_id]) rangesMap[r.teacher_id] = [];
-    rangesMap[r.teacher_id].push({ day_of_week: r.day_of_week, start_time: r.start_time, end_time: r.end_time });
+    rangesMap[r.teacher_id].push({ day_of_week: r.day_of_week, start_time: r.start_time, end_time: r.end_time, closed_for_registration: r.closed_for_registration });
   }
 
   const usedMap = await buildUsedMinutesMap(supabase);

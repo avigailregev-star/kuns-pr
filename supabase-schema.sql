@@ -58,3 +58,4 @@ ALTER TABLE registrations ADD COLUMN IF NOT EXISTS orchestra_confirmed boolean;
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS attended_open_day boolean;
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS max_students integer;
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS weekly_hours_quota numeric;
+ALTER TABLE teacher_availability_ranges ADD COLUMN IF NOT EXISTS closed_for_registration boolean NOT NULL DEFAULT false;

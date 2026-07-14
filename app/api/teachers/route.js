@@ -11,7 +11,7 @@ export async function GET() {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('teachers')
-    .select('*, teacher_availability_ranges(day_of_week, start_time, end_time)')
+    .select('*, teacher_availability_ranges(day_of_week, start_time, end_time, closed_for_registration)')
     .order('name');
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -60,6 +60,7 @@ export async function POST(request) {
         day_of_week: r.day_of_week,
         start_time: r.start_time,
         end_time: r.end_time,
+        closed_for_registration: r.closed_for_registration ?? false,
       }))
     );
   }

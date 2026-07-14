@@ -39,6 +39,7 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
       map[r.day_of_week] = {
         start_time: (r.start_time || '').slice(0, 5),
         end_time: (r.end_time || '').slice(0, 5),
+        closed_for_registration: !!r.closed_for_registration,
       };
     }
     return map;
@@ -78,13 +79,20 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
   function toggleDayRange(day) {
     setAvailabilityRanges((prev) => {
       const next = { ...prev };
-      if (next[day]) { delete next[day]; } else { next[day] = { start_time: '', end_time: '' }; }
+      if (next[day]) { delete next[day]; } else { next[day] = { start_time: '', end_time: '', closed_for_registration: false }; }
       return next;
     });
   }
 
   function setRangeTime(day, field, value) {
     setAvailabilityRanges((prev) => ({ ...prev, [day]: { ...prev[day], [field]: value } }));
+  }
+
+  function toggleClosedForRegistration(day) {
+    setAvailabilityRanges((prev) => ({
+      ...prev,
+      [day]: { ...prev[day], closed_for_registration: !prev[day]?.closed_for_registration },
+    }));
   }
 
   async function handleSubmit(e) {
@@ -105,7 +113,12 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
         courses,
         availability_ranges: Object.entries(availabilityRanges)
           .filter(([, t]) => t.start_time && t.end_time)
-          .map(([day, t]) => ({ day_of_week: Number(day), start_time: t.start_time, end_time: t.end_time })),
+          .map(([day, t]) => ({
+            day_of_week: Number(day),
+            start_time: t.start_time,
+            end_time: t.end_time,
+            closed_for_registration: !!t.closed_for_registration,
+          })),
       });
     } catch (err) {
       setError(err.message);
@@ -195,6 +208,15 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
                     <input type="time" dir="ltr" className="admin-input py-1 text-sm"
                       value={availabilityRanges[day].end_time}
                       onChange={(e) => setRangeTime(day, 'end_time', e.target.value)} />
+                    <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        className="accent-red-500 cursor-pointer"
+                        checked={!!availabilityRanges[day].closed_for_registration}
+                        onChange={() => toggleClosedForRegistration(day)}
+                      />
+                      סגור להרשמות חדשות
+                    </label>
                   </>
                 )}
               </div>
