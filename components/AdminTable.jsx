@@ -667,6 +667,9 @@ async function deleteRegistration(id, studentName) {
                                 <p className="text-sm text-gray-600">
                                   🎓 כיתה: {row.grade || '—'}
                                 </p>
+                                <p className="text-sm text-gray-600">
+                                  🎂 תאריך לידה: {row.birthdate ? new Date(row.birthdate).toLocaleDateString('he-IL') : '—'}
+                                </p>
                               </>
                             )}
                           </div>
