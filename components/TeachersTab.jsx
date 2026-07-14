@@ -173,6 +173,11 @@ function TeacherCard({ t, registrations, onEdit, onDelete, onStudentUpdated }) {
                           {formatDayTeacher(s.assigned_day) != null ? ` · יום ${formatDayTeacher(s.assigned_day)}` : ''}
                           {s.assigned_time ? ` ${s.assigned_time}` : ''}
                         </span>
+                        {formatDayTeacher(s.assigned_day) == null && (
+                          <span className="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full whitespace-nowrap">
+                            ⏳ טרם נקבע יום
+                          </span>
+                        )}
                         <button
                           onClick={() => startEdit(s)}
                           className="text-xs text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity"
