@@ -240,10 +240,17 @@ export default function AdminTable() {
       ? 'שובץ'
       : row.status;
 
-    // Orchestra/choir and lessons tied to an existing group get their time from
-    // the group's fixed schedule — only a manually-typed individual lesson needs
-    // its own time picked here.
-    const isGroupAssignment = !!orchestraAuto || !!selectedGroups[row.id] || !!row.group_id;
+    // Orchestra/choir and lessons tied to a real shared group get their time
+    // from that group's fixed schedule. An individual lesson also gets a
+    // group_id (auto-created 1-student "group" for attendance sync), but that
+    // group has no independent schedule of its own — checking group_id alone
+    // would let a stale link from a previous save skip the time requirement.
+    const groupIdForCheck = selectedGroups[row.id] || row.group_id;
+    const linkedGroup = groupIdForCheck ? groups.find(g => String(g.id) === String(groupIdForCheck)) : null;
+    const isSharedGroupSchedule = !!linkedGroup &&
+      !INDIVIDUAL_LESSON_TYPES.has(linkedGroup.lesson_type) &&
+      (linkedGroup.group_schedules || []).some(sc => sc.start_time);
+    const isGroupAssignment = !!orchestraAuto || isSharedGroupSchedule;
     if (newStatus === 'שובץ' && !isGroupAssignment && !row.assigned_time) {
       alert('יש לבחור שעה כדי לשבץ תלמיד/ה לשיעור פרטני');
       return;
@@ -307,6 +314,10 @@ export default function AdminTable() {
 
   async function handleCreateGroup(rowId, teacherName, assignedDay, assignedTime, groupType) {
     if (!groupType || newGroupStudents.length === 0) return;
+    if (!assignedTime) {
+      alert('יש לבחור שעה כדי ליצור שיעור');
+      return;
+    }
     const teacher = teachers.find(t => t.name === teacherName);
     if (!teacher?.id) {
       alert('יש לבחור מורה לפני יצירת קבוצה');

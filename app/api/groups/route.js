@@ -16,6 +16,9 @@ export async function POST(request) {
     if (!name?.trim()) {
       return NextResponse.json({ error: 'שם קבוצה הוא שדה חובה' }, { status: 400 });
     }
+    if (!assigned_time) {
+      return NextResponse.json({ error: 'יש לבחור שעה כדי ליצור שיעור' }, { status: 400 });
+    }
 
     const supabase = getSupabaseClient();
 

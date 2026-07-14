@@ -35,6 +35,17 @@ function getEffectiveSchedule(s, groupsById) {
   return { day: s.assigned_day, time: s.assigned_time };
 }
 
+// An individual lesson also gets a 1-student "group" behind the scenes for
+// attendance sync, but that group has no independent schedule of its own —
+// only a real shared group (theory/choir/orchestra/etc) can supply a time on
+// the student's behalf.
+const INDIVIDUAL_LESSON_TYPES_TEACHER = new Set(['individual_45', 'individual_60', 'melodies_individual']);
+function hasSharedGroupSchedule(s, groupsById) {
+  const group = s.group_id != null ? groupsById[s.group_id] : null;
+  if (!group || INDIVIDUAL_LESSON_TYPES_TEACHER.has(group.lesson_type)) return false;
+  return (group.group_schedules || []).some(sc => sc.start_time);
+}
+
 function TeacherCard({ t, registrations, groupsById, onEdit, onDelete, onStudentUpdated }) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -63,7 +74,7 @@ function TeacherCard({ t, registrations, groupsById, onEdit, onDelete, onStudent
   }
 
   async function saveEdit(s) {
-    if (!s.group_id && !editTime) {
+    if (!editTime && !hasSharedGroupSchedule(s, groupsById)) {
       alert('יש לבחור שעה כדי לשבץ תלמיד/ה לשיעור פרטני');
       return;
     }
