@@ -22,7 +22,20 @@ function dayToNum(assignedDay) {
   return HEBREW_TO_NUM[assignedDay] ?? 99;
 }
 
-function TeacherCard({ t, registrations, onEdit, onDelete, onStudentUpdated }) {
+// A registration linked to an existing group (group_id) gets its real day/time
+// from that group's schedule, not from its own assigned_day/assigned_time —
+// those are only populated when the assignment was made directly on the
+// registration (see syncToAttendance.js). Without this, students assigned via
+// the "existing lesson" picker in AdminTable look unscheduled here even
+// though they have a real day+time.
+function getEffectiveSchedule(s, groupsById) {
+  const group = s.group_id != null ? groupsById[s.group_id] : null;
+  const sched = group?.group_schedules?.find(sc => sc.start_time) || group?.group_schedules?.[0];
+  if (sched) return { day: sched.day_of_week, time: sched.start_time };
+  return { day: s.assigned_day, time: s.assigned_time };
+}
+
+function TeacherCard({ t, registrations, groupsById, onEdit, onDelete, onStudentUpdated }) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editDay, setEditDay] = useState('');
@@ -35,9 +48,11 @@ function TeacherCard({ t, registrations, onEdit, onDelete, onStudentUpdated }) {
         !['בוטל', 'נדחה', 'רשימת המתנה'].includes(r.status)
     )
     .sort((a, b) => {
-      const dayDiff = dayToNum(a.assigned_day) - dayToNum(b.assigned_day);
+      const schedA = getEffectiveSchedule(a, groupsById);
+      const schedB = getEffectiveSchedule(b, groupsById);
+      const dayDiff = dayToNum(schedA.day) - dayToNum(schedB.day);
       if (dayDiff !== 0) return dayDiff;
-      return (a.assigned_time || '').localeCompare(b.assigned_time || '');
+      return (schedA.time || '').localeCompare(schedB.time || '');
     });
 
   function startEdit(s) {
@@ -48,6 +63,10 @@ function TeacherCard({ t, registrations, onEdit, onDelete, onStudentUpdated }) {
   }
 
   async function saveEdit(s) {
+    if (!s.group_id && !editTime) {
+      alert('יש לבחור שעה כדי לשבץ תלמיד/ה לשיעור פרטני');
+      return;
+    }
     setSaving(true);
     await fetch('/api/update-status', {
       method: 'POST',
@@ -168,16 +187,26 @@ function TeacherCard({ t, registrations, onEdit, onDelete, onStudentUpdated }) {
                     <div className="flex items-center justify-between group">
                       <span className="font-medium text-gray-800">{s.student_name}</span>
                       <div className="flex items-center gap-3">
-                        <span className="text-gray-500 text-xs">
-                          {s.selected_course || (Array.isArray(s.instruments) ? s.instruments.join(', ') : s.instruments) || '—'}
-                          {formatDayTeacher(s.assigned_day) != null ? ` · יום ${formatDayTeacher(s.assigned_day)}` : ''}
-                          {s.assigned_time ? ` ${s.assigned_time}` : ''}
-                        </span>
-                        {formatDayTeacher(s.assigned_day) == null && (
-                          <span className="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full whitespace-nowrap">
-                            ⏳ טרם נקבע יום
-                          </span>
-                        )}
+                        {(() => {
+                          const sched = getEffectiveSchedule(s, groupsById);
+                          const dayLabel = formatDayTeacher(sched.day);
+                          const hasDay = dayLabel != null;
+                          const hasTime = !!sched.time;
+                          return (
+                            <>
+                              <span className="text-gray-500 text-xs">
+                                {s.selected_course || (Array.isArray(s.instruments) ? s.instruments.join(', ') : s.instruments) || '—'}
+                                {hasDay ? ` · יום ${dayLabel}` : ''}
+                                {hasTime ? ` ${sched.time}` : ''}
+                              </span>
+                              {!(hasDay && hasTime) && (
+                                <span className="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                  ⏳ טרם שובץ{!hasDay && !hasTime ? '' : !hasDay ? ' (חסר יום)' : ' (חסרה שעה)'}
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
                         <button
                           onClick={() => startEdit(s)}
                           className="text-xs text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -206,6 +235,7 @@ function TeacherCard({ t, registrations, onEdit, onDelete, onStudentUpdated }) {
 export default function TeachersTab() {
   const [teachers, setTeachers] = useState([]);
   const [registrations, setRegistrations] = useState([]);
+  const [groupsById, setGroupsById] = useState({});
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -218,13 +248,15 @@ export default function TeachersTab() {
 
   async function fetchAll() {
     setLoading(true);
-    const [tRes, rRes] = await Promise.all([
+    const [tRes, rRes, gRes] = await Promise.all([
       fetch('/api/teachers'),
       fetch('/api/registrations'),
+      fetch('/api/groups'),
     ]);
-    const [tJson, rJson] = await Promise.all([tRes.json(), rRes.json()]);
+    const [tJson, rJson, gJson] = await Promise.all([tRes.json(), rRes.json(), gRes.json()]);
     setTeachers(tJson.data || []);
     setRegistrations((rJson.data || []).filter(r => r.teacher));
+    setGroupsById(Object.fromEntries((gJson.data || []).map(g => [g.id, g])));
     setLoading(false);
   }
 
@@ -304,6 +336,7 @@ export default function TeachersTab() {
               <TeacherCard
                 t={t}
                 registrations={registrations}
+                groupsById={groupsById}
                 onEdit={() => setEditing(t)}
                 onDelete={() => handleDelete(t.id)}
                 onStudentUpdated={fetchAll}

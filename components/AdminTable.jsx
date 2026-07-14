@@ -233,13 +233,23 @@ export default function AdminTable() {
   }
 
   async function saveAssignment(row) {
-    setUpdating(row.id);
     const orchestraAuto = row.type === 'continue'
       ? (row.orchestra || getOrchestraForInstruments(row.instruments))
       : undefined;
     const newStatus = !LOCKED_ASSIGNMENT_STATUSES.includes(row.status) && (row.teacher || orchestraAuto)
       ? 'שובץ'
       : row.status;
+
+    // Orchestra/choir and lessons tied to an existing group get their time from
+    // the group's fixed schedule — only a manually-typed individual lesson needs
+    // its own time picked here.
+    const isGroupAssignment = !!orchestraAuto || !!selectedGroups[row.id] || !!row.group_id;
+    if (newStatus === 'שובץ' && !isGroupAssignment && !row.assigned_time) {
+      alert('יש לבחור שעה כדי לשבץ תלמיד/ה לשיעור פרטני');
+      return;
+    }
+
+    setUpdating(row.id);
     try {
       const res = await fetch('/api/update-status', {
         method: 'POST',

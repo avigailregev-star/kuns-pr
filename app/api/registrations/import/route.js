@@ -14,6 +14,9 @@ export async function POST(request) {
     if (!studentName || !teacher) {
       return NextResponse.json({ error: 'חסרים שדות חובה' }, { status: 400 });
     }
+    if (!assignedTime) {
+      return NextResponse.json({ error: 'חסרה שעה — לא ניתן לשבץ בלעדיה' }, { status: 400 });
+    }
 
     const supabase = getSupabaseClient();
 
