@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
+import { unstable_noStore as noStore } from 'next/cache';
 import { getSupabaseClient } from '../../../../lib/supabase';
 import { buildUsedMinutesMap } from '../../../../lib/teacherCapacity';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  // `dynamic = 'force-dynamic'` alone doesn't reliably bust Vercel's Data Cache
+  // for fetches made by third-party clients (supabase-js) — noStore() does.
+  noStore();
   const supabase = getSupabaseClient();
 
   // Three separate queries — no nested joins at all.
