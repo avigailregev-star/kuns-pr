@@ -153,6 +153,7 @@ export default function RegistrationForm() {
     const ranges = filterRangesByCourse(teacher.teacher_availability_ranges || [], form.selectedCourse);
     if (ranges.length > 0) {
       return ranges.every(s => {
+        if (s.closed_for_registration) return true;
         const used = teacher.used_minutes_per_day?.[s.day_of_week] || 0;
         if (!s.start_time || !s.end_time) return false;
         const [sh, sm] = s.start_time.split(':').map(Number);
@@ -649,7 +650,7 @@ export default function RegistrationForm() {
                             return (eh * 60 + em) - (sh * 60 + sm);
                           })();
                           const freeMins = totalMins - usedMins;
-                          const isFull = freeMins < lessonDuration;
+                          const isFull = freeMins < lessonDuration || !!s.closed_for_registration;
                           const nextTime = (() => {
                             if (!s.start_time || usedMins === 0) return s.start_time;
                             const [sh, sm] = s.start_time.split(':').map(Number);
