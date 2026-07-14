@@ -6,10 +6,12 @@ import { buildScheduleGrid, minsToTime, SLOT_MINUTES } from '../lib/scheduleGrid
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'];
 const BLOCKED_STATUSES = ['נדחה', 'בוטל', 'רשימת המתנה'];
 const SLOT_HEIGHT = 28; // px
+const MIN_LESSON_BLOCK_HEIGHT = 48; // px — smallest space that fits 3 lines of text without clipping
 
 export default function ScheduleGrid() {
   const [teachers, setTeachers] = useState([]);
   const [registrations, setRegistrations] = useState([]);
+  const [groupsById, setGroupsById] = useState({});
   const [selectedTeacher, setSelectedTeacher] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -17,16 +19,20 @@ export default function ScheduleGrid() {
   useEffect(() => {
     async function load() {
       try {
-        const [teachersRes, registrationsRes] = await Promise.all([
+        const [teachersRes, registrationsRes, groupsRes] = await Promise.all([
           fetch('/api/teachers'),
           fetch('/api/registrations'),
+          fetch('/api/groups'),
         ]);
         const teachersJson = await teachersRes.json();
         const registrationsJson = await registrationsRes.json();
+        const groupsJson = await groupsRes.json();
         if (teachersJson.error) throw new Error(teachersJson.error);
         if (registrationsJson.error) throw new Error(registrationsJson.error);
+        if (groupsJson.error) throw new Error(groupsJson.error);
         setTeachers(teachersJson.data || []);
         setRegistrations(registrationsJson.data || []);
+        setGroupsById(Object.fromEntries((groupsJson.data || []).map((g) => [g.id, g])));
         if (teachersJson.data?.length > 0) setSelectedTeacher(teachersJson.data[0].name);
       } catch (err) {
         setError(err.message || 'שגיאה בטעינת הנתונים');
@@ -39,8 +45,8 @@ export default function ScheduleGrid() {
 
   const grid = useMemo(() => {
     if (!selectedTeacher) return null;
-    return buildScheduleGrid(registrations, { teacherName: selectedTeacher, blockedStatuses: BLOCKED_STATUSES });
-  }, [registrations, selectedTeacher]);
+    return buildScheduleGrid(registrations, { teacherName: selectedTeacher, blockedStatuses: BLOCKED_STATUSES, groupsById });
+  }, [registrations, groupsById, selectedTeacher]);
 
   if (loading) return <p className="text-gray-500">טוען...</p>;
   if (error) return <p className="text-red-600">{error}</p>;
@@ -97,13 +103,16 @@ export default function ScheduleGrid() {
                       }`}
                       style={{
                         top: ((lesson.startMins - grid.rangeStart) / SLOT_MINUTES) * SLOT_HEIGHT,
-                        height: Math.max(1, (lesson.endMins - lesson.startMins) / SLOT_MINUTES) * SLOT_HEIGHT,
+                        height: Math.max(
+                          MIN_LESSON_BLOCK_HEIGHT,
+                          ((lesson.endMins - lesson.startMins) / SLOT_MINUTES) * SLOT_HEIGHT
+                        ),
                         left: `${(lesson.columnIndex / lesson.columnCount) * 100}%`,
                         width: `${100 / lesson.columnCount}%`,
                       }}
                     >
                       <div className="font-medium text-gray-800 truncate">{lesson.studentName}</div>
-                      <div className="text-gray-500 truncate">
+                      <div className="text-gray-500 truncate" dir="ltr">
                         {minsToTime(lesson.startMins)}–{minsToTime(lesson.endMins)}
                       </div>
                       <div className="text-gray-500 truncate">{lesson.course}</div>
