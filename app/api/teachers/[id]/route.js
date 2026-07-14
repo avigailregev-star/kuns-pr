@@ -43,6 +43,7 @@ export async function PUT(request, { params }) {
           day_of_week: r.day_of_week,
           start_time: r.start_time,
           end_time: r.end_time,
+          closed_for_registration: r.closed_for_registration ?? false,
         })));
       if (rangesError) return NextResponse.json({ error: rangesError.message }, { status: 500 });
     }
