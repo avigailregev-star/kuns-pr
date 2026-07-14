@@ -5,7 +5,7 @@ import StatusSelect, { STATUS_OPTIONS } from './StatusSelect';
 import { INSTRUMENTS } from './InstrumentPicker';
 import { getOrchestraForInstruments } from '../lib/autoAssign';
 import { getLessonDuration } from '../lib/lessonDuration';
-import { freeMinutesOnDay } from '../lib/teacherCapacity';
+import { freeMinutesOnDay, getGroupLessonDuration } from '../lib/teacherCapacity';
 import { LESSON_TYPE_OPTIONS, getLessonTypeValue, computeGroupName, matchesLessonType } from '../lib/groupNaming';
 import { FIXED_COURSE_TIMES, filterRangesToFixedDay } from '../lib/fixedCourseDays';
 import { assignRowColors, downloadExcelFile, paymentStatusLabel } from '../lib/excelExport';
@@ -819,7 +819,7 @@ async function deleteRegistration(id, studentName) {
                                             const sched = (g.group_schedules || []).find(sc => String(sc.day_of_week) === String(s.day_of_week));
                                             if (!sched?.start_time) continue;
                                             const gStart = timeToMins(sched.start_time);
-                                            const gEnd = sched.end_time ? timeToMins(sched.end_time) : gStart + 60;
+                                            const gEnd = sched.end_time ? timeToMins(sched.end_time) : gStart + getGroupLessonDuration(g.lesson_type);
                                             occupied.push({ start: gStart, end: gEnd });
                                             if (INDIVIDUAL_LESSON_TYPES.has(g.lesson_type)) hasOnlyGroupOccupied = false;
                                           }
