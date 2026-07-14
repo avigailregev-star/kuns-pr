@@ -1,6 +1,6 @@
 'use client';
 
-const STATUS_OPTIONS = ['חדש', 'בבדיקה', 'שובץ', 'נדחה', 'רשימת המתנה', 'ממתין לשיחת היכרות'];
+export const STATUS_OPTIONS = ['חדש', 'בבדיקה', 'שובץ', 'נדחה', 'רשימת המתנה', 'ממתין לשיחת היכרות'];
 
 const STATUS_COLORS = {
   'חדש':                    'bg-blue-100 text-blue-800',

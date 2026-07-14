@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import StatusSelect from './StatusSelect';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import StatusSelect, { STATUS_OPTIONS } from './StatusSelect';
+import { INSTRUMENTS } from './InstrumentPicker';
 import { getOrchestraForInstruments } from '../lib/autoAssign';
 import { getLessonDuration } from '../lib/lessonDuration';
 import { freeMinutesOnDay } from '../lib/teacherCapacity';
 import { LESSON_TYPE_OPTIONS, getLessonTypeValue, computeGroupName, matchesLessonType } from '../lib/groupNaming';
 import { FIXED_COURSE_TIMES, filterRangesToFixedDay } from '../lib/fixedCourseDays';
 import { assignRowColors, downloadExcelFile, paymentStatusLabel } from '../lib/excelExport';
+import { filterRegistrations } from '../lib/registrationFilters';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const INDIVIDUAL_LESSON_TYPES = new Set(['individual_45', 'individual_60', 'melodies_individual']);
@@ -132,6 +134,9 @@ export default function AdminTable() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterInstrument, setFilterInstrument] = useState('');
+  const [filterTeacher, setFilterTeacher] = useState('');
+  const [filterPayment, setFilterPayment] = useState('');
   const [updating, setUpdating] = useState(null);
   const [saved, setSaved] = useState(null);
   const [sheetExporting, setSheetExporting] = useState(false);
@@ -203,6 +208,11 @@ export default function AdminTable() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const teacherNames = useMemo(
+    () => Array.from(new Set(teachers.map((t) => t.name).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'he')),
+    [teachers]
+  );
 
   async function refreshTeachers() {
     const res = await fetch('/api/teachers');
@@ -405,14 +415,12 @@ async function deleteRegistration(id, studentName) {
     }
   }
 
-  const filtered = rows.filter((r) => {
-    const matchSearch =
-      !search ||
-      r.student_name?.includes(search) ||
-      r.parent_name?.includes(search) ||
-      r.parent_phone?.includes(search);
-    const matchStatus = !filterStatus || r.status === filterStatus;
-    return matchSearch && matchStatus;
+  const filtered = filterRegistrations(rows, {
+    search,
+    status: filterStatus,
+    instrument: filterInstrument,
+    teacher: filterTeacher,
+    payment: filterPayment,
   });
 
   if (loading) {
@@ -455,10 +463,39 @@ async function deleteRegistration(id, studentName) {
           onChange={(e) => setFilterStatus(e.target.value)}
         >
           <option value="">כל הסטטוסים</option>
-          <option value="חדש">חדש</option>
-          <option value="בבדיקה">בבדיקה</option>
-          <option value="שובץ">שובץ</option>
-          <option value="נדחה">נדחה</option>
+          {STATUS_OPTIONS.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <select
+          className="form-input sm:w-40"
+          value={filterInstrument}
+          onChange={(e) => setFilterInstrument(e.target.value)}
+        >
+          <option value="">כל הכלים</option>
+          {INSTRUMENTS.map((inst) => (
+            <option key={inst.value} value={inst.value}>{inst.label}</option>
+          ))}
+        </select>
+        <select
+          className="form-input sm:w-40"
+          value={filterTeacher}
+          onChange={(e) => setFilterTeacher(e.target.value)}
+        >
+          <option value="">כל המורים</option>
+          {teacherNames.map((name) => (
+            <option key={name} value={name}>{name}</option>
+          ))}
+        </select>
+        <select
+          className="form-input sm:w-40"
+          value={filterPayment}
+          onChange={(e) => setFilterPayment(e.target.value)}
+        >
+          <option value="">כל התשלומים</option>
+          <option value="Confirmed">{paymentStatusLabel('Confirmed')}</option>
+          <option value="Pending">{paymentStatusLabel('Pending')}</option>
+          <option value="Cancelled">{paymentStatusLabel('Cancelled')}</option>
         </select>
         <button
           onClick={fetchData}
