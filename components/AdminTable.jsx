@@ -309,10 +309,10 @@ export default function AdminTable() {
   }
 
   async function handleExportToSheet() {
-    if (filtered.length === 0 && !confirm('אין רישומים מסוננים כרגע — הגיליון יימחק ויישאר ריק. להמשיך?')) return;
+    if (rows.length === 0 && !confirm('אין רישומים כרגע — הגיליון יימחק ויישאר ריק. להמשיך?')) return;
     setSheetExporting(true);
     try {
-      const { headers, dataRows } = buildExportRows(filtered);
+      const { headers, dataRows } = buildExportRows(rows);
       await postRegistrationsToSheet(headers, dataRows);
       alert('הייצוא לגיליון הושלם בהצלחה');
     } catch (err) {
