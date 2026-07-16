@@ -62,7 +62,10 @@ export async function POST(request) {
         .from('registrations')
         .select('id, status, selected_course')
         .eq('linked_registration_id', sourceId);
-      if (existingErr) console.error('addon: existing-theory check error', existingErr.message);
+      if (existingErr) {
+        console.error('addon: existing-theory check error', existingErr.message);
+        return NextResponse.json({ error: 'שגיאה בבדיקת רישום' }, { status: 500 });
+      }
       const hasActiveTheory = (existingLinked || []).some(r =>
         getLessonTypeValue(r.selected_course) === 'theory' && !EXCLUDED_STATUSES.includes(r.status)
       );

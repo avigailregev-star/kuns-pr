@@ -154,4 +154,20 @@ describe('POST /api/registrations/addon — duplicate theory guard', () => {
     // No insert was attempted.
     expect(mockSupabase.from.mock.calls.map(c => c[0])).toEqual(['registrations', 'registrations']);
   });
+
+  test('rejects with 500 when the existing-theory check query errors', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [
+        { data: sourceReg, error: null }, // source fetch
+        { data: null, error: { message: 'Database connection error' } }, // existing-theory check fails
+      ],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+
+    const res = await POST(makeRequest({ sourceId: 'r1', newLabel: 'תיאוריה' }));
+    expect(res.status).toBe(500);
+
+    // No insert was attempted.
+    expect(mockSupabase.from.mock.calls.map(c => c[0])).toEqual(['registrations', 'registrations']);
+  });
 });
