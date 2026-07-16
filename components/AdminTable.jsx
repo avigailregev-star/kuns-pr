@@ -789,6 +789,8 @@ async function deleteRegistration(id, studentName) {
                           <div>
                             <h4 className="font-semibold text-gray-700 mb-2">שיבוץ</h4>
                             {row.linked_registration_id && getLessonTypeValue(row.selected_course) === 'theory' && (() => {
+                              // Match either the source registration itself (r.id === row.linked_registration_id)
+                              // or a sibling add-on row that shares the same source (r.linked_registration_id === row.linked_registration_id).
                               const family = rows.filter(r =>
                                 r.id !== row.id &&
                                 (r.id === row.linked_registration_id || r.linked_registration_id === row.linked_registration_id) &&

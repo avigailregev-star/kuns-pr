@@ -135,7 +135,7 @@ export async function POST(request) {
         .eq('name', source.student_name)
         .maybeSingle();
       if (existingStudentErr) console.error('addon: existing student check error', existingStudentErr.message);
-      if (!existingStudent) {
+      if (!existingStudentErr && !existingStudent) {
         const { error: studentErr } = await supabase.from('students').insert({
           group_id: group.id,
           name: source.student_name,

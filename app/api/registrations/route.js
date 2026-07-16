@@ -40,7 +40,7 @@ export async function DELETE(request) {
 
     // מצא שם תלמיד לפני המחיקה
     const { data: reg } = await supabase
-      .from('registrations').select('student_name').eq('id', id).single();
+      .from('registrations').select('student_name, group_id').eq('id', id).single();
 
     await supabase.from('message_log').delete().eq('registration_id', id);
     const { error } = await supabase.from('registrations').delete().eq('id', id);
@@ -48,11 +48,18 @@ export async function DELETE(request) {
 
     // הסר תלמיד מאפליקציית הנוכחות
     if (reg?.student_name) {
-      const { data: updated, error: studErr } = await supabase
+      // מחיקה לפי שם + group_id ביחד, כדי לא להשבית את התלמיד/ה בקבוצות אחרות
+      // (למשל תוספת אנסמבל/תיאוריה) כשמוחקים רק רישום אחד שלהם
+      let query = supabase
         .from('students')
         .update({ is_active: false })
-        .eq('name', reg.student_name.trim())
-        .select('id, name');
+        .eq('name', reg.student_name.trim());
+
+      if (reg.group_id) {
+        query = query.eq('group_id', reg.group_id);
+      }
+
+      const { data: updated, error: studErr } = await query.select('id, name');
       console.log('student deactivate:', JSON.stringify(updated), studErr?.message);
     }
 

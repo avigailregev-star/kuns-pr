@@ -136,6 +136,95 @@ describe('POST /api/registrations/addon — attach to an existing group', () => 
     expect(json.data.status).toBe('שובץ');
     expect(json.data.teacher).toBe('רותם לוי');
   });
+
+  test('rejects with 409 when attaching to a theory group and the student already has an active theory add-on', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [
+        { data: sourceReg, error: null }, // source fetch
+        { data: [{ id: 'existing-theory', status: 'שובץ', selected_course: 'תיאוריה' }], error: null }, // existing-theory check
+      ],
+      groups: [
+        { data: { id: 'g-theory', name: 'תיאוריה', teacher_id: null, lesson_type: 'theory', group_schedules: [] }, error: null },
+      ],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+
+    const res = await POST(makeRequest({ sourceId: 'r1', groupId: 'g-theory' }));
+    expect(res.status).toBe(409);
+
+    // No insert was attempted.
+    expect(mockSupabase.from.mock.calls.map(c => c[0])).toEqual(['registrations', 'groups', 'registrations']);
+  });
+
+  test('returns 404 when the given groupId does not match any group', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [
+        { data: sourceReg, error: null }, // source fetch
+      ],
+      groups: [
+        { data: null, error: null }, // group not found
+      ],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+
+    const res = await POST(makeRequest({ sourceId: 'r1', groupId: 'missing-group' }));
+    expect(res.status).toBe(404);
+  });
+
+  test('still creates the registration when the teacher lookup errors, falling back to a null teacher name', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [
+        { data: sourceReg, error: null }, // source fetch
+        { data: { id: 'new3', ...sourceReg, selected_course: 'תזמורת כלי קשת', linked_registration_id: 'r1', status: 'שובץ', teacher: null, assigned_day: 2, assigned_time: '17:00', group_id: 'g1' }, error: null }, // insert
+      ],
+      groups: [
+        { data: { id: 'g1', name: 'תזמורת כלי קשת', teacher_id: 't1', lesson_type: 'orchestra', group_schedules: [{ day_of_week: 2, start_time: '17:00', end_time: '18:00' }] }, error: null },
+      ],
+      teachers: [
+        { data: null, error: { message: 'teacher lookup boom' } },
+      ],
+      students: [
+        { data: null, error: null }, // existing-student check: not found
+        { error: null },              // insert
+      ],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+
+    const res = await POST(makeRequest({ sourceId: 'r1', groupId: 'g1' }));
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.data.teacher).toBe(null);
+  });
+
+  test('does not attempt a students insert when the existence check errors (fails closed)', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [
+        { data: sourceReg, error: null }, // source fetch
+        { data: { id: 'new4', ...sourceReg, selected_course: 'תזמורת כלי קשת', linked_registration_id: 'r1', status: 'שובץ', teacher: 'רותם לוי', assigned_day: 2, assigned_time: '17:00', group_id: 'g1' }, error: null }, // insert
+      ],
+      groups: [
+        { data: { id: 'g1', name: 'תזמורת כלי קשת', teacher_id: 't1', lesson_type: 'orchestra', group_schedules: [{ day_of_week: 2, start_time: '17:00', end_time: '18:00' }] }, error: null },
+      ],
+      teachers: [
+        { data: { name: 'רותם לוי' }, error: null },
+      ],
+      students: [
+        { data: null, error: { message: 'boom' } }, // existing-student check errors
+      ],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+
+    const res = await POST(makeRequest({ sourceId: 'r1', groupId: 'g1' }));
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.data.id).toBe('new4');
+
+    // Only one students call (the failed existence check) — no insert attempted.
+    const studentsCalls = mockSupabase.from.mock.calls.filter(c => c[0] === 'students');
+    expect(studentsCalls.length).toBe(1);
+  });
 });
 
 describe('POST /api/registrations/addon — duplicate theory guard', () => {
