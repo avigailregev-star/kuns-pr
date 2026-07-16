@@ -6,11 +6,10 @@ import { INSTRUMENTS } from './InstrumentPicker';
 import AssignmentPanel from './AssignmentPanel';
 import { getOrchestraForInstruments } from '../lib/autoAssign';
 import { getLessonDuration } from '../lib/lessonDuration';
-import { freeMinutesOnDay, getGroupLessonDuration } from '../lib/teacherCapacity';
-import { LESSON_TYPE_OPTIONS, getLessonTypeValue, computeGroupName, matchesLessonType, THEORY_LABEL, ENSEMBLE_LABELS, getAddonBadge } from '../lib/groupNaming';
-import { FIXED_COURSE_TIMES, filterRangesToFixedDay } from '../lib/fixedCourseDays';
+import { getLessonTypeValue, computeGroupName, THEORY_LABEL, ENSEMBLE_LABELS } from '../lib/groupNaming';
 import { assignRowColors, downloadExcelFile, paymentStatusLabel } from '../lib/excelExport';
 import { filterRegistrations } from '../lib/registrationFilters';
+import { groupStudentRows } from '../lib/groupStudentRows';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const INDIVIDUAL_LESSON_TYPES = new Set(['individual_45', 'individual_60', 'melodies_individual']);
@@ -138,8 +137,8 @@ export default function AdminTable() {
   const [filterInstrument, setFilterInstrument] = useState('');
   const [filterTeacher, setFilterTeacher] = useState('');
   const [filterPayment, setFilterPayment] = useState('');
-  const [updating, setUpdating] = useState(null);
-  const [saved, setSaved] = useState(null);
+  const [updatingIds, setUpdatingIds] = useState([]);
+  const [savedIds, setSavedIds] = useState([]);
   const [sheetExporting, setSheetExporting] = useState(false);
   const [expandedRow, setExpandedRow] = useState(null);
   const [selectedGroups, setSelectedGroups] = useState({});
@@ -225,7 +224,7 @@ export default function AdminTable() {
   }
 
   async function updateStatus(id, newStatus) {
-    setUpdating(id);
+    setUpdatingIds(prev => [...prev, id]);
     try {
       await fetch('/api/update-status', {
         method: 'POST',
@@ -236,7 +235,7 @@ export default function AdminTable() {
         prev.map((r) => r.id === id ? { ...r, status: newStatus } : r)
       );
     } finally {
-      setUpdating(null);
+      setUpdatingIds(prev => prev.filter(x => x !== id));
     }
   }
 
@@ -270,7 +269,7 @@ export default function AdminTable() {
       return;
     }
 
-    setUpdating(row.id);
+    setUpdatingIds(prev => [...prev, row.id]);
     try {
       const res = await fetch('/api/update-status', {
         method: 'POST',
@@ -293,8 +292,8 @@ export default function AdminTable() {
         alert(json.error || 'שגיאה בשמירה — נסה שוב');
         return;
       }
-      setSaved(row.id);
-      setTimeout(() => setSaved(null), 3000);
+      setSavedIds(prev => [...prev, row.id]);
+      setTimeout(() => setSavedIds(prev => prev.filter(x => x !== row.id)), 3000);
       setRows(prev => prev.map(r => r.id === row.id ? { ...r, status: newStatus } : r));
       const selGroupId = selectedGroups[row.id];
       if (selGroupId) {
@@ -308,7 +307,14 @@ export default function AdminTable() {
     } catch {
       alert('שגיאת רשת — בדוק חיבור ונסה שוב');
     } finally {
-      setUpdating(null);
+      setUpdatingIds(prev => prev.filter(x => x !== row.id));
+    }
+  }
+
+  async function saveAllInGroup(group) {
+    const allLessons = [...group.categories.individual, ...group.categories.ensemble, ...group.categories.theory];
+    for (const lesson of allLessons) {
+      await saveAssignment(lesson);
     }
   }
 
@@ -380,7 +386,7 @@ export default function AdminTable() {
       setAddonPickerFor(null);
       setAddonNewLabel('');
       await fetchData();
-      setExpandedRow(json.data.id);
+      setExpandedRow(row.id);
     } finally {
       setAddonSaving(false);
     }
@@ -397,7 +403,7 @@ export default function AdminTable() {
   async function saveDetails(id) {
     const details = editingDetails[id];
     if (!details) return;
-    setUpdating(id);
+    setUpdatingIds(prev => [...prev, id]);
     try {
       await fetch('/api/registrations', {
         method: 'PATCH',
@@ -407,13 +413,13 @@ export default function AdminTable() {
       setRows(prev => prev.map(r => r.id === id ? { ...r, ...details } : r));
       setEditingDetails(prev => { const n = { ...prev }; delete n[id]; return n; });
     } finally {
-      setUpdating(null);
+      setUpdatingIds(prev => prev.filter(x => x !== id));
     }
   }
 
 async function deleteRegistration(id, studentName) {
     if (!confirm(`למחוק לחלוטין את הרישום של ${studentName}?\nפעולה זו אינה הפיכה.`)) return;
-    setUpdating(id);
+    setUpdatingIds(prev => [...prev, id]);
     try {
       await fetch('/api/registrations', {
         method: 'DELETE',
@@ -423,12 +429,12 @@ async function deleteRegistration(id, studentName) {
       setRows(prev => prev.filter(r => r.id !== id));
       setExpandedRow(null);
     } finally {
-      setUpdating(null);
+      setUpdatingIds(prev => prev.filter(x => x !== id));
     }
   }
 
   async function updatePaymentStatus(id, newPaymentStatus) {
-    setUpdating(id);
+    setUpdatingIds(prev => [...prev, id]);
     try {
       await fetch('/api/registrations', {
         method: 'PATCH',
@@ -437,17 +443,14 @@ async function deleteRegistration(id, studentName) {
       });
       setRows((prev) => prev.map((r) => r.id === id ? { ...r, registration_status: newPaymentStatus } : r));
     } finally {
-      setUpdating(null);
+      setUpdatingIds(prev => prev.filter(x => x !== id));
     }
   }
 
-  const filtered = filterRegistrations(rows, {
-    search,
-    status: filterStatus,
-    instrument: filterInstrument,
-    teacher: filterTeacher,
-    payment: filterPayment,
-  });
+  const allGroups = useMemo(() => groupStudentRows(rows), [rows]);
+  const activeFilters = { search, status: filterStatus, instrument: filterInstrument, teacher: filterTeacher, payment: filterPayment };
+  const filteredGroups = allGroups.filter(g => filterRegistrations(g.members, activeFilters).length > 0);
+  const filtered = filteredGroups.flatMap(g => g.members);
 
   if (loading) {
     return (
@@ -560,384 +563,336 @@ async function deleteRegistration(id, studentName) {
                 <th className="px-4 py-3 text-right font-semibold text-gray-600">תלמיד/ה</th>
                 <th className="px-4 py-3 text-right font-semibold text-gray-600">הורה / טלפון</th>
                 <th className="px-4 py-3 text-right font-semibold text-gray-600">סוג</th>
-                <th className="px-4 py-3 text-right font-semibold text-gray-600">כלים</th>
-                <th className="px-4 py-3 text-right font-semibold text-gray-600">סטטוס</th>
-                <th className="px-4 py-3 text-right font-semibold text-gray-600">תשלום</th>
+                <th className="px-4 py-3 text-right font-semibold text-gray-600">🎻 פרטני</th>
+                <th className="px-4 py-3 text-right font-semibold text-gray-600">🎼 הרכב</th>
+                <th className="px-4 py-3 text-right font-semibold text-gray-600">📘 תיאוריה</th>
                 <th className="px-4 py-3 text-right font-semibold text-gray-600">פעולות</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.length === 0 && (
+              {filteredGroups.length === 0 && (
                 <tr>
                   <td colSpan={8} className="text-center py-8 text-gray-400">
                     לא נמצאו רישומים
                   </td>
                 </tr>
               )}
-              {filtered.map((row) => (
-                <React.Fragment key={row.id}>
-                  <tr className="hover:bg-gray-50 transition">
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                      {new Date(row.created_at).toLocaleDateString('he-IL')}
-                    </td>
-                    <td className="px-4 py-3 font-medium">
-                      {row.student_name}
-                      {row.attended_open_day === false && (
-                        <span className="mr-1 text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">
-                          טרם שיחת היכרות
-                        </span>
-                      )}
-                      {row.has_accommodations && (
-                        <span className="mr-1 text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded-full font-medium">
-                          התאמות
-                        </span>
-                      )}
-                      {(() => {
-                        const badge = getAddonBadge(row.selected_course);
-                        return badge ? (
-                          <span className="mr-1 text-xs bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full font-medium">
-                            {badge.emoji} {badge.label}
-                          </span>
-                        ) : null;
-                      })()}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500">
-                      <div>{row.parent_name}</div>
-                      <div className="text-xs" dir="ltr">{row.parent_phone}</div>
-                    </td>
-                    <td className="px-4 py-3 text-gray-500">
-                      {getTypeLabel(row)}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">
-                      {Array.isArray(row.instruments) && row.instruments.length > 0
-                        ? row.instruments.join(', ')
-                        : row.selected_course || '—'}
-                      {row.teacher && row.assigned_day != null && (
-                        <div className="mt-0.5 text-green-700 font-medium">
-                          {row.teacher} · יום {DAY_NAMES[Number(row.assigned_day)]}
-                          {row.assigned_time ? ` ${row.assigned_time.slice(0,5)}` : ''}
-                          {row.assigned_end_time ? `–${row.assigned_end_time.slice(0,5)}` : ''}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusSelect
-                        value={row.status}
-                        onChange={(val) => updateStatus(row.id, val)}
-                        disabled={updating === row.id}
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <RegistrationStatusBadge status={row.registration_status} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => setExpandedRow(expandedRow === row.id ? null : row.id)}
-                        className="text-primary text-xs hover:underline"
-                      >
-                        {expandedRow === row.id ? '▲ סגור' : '▼ פרטים'}
-                      </button>
-                    </td>
-                  </tr>
-
-                  {/* Expanded row */}
-                  {expandedRow === row.id && (
-                    <tr className="bg-primary-50">
-                      <td colSpan={8} className="px-6 py-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {/* Contact */}
-                          <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-semibold text-gray-700">פרטי קשר</h4>
-                              {!editingDetails[row.id] && (
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingDetails(prev => ({ ...prev, [row.id]: {
-                                    student_name: row.student_name,
-                                    parent_name: row.parent_name,
-                                    parent_phone: row.parent_phone,
-                                    parent_email: row.parent_email,
-                                  }}))}
-                                  className="text-xs text-blue-600 hover:underline"
-                                >
-                                  ✏️ ערוך
-                                </button>
-                              )}
-                            </div>
-                            {editingDetails[row.id] ? (
-                              <div className="space-y-2">
-                                <div>
-                                  <label className="text-xs text-gray-500">שם תלמיד/ה</label>
-                                  <input
-                                    className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm"
-                                    value={editingDetails[row.id].student_name || ''}
-                                    onChange={e => setEditingDetails(prev => ({ ...prev, [row.id]: { ...prev[row.id], student_name: e.target.value }}))}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-xs text-gray-500">שם הורה</label>
-                                  <input
-                                    className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm"
-                                    value={editingDetails[row.id].parent_name || ''}
-                                    onChange={e => setEditingDetails(prev => ({ ...prev, [row.id]: { ...prev[row.id], parent_name: e.target.value }}))}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-xs text-gray-500">טלפון</label>
-                                  <input
-                                    className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm"
-                                    dir="ltr"
-                                    value={editingDetails[row.id].parent_phone || ''}
-                                    onChange={e => setEditingDetails(prev => ({ ...prev, [row.id]: { ...prev[row.id], parent_phone: e.target.value }}))}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-xs text-gray-500">אימייל</label>
-                                  <input
-                                    className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm"
-                                    dir="ltr"
-                                    value={editingDetails[row.id].parent_email || ''}
-                                    onChange={e => setEditingDetails(prev => ({ ...prev, [row.id]: { ...prev[row.id], parent_email: e.target.value }}))}
-                                  />
-                                </div>
-                                <div className="flex gap-2 pt-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => saveDetails(row.id)}
-                                    disabled={updating === row.id}
-                                    className="text-xs px-3 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-                                  >
-                                    שמור
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setEditingDetails(prev => { const n = { ...prev }; delete n[row.id]; return n; })}
-                                    className="text-xs px-3 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200"
-                                  >
-                                    ביטול
-                                  </button>
-                                </div>
+              {filteredGroups.map((group) => {
+                const { contactRow } = group;
+                const renderCategoryCell = (categoryRows, emptyLabel) => (
+                  <td className="px-4 py-3">
+                    {categoryRows.length === 0 ? (
+                      <span className="text-gray-300">—</span>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {categoryRows.map(r => (
+                          <div key={r.id} className="text-xs bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5">
+                            <div className="font-medium text-gray-700">{r.selected_course || emptyLabel}</div>
+                            {r.teacher && r.assigned_day != null && (
+                              <div className="text-green-700">
+                                {r.teacher} · יום {DAY_NAMES[Number(r.assigned_day)]}
+                                {r.assigned_time ? ` ${r.assigned_time.slice(0, 5)}` : ''}
                               </div>
-                            ) : (
-                              <>
-                                <p className="text-sm text-gray-600">👤 {row.parent_name}</p>
-                                <p className="text-sm text-gray-600" dir="ltr">📞 {row.parent_phone}</p>
-                                <p className="text-sm text-gray-600">📧 {row.parent_email}</p>
-                                <p className="text-sm text-gray-600">
-                                  📅 שיחה טלפונית בזמן רצוי: {row.preferred_slot || '—'}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  🚫 ימים לא פנויים:{' '}
-                                  {Array.isArray(row.unavailable_days) && row.unavailable_days.length > 0
-                                    ? row.unavailable_days.map(d => `יום ${d}`).join(', ')
-                                    : 'ללא הגבלה'}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  🏫 בית ספר: {row.school_name || '—'}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  🎓 כיתה: {row.grade || '—'}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  🎂 תאריך לידה: {row.birthdate ? new Date(row.birthdate).toLocaleDateString('he-IL') : '—'}
-                                </p>
-                              </>
                             )}
-                          </div>
-
-                          {/* Auto-assignment suggestions for continuing students */}
-                          {row.type === 'continue' && (
-                            <div className="space-y-2 mb-3">
-                              <h4 className="font-semibold text-gray-700 mb-1">שיבוץ אוטומטי</h4>
-                              {getOrchestraForInstruments(row.instruments) && (
-                                <div className="flex items-center gap-2 p-2 rounded-lg bg-green-50 border border-green-200 text-sm">
-                                  <span className="text-green-600">🎼</span>
-                                  <span className="text-green-700">
-                                    תזמורת/מקהלה: <strong>{row.orchestra || getOrchestraForInstruments(row.instruments)}</strong>
-                                  </span>
-                                  {!row.orchestra && (
-                                    <button
-                                      type="button"
-                                      onClick={() => updateAssignment(row.id, 'orchestra', getOrchestraForInstruments(row.instruments))}
-                                      className="mr-auto text-xs text-green-600 underline"
-                                    >
-                                      אשר
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-                              {row.assigned_day && (
-                                <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 border border-blue-200 text-sm">
-                                  <span className="text-blue-600">📚</span>
-                                  <span className="text-blue-700">
-                                    תיאוריה מוצעת: <strong>יום {(() => { const d = row.theory_day ?? row.assigned_day; const n = Number(d); return (!isNaN(n) && n >= 0 && n <= 6) ? DAY_NAMES[n] : d; })()}</strong>
-                                  </span>
-                                  {!row.theory_day && (
-                                    <button
-                                      type="button"
-                                      onClick={() => updateAssignment(row.id, 'theory_day', row.assigned_day)}
-                                      className="mr-auto text-xs text-blue-600 underline"
-                                    >
-                                      אשר
-                                    </button>
-                                  )}
-                                </div>
-                              )}
+                            <div className="flex gap-1 mt-1">
+                              <StatusSelect value={r.status} onChange={(val) => updateStatus(r.id, val)} disabled={updatingIds.includes(r.id)} />
+                              <RegistrationStatusBadge status={r.registration_status} />
                             </div>
-                          )}
-
-                          {/* Assignment */}
-                          <AssignmentPanel
-                            row={row}
-                            rows={rows}
-                            teachers={teachers}
-                            groups={groups}
-                            setGroups={setGroups}
-                            selectedGroups={selectedGroups}
-                            setSelectedGroups={setSelectedGroups}
-                            groupTypeFilter={groupTypeFilter}
-                            setGroupTypeFilter={setGroupTypeFilter}
-                            creatingGroupFor={creatingGroupFor}
-                            setCreatingGroupFor={setCreatingGroupFor}
-                            newGroupStudents={newGroupStudents}
-                            setNewGroupStudents={setNewGroupStudents}
-                            studentSearchQuery={studentSearchQuery}
-                            setStudentSearchQuery={setStudentSearchQuery}
-                            updateAssignment={updateAssignment}
-                            handleCreateGroup={handleCreateGroup}
-                            updateStatus={updateStatus}
-                            updatePaymentStatus={updatePaymentStatus}
-                            deleteRegistration={deleteRegistration}
-                            updatingIds={updating ? [updating] : []}
-                            savedIds={saved ? [saved] : []}
-                            onSave={() => saveAssignment(row)}
-                          />
-
-                          {/* Add-on registrations (ensemble / theory) */}
-                          {!row.linked_registration_id && (
-                            <div className="sm:col-span-2">
-                              <h4 className="font-semibold text-gray-700 mb-2">הוספת שיבוץ</h4>
-                              <div className="flex flex-wrap gap-2 mb-2">
-                                <button
-                                  type="button"
-                                  onClick={() => { setAddonPickerFor({ rowId: row.id, kind: 'ensemble' }); setAddonNewLabel(''); }}
-                                  className="text-xs px-3 py-1.5 rounded-lg border border-indigo-300 text-indigo-700 hover:bg-indigo-50"
-                                >
-                                  + הרכב
-                                </button>
-                                {!rows.some(r =>
-                                  r.linked_registration_id === row.id &&
-                                  getLessonTypeValue(r.selected_course) === 'theory' &&
-                                  !['נדחה', 'בוטל'].includes(r.status)
-                                ) && (
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                );
+                return (
+                  <React.Fragment key={group.key}>
+                    <tr className="hover:bg-gray-50 transition">
+                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                        {new Date(contactRow.created_at).toLocaleDateString('he-IL')}
+                      </td>
+                      <td className="px-4 py-3 font-medium">
+                        {contactRow.student_name}
+                        {contactRow.attended_open_day === false && (
+                          <span className="mr-1 text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">
+                            טרם שיחת היכרות
+                          </span>
+                        )}
+                        {contactRow.has_accommodations && (
+                          <span className="mr-1 text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded-full font-medium">
+                            התאמות
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500">
+                        <div>{contactRow.parent_name}</div>
+                        <div className="text-xs" dir="ltr">{contactRow.parent_phone}</div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-500">{getTypeLabel(contactRow)}</td>
+                      {renderCategoryCell(group.categories.individual, 'פרטני')}
+                      {renderCategoryCell(group.categories.ensemble, 'הרכב')}
+                      {renderCategoryCell(group.categories.theory, 'תיאוריה')}
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => setExpandedRow(expandedRow === group.key ? null : group.key)}
+                          className="text-primary text-xs hover:underline"
+                        >
+                          {expandedRow === group.key ? '▲ סגור' : '▼ פרטים'}
+                        </button>
+                      </td>
+                    </tr>
+                    {expandedRow === group.key && (
+                      <tr className="bg-primary-50">
+                        <td colSpan={8} className="px-6 py-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                            {/* Contact — shown once per group, from contactRow */}
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-semibold text-gray-700">פרטי קשר</h4>
+                                {!editingDetails[contactRow.id] && (
                                   <button
                                     type="button"
-                                    onClick={() => { setAddonPickerFor({ rowId: row.id, kind: 'theory' }); setAddonNewLabel(''); }}
-                                    className="text-xs px-3 py-1.5 rounded-lg border border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                                    onClick={() => setEditingDetails(prev => ({ ...prev, [contactRow.id]: {
+                                      student_name: contactRow.student_name,
+                                      parent_name: contactRow.parent_name,
+                                      parent_phone: contactRow.parent_phone,
+                                      parent_email: contactRow.parent_email,
+                                    }}))}
+                                    className="text-xs text-blue-600 hover:underline"
                                   >
-                                    + תיאוריה
+                                    ✏️ ערוך
                                   </button>
                                 )}
                               </div>
-
-                              {addonPickerFor?.rowId === row.id && (() => {
-                                const wantedTypes = addonPickerFor.kind === 'theory' ? ['theory'] : ['orchestra', 'choir'];
-                                const matching = groups.filter(g => wantedTypes.includes(g.lesson_type));
-                                return (
-                                  <div className="border border-gray-200 rounded-lg p-2 space-y-1 max-h-56 overflow-y-auto">
-                                    {matching.map(g => {
-                                      const teacherName = teachers.find(t => t.id === g.teacher_id)?.name || '—';
-                                      const sched = (g.group_schedules || [])
-                                        .filter(s => s.start_time)
-                                        .sort((a, b) => a.day_of_week - b.day_of_week)[0];
-                                      return (
-                                        <button
-                                          key={g.id}
-                                          type="button"
-                                          disabled={addonSaving}
-                                          onClick={() => handleAddAddon(row, { groupId: g.id })}
-                                          className="block w-full text-right px-2 py-1.5 text-sm rounded-lg hover:bg-indigo-50 disabled:opacity-40"
-                                        >
-                                          {g.name} · {teacherName}
-                                          {sched ? ` · יום ${DAY_NAMES[sched.day_of_week]} ${sched.start_time.slice(0, 5)}` : ' · ללא שעה קבועה'}
-                                        </button>
-                                      );
-                                    })}
-                                    {matching.length === 0 && (
-                                      <p className="text-xs text-gray-400 px-2 py-1">אין קבוצות קיימות מסוג זה</p>
-                                    )}
-
-                                    {addonPickerFor.kind === 'theory' ? (
-                                      <button
-                                        type="button"
-                                        disabled={addonSaving}
-                                        onClick={() => handleAddAddon(row, { newLabel: THEORY_LABEL })}
-                                        className="block w-full text-right px-2 py-1.5 text-sm rounded-lg text-purple-700 hover:bg-purple-50 disabled:opacity-40"
-                                      >
-                                        ➕ צור שיעור חדש
-                                      </button>
-                                    ) : (
-                                      <div className="flex gap-2 items-center pt-1">
-                                        <select
-                                          className="admin-input flex-1"
-                                          value={addonNewLabel}
-                                          onChange={e => setAddonNewLabel(e.target.value)}
-                                        >
-                                          <option value="">➕ צור שיעור חדש — בחר/י סוג —</option>
-                                          {ENSEMBLE_LABELS.map(label => (
-                                            <option key={label} value={label}>{label}</option>
-                                          ))}
-                                        </select>
-                                        <button
-                                          type="button"
-                                          disabled={addonSaving || !addonNewLabel}
-                                          onClick={() => handleAddAddon(row, { newLabel: addonNewLabel })}
-                                          className="text-xs px-3 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40"
-                                        >
-                                          צור
-                                        </button>
-                                      </div>
-                                    )}
-
+                              {editingDetails[contactRow.id] ? (
+                                <div className="space-y-2">
+                                  <div>
+                                    <label className="text-xs text-gray-500">שם תלמיד/ה</label>
+                                    <input
+                                      className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm"
+                                      value={editingDetails[contactRow.id].student_name || ''}
+                                      onChange={e => setEditingDetails(prev => ({ ...prev, [contactRow.id]: { ...prev[contactRow.id], student_name: e.target.value }}))}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs text-gray-500">שם הורה</label>
+                                    <input
+                                      className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm"
+                                      value={editingDetails[contactRow.id].parent_name || ''}
+                                      onChange={e => setEditingDetails(prev => ({ ...prev, [contactRow.id]: { ...prev[contactRow.id], parent_name: e.target.value }}))}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs text-gray-500">טלפון</label>
+                                    <input
+                                      className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm"
+                                      dir="ltr"
+                                      value={editingDetails[contactRow.id].parent_phone || ''}
+                                      onChange={e => setEditingDetails(prev => ({ ...prev, [contactRow.id]: { ...prev[contactRow.id], parent_phone: e.target.value }}))}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs text-gray-500">אימייל</label>
+                                    <input
+                                      className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm"
+                                      dir="ltr"
+                                      value={editingDetails[contactRow.id].parent_email || ''}
+                                      onChange={e => setEditingDetails(prev => ({ ...prev, [contactRow.id]: { ...prev[contactRow.id], parent_email: e.target.value }}))}
+                                    />
+                                  </div>
+                                  <div className="flex gap-2 pt-1">
                                     <button
                                       type="button"
-                                      onClick={() => setAddonPickerFor(null)}
-                                      className="block w-full text-right px-2 py-1 text-xs text-gray-400 hover:text-gray-600"
+                                      onClick={() => saveDetails(contactRow.id)}
+                                      disabled={updatingIds.includes(contactRow.id)}
+                                      className="text-xs px-3 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                                    >
+                                      שמור
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingDetails(prev => { const n = { ...prev }; delete n[contactRow.id]; return n; })}
+                                      className="text-xs px-3 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200"
                                     >
                                       ביטול
                                     </button>
                                   </div>
-                                );
-                              })()}
+                                </div>
+                              ) : (
+                                <>
+                                  <p className="text-sm text-gray-600">👤 {contactRow.parent_name}</p>
+                                  <p className="text-sm text-gray-600" dir="ltr">📞 {contactRow.parent_phone}</p>
+                                  <p className="text-sm text-gray-600">📧 {contactRow.parent_email}</p>
+                                  <p className="text-sm text-gray-600">
+                                    📅 שיחה טלפונית בזמן רצוי: {contactRow.preferred_slot || '—'}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    🚫 ימים לא פנויים:{' '}
+                                    {Array.isArray(contactRow.unavailable_days) && contactRow.unavailable_days.length > 0
+                                      ? contactRow.unavailable_days.map(d => `יום ${d}`).join(', ')
+                                      : 'ללא הגבלה'}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    🏫 בית ספר: {contactRow.school_name || '—'}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    🎓 כיתה: {contactRow.grade || '—'}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    🎂 תאריך לידה: {contactRow.birthdate ? new Date(contactRow.birthdate).toLocaleDateString('he-IL') : '—'}
+                                  </p>
+                                </>
+                              )}
                             </div>
-                          )}
 
-                          {/* Notes */}
-                          <div className={row.availability_notes ? '' : 'sm:col-span-2'}>
-                            <h4 className="font-semibold text-gray-700 mb-2">הערות מנהל</h4>
-                            <textarea
-                              className="admin-input h-20 resize-none"
-                              value={row.admin_notes || ''}
-                              onChange={(e) => updateAssignment(row.id, 'admin_notes', e.target.value)}
-                              onBlur={(e) => saveNotes(row.id, e.target.value)}
-                              placeholder="הוסף הערות פנימיות..."
-                            />
-                          </div>
-                          {row.availability_notes && (
+                            {/* Notes — shared once per group, stored on the contact row */}
                             <div>
-                              <h4 className="font-semibold text-gray-700 mb-2">הערות זמינות</h4>
-                              <div className="admin-input h-20 overflow-y-auto text-sm text-gray-600 bg-amber-50 border-amber-200">
-                                {row.availability_notes}
-                              </div>
+                              <h4 className="font-semibold text-gray-700 mb-2">הערות מנהל</h4>
+                              <textarea
+                                className="admin-input h-20 resize-none"
+                                value={contactRow.admin_notes || ''}
+                                onChange={(e) => updateAssignment(contactRow.id, 'admin_notes', e.target.value)}
+                                onBlur={(e) => saveNotes(contactRow.id, e.target.value)}
+                                placeholder="הוסף הערות פנימיות..."
+                              />
+                              {contactRow.availability_notes && (
+                                <>
+                                  <h4 className="font-semibold text-gray-700 mb-2 mt-3">הערות זמינות</h4>
+                                  <div className="admin-input h-20 overflow-y-auto text-sm text-gray-600 bg-amber-50 border-amber-200">
+                                    {contactRow.availability_notes}
+                                  </div>
+                                </>
+                              )}
                             </div>
-                          )}
+                          </div>
 
-                          {/* Message log */}
-                          {row.message_log && row.message_log.length > 0 && (
-                            <div className="sm:col-span-2">
+                          {/* One AssignmentPanel per lesson, grouped by category */}
+                          <div className="space-y-4">
+                            {[
+                              { label: '🎻 פרטני', kind: 'individual', lessons: group.categories.individual, addonKind: null },
+                              { label: '🎼 הרכב', kind: 'ensemble', lessons: group.categories.ensemble, addonKind: 'ensemble' },
+                              { label: '📘 תיאוריה', kind: 'theory', lessons: group.categories.theory, addonKind: 'theory' },
+                            ].map(section => (
+                              <div key={section.kind}>
+                                <h4 className="font-semibold text-gray-700 mb-2">{section.label}</h4>
+                                {section.lessons.length > 0 ? (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    {section.lessons.map(lesson => (
+                                      <AssignmentPanel
+                                        key={lesson.id}
+                                        row={lesson}
+                                        rows={rows}
+                                        teachers={teachers}
+                                        groups={groups}
+                                        setGroups={setGroups}
+                                        selectedGroups={selectedGroups}
+                                        setSelectedGroups={setSelectedGroups}
+                                        groupTypeFilter={groupTypeFilter}
+                                        setGroupTypeFilter={setGroupTypeFilter}
+                                        creatingGroupFor={creatingGroupFor}
+                                        setCreatingGroupFor={setCreatingGroupFor}
+                                        newGroupStudents={newGroupStudents}
+                                        setNewGroupStudents={setNewGroupStudents}
+                                        studentSearchQuery={studentSearchQuery}
+                                        setStudentSearchQuery={setStudentSearchQuery}
+                                        updateAssignment={updateAssignment}
+                                        handleCreateGroup={handleCreateGroup}
+                                        updateStatus={updateStatus}
+                                        updatePaymentStatus={updatePaymentStatus}
+                                        deleteRegistration={deleteRegistration}
+                                        updatingIds={updatingIds}
+                                        savedIds={savedIds}
+                                        onSave={() => saveAssignment(lesson)}
+                                      />
+                                    ))}
+                                  </div>
+                                ) : section.addonKind ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => { setAddonPickerFor({ rowId: contactRow.id, kind: section.addonKind === 'ensemble' ? 'ensemble' : 'theory' }); setAddonNewLabel(''); }}
+                                    className="text-xs px-3 py-1.5 rounded-lg border border-dashed border-indigo-300 text-indigo-700 hover:bg-indigo-50 w-full"
+                                  >
+                                    + הוסף {section.addonKind === 'ensemble' ? 'הרכב' : 'תיאוריה'}
+                                  </button>
+                                ) : (
+                                  <p className="text-xs text-gray-400">אין שיעור פרטני</p>
+                                )}
+
+                                {addonPickerFor?.rowId === contactRow.id && addonPickerFor.kind === section.addonKind && (() => {
+                                  const wantedTypes = addonPickerFor.kind === 'theory' ? ['theory'] : ['orchestra', 'choir'];
+                                  const matching = groups.filter(g => wantedTypes.includes(g.lesson_type));
+                                  return (
+                                    <div className="border border-gray-200 rounded-lg p-2 space-y-1 max-h-56 overflow-y-auto mt-2">
+                                      {matching.map(g => {
+                                        const teacherName = teachers.find(t => t.id === g.teacher_id)?.name || '—';
+                                        const sched = (g.group_schedules || [])
+                                          .filter(s => s.start_time)
+                                          .sort((a, b) => a.day_of_week - b.day_of_week)[0];
+                                        return (
+                                          <button
+                                            key={g.id}
+                                            type="button"
+                                            disabled={addonSaving}
+                                            onClick={() => handleAddAddon(contactRow, { groupId: g.id })}
+                                            className="block w-full text-right px-2 py-1.5 text-sm rounded-lg hover:bg-indigo-50 disabled:opacity-40"
+                                          >
+                                            {g.name} · {teacherName}
+                                            {sched ? ` · יום ${DAY_NAMES[sched.day_of_week]} ${sched.start_time.slice(0, 5)}` : ' · ללא שעה קבועה'}
+                                          </button>
+                                        );
+                                      })}
+                                      {matching.length === 0 && (
+                                        <p className="text-xs text-gray-400 px-2 py-1">אין קבוצות קיימות מסוג זה</p>
+                                      )}
+                                      {addonPickerFor.kind === 'theory' ? (
+                                        <button
+                                          type="button"
+                                          disabled={addonSaving}
+                                          onClick={() => handleAddAddon(contactRow, { newLabel: THEORY_LABEL })}
+                                          className="block w-full text-right px-2 py-1.5 text-sm rounded-lg text-purple-700 hover:bg-purple-50 disabled:opacity-40"
+                                        >
+                                          ➕ צור שיעור חדש
+                                        </button>
+                                      ) : (
+                                        <div className="flex gap-2 items-center pt-1">
+                                          <select
+                                            className="admin-input flex-1"
+                                            value={addonNewLabel}
+                                            onChange={e => setAddonNewLabel(e.target.value)}
+                                          >
+                                            <option value="">➕ צור שיעור חדש — בחר/י סוג —</option>
+                                            {ENSEMBLE_LABELS.map(label => (
+                                              <option key={label} value={label}>{label}</option>
+                                            ))}
+                                          </select>
+                                          <button
+                                            type="button"
+                                            disabled={addonSaving || !addonNewLabel}
+                                            onClick={() => handleAddAddon(contactRow, { newLabel: addonNewLabel })}
+                                            className="text-xs px-3 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40"
+                                          >
+                                            צור
+                                          </button>
+                                        </div>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={() => setAddonPickerFor(null)}
+                                        className="block w-full text-right px-2 py-1 text-xs text-gray-400 hover:text-gray-600"
+                                      >
+                                        ביטול
+                                      </button>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            ))}
+                          </div>
+
+                          {contactRow.message_log && contactRow.message_log.length > 0 && (
+                            <div className="mt-4">
                               <h4 className="font-semibold text-gray-700 mb-2">לוג הודעות</h4>
                               <div className="space-y-1">
-                                {row.message_log.map((log, i) => (
+                                {contactRow.message_log.map((log, i) => (
                                   <div key={i} className="flex items-center gap-2 text-xs text-gray-500">
                                     <span className={log.status === 'sent' ? 'text-green-600' : 'text-yellow-600'}>
                                       {log.status === 'sent' ? '✓' : '⏳'}
@@ -952,50 +907,20 @@ async function deleteRegistration(id, studentName) {
                             </div>
                           )}
 
-                          {/* Save button + payment status buttons */}
-                          <div className="sm:col-span-2 flex flex-wrap items-center gap-2 justify-end">
+                          <div className="flex justify-end mt-4">
                             <button
-                              onClick={() => deleteRegistration(row.id, row.student_name)}
-                              disabled={updating === row.id}
-                              className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-40 disabled:cursor-not-allowed ml-auto"
+                              onClick={() => saveAllInGroup(group)}
+                              className="text-sm px-4 py-2 rounded-xl font-semibold btn-primary"
                             >
-                              🗑 מחק רישום
-                            </button>
-                            <button
-                              onClick={() => updatePaymentStatus(row.id, 'Confirmed')}
-                              disabled={updating === row.id || row.registration_status === 'Confirmed'}
-                              className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                              ✓ סמן כשולם
-                            </button>
-                            <button
-                              onClick={() => updatePaymentStatus(row.id, 'Cancelled')}
-                              disabled={updating === row.id || row.registration_status === 'Cancelled'}
-                              className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-gray-500 text-white hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                              ✗ בטל
-                            </button>
-                            <button
-                              onClick={() => updatePaymentStatus(row.id, 'Pending')}
-                              disabled={updating === row.id || row.registration_status === 'Pending'}
-                              className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-yellow-500 text-white hover:bg-yellow-600 disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                              ↺ ממתין
-                            </button>
-                            <button
-                              onClick={() => saveAssignment(row)}
-                              disabled={updating === row.id}
-                              className={`text-sm px-4 py-2 rounded-xl font-semibold transition-colors ${saved === row.id ? 'bg-green-500 text-white' : 'btn-primary'}`}
-                            >
-                              {updating === row.id ? '⏳ שומר...' : saved === row.id ? '✓ נשמר!' : '💾 שמור שיבוץ'}
+                              💾 שמור הכל
                             </button>
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
