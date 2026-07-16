@@ -6,7 +6,7 @@ import { INSTRUMENTS } from './InstrumentPicker';
 import { getOrchestraForInstruments } from '../lib/autoAssign';
 import { getLessonDuration } from '../lib/lessonDuration';
 import { freeMinutesOnDay, getGroupLessonDuration } from '../lib/teacherCapacity';
-import { LESSON_TYPE_OPTIONS, getLessonTypeValue, computeGroupName, matchesLessonType } from '../lib/groupNaming';
+import { LESSON_TYPE_OPTIONS, getLessonTypeValue, computeGroupName, matchesLessonType, THEORY_LABEL, ENSEMBLE_LABELS, getAddonBadge } from '../lib/groupNaming';
 import { FIXED_COURSE_TIMES, filterRangesToFixedDay } from '../lib/fixedCourseDays';
 import { assignRowColors, downloadExcelFile, paymentStatusLabel } from '../lib/excelExport';
 import { filterRegistrations } from '../lib/registrationFilters';
@@ -147,6 +147,9 @@ export default function AdminTable() {
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [groupTypeFilter, setGroupTypeFilter] = useState({}); // { [rowId]: label }
   const [editingDetails, setEditingDetails] = useState({});
+  const [addonPickerFor, setAddonPickerFor] = useState(null); // { rowId, kind: 'theory' | 'ensemble' }
+  const [addonNewLabel, setAddonNewLabel] = useState('');
+  const [addonSaving, setAddonSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -360,6 +363,28 @@ export default function AdminTable() {
     await fetchData();
   }
 
+  async function handleAddAddon(row, { groupId, newLabel } = {}) {
+    setAddonSaving(true);
+    try {
+      const res = await fetch('/api/registrations/addon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceId: row.id, groupId, newLabel }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error || 'שגיאה בהוספת שיבוץ');
+        return;
+      }
+      setAddonPickerFor(null);
+      setAddonNewLabel('');
+      await fetchData();
+      setExpandedRow(json.data.id);
+    } finally {
+      setAddonSaving(false);
+    }
+  }
+
   async function saveNotes(id, notes) {
     await fetch('/api/registrations', {
       method: 'PATCH',
@@ -566,6 +591,14 @@ async function deleteRegistration(id, studentName) {
                           התאמות
                         </span>
                       )}
+                      {(() => {
+                        const badge = getAddonBadge(row.selected_course);
+                        return badge ? (
+                          <span className="mr-1 text-xs bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full font-medium">
+                            {badge.emoji} {badge.label}
+                          </span>
+                        ) : null;
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-gray-500">
                       <div>{row.parent_name}</div>
@@ -755,6 +788,22 @@ async function deleteRegistration(id, studentName) {
                           {/* Assignment */}
                           <div>
                             <h4 className="font-semibold text-gray-700 mb-2">שיבוץ</h4>
+                            {row.linked_registration_id && getLessonTypeValue(row.selected_course) === 'theory' && (() => {
+                              const family = rows.filter(r =>
+                                r.id !== row.id &&
+                                (r.id === row.linked_registration_id || r.linked_registration_id === row.linked_registration_id) &&
+                                r.teacher && r.assigned_day != null && r.assigned_day !== ''
+                              );
+                              if (family.length === 0) return null;
+                              return (
+                                <div className="mb-2 p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700">
+                                  שיעורים נוספים של {row.student_name}:{' '}
+                                  {family.map(r =>
+                                    `${r.selected_course || r.teacher} · יום ${DAY_NAMES[Number(r.assigned_day)]}${r.assigned_time ? ` ${r.assigned_time.slice(0, 5)}` : ''}`
+                                  ).join(' · ')}
+                                </div>
+                              );
+                            })()}
                             <div className="space-y-2">
                               <select
                                 className="admin-input"
@@ -1225,6 +1274,105 @@ async function deleteRegistration(id, studentName) {
                               })()}
                             </div>
                           </div>
+
+                          {/* Add-on registrations (ensemble / theory) */}
+                          {!row.linked_registration_id && (
+                            <div className="sm:col-span-2">
+                              <h4 className="font-semibold text-gray-700 mb-2">הוספת שיבוץ</h4>
+                              <div className="flex flex-wrap gap-2 mb-2">
+                                <button
+                                  type="button"
+                                  onClick={() => { setAddonPickerFor({ rowId: row.id, kind: 'ensemble' }); setAddonNewLabel(''); }}
+                                  className="text-xs px-3 py-1.5 rounded-lg border border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                                >
+                                  + הרכב
+                                </button>
+                                {!rows.some(r =>
+                                  r.linked_registration_id === row.id &&
+                                  getLessonTypeValue(r.selected_course) === 'theory' &&
+                                  !['נדחה', 'בוטל'].includes(r.status)
+                                ) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => { setAddonPickerFor({ rowId: row.id, kind: 'theory' }); setAddonNewLabel(''); }}
+                                    className="text-xs px-3 py-1.5 rounded-lg border border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                                  >
+                                    + תיאוריה
+                                  </button>
+                                )}
+                              </div>
+
+                              {addonPickerFor?.rowId === row.id && (() => {
+                                const wantedTypes = addonPickerFor.kind === 'theory' ? ['theory'] : ['orchestra', 'choir'];
+                                const matching = groups.filter(g => wantedTypes.includes(g.lesson_type));
+                                return (
+                                  <div className="border border-gray-200 rounded-lg p-2 space-y-1 max-h-56 overflow-y-auto">
+                                    {matching.map(g => {
+                                      const teacherName = teachers.find(t => t.id === g.teacher_id)?.name || '—';
+                                      const sched = (g.group_schedules || [])
+                                        .filter(s => s.start_time)
+                                        .sort((a, b) => a.day_of_week - b.day_of_week)[0];
+                                      return (
+                                        <button
+                                          key={g.id}
+                                          type="button"
+                                          disabled={addonSaving}
+                                          onClick={() => handleAddAddon(row, { groupId: g.id })}
+                                          className="block w-full text-right px-2 py-1.5 text-sm rounded-lg hover:bg-indigo-50 disabled:opacity-40"
+                                        >
+                                          {g.name} · {teacherName}
+                                          {sched ? ` · יום ${DAY_NAMES[sched.day_of_week]} ${sched.start_time.slice(0, 5)}` : ' · ללא שעה קבועה'}
+                                        </button>
+                                      );
+                                    })}
+                                    {matching.length === 0 && (
+                                      <p className="text-xs text-gray-400 px-2 py-1">אין קבוצות קיימות מסוג זה</p>
+                                    )}
+
+                                    {addonPickerFor.kind === 'theory' ? (
+                                      <button
+                                        type="button"
+                                        disabled={addonSaving}
+                                        onClick={() => handleAddAddon(row, { newLabel: THEORY_LABEL })}
+                                        className="block w-full text-right px-2 py-1.5 text-sm rounded-lg text-purple-700 hover:bg-purple-50 disabled:opacity-40"
+                                      >
+                                        ➕ צור שיעור חדש
+                                      </button>
+                                    ) : (
+                                      <div className="flex gap-2 items-center pt-1">
+                                        <select
+                                          className="admin-input flex-1"
+                                          value={addonNewLabel}
+                                          onChange={e => setAddonNewLabel(e.target.value)}
+                                        >
+                                          <option value="">➕ צור שיעור חדש — בחר/י סוג —</option>
+                                          {ENSEMBLE_LABELS.map(label => (
+                                            <option key={label} value={label}>{label}</option>
+                                          ))}
+                                        </select>
+                                        <button
+                                          type="button"
+                                          disabled={addonSaving || !addonNewLabel}
+                                          onClick={() => handleAddAddon(row, { newLabel: addonNewLabel })}
+                                          className="text-xs px-3 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40"
+                                        >
+                                          צור
+                                        </button>
+                                      </div>
+                                    )}
+
+                                    <button
+                                      type="button"
+                                      onClick={() => setAddonPickerFor(null)}
+                                      className="block w-full text-right px-2 py-1 text-xs text-gray-400 hover:text-gray-600"
+                                    >
+                                      ביטול
+                                    </button>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          )}
 
                           {/* Notes */}
                           <div className={row.availability_notes ? '' : 'sm:col-span-2'}>
