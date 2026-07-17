@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import StatusSelect, { STATUS_OPTIONS, STATUS_COLORS } from './StatusSelect';
+import { STATUS_OPTIONS, STATUS_COLORS } from './StatusSelect';
 import { INSTRUMENTS } from './InstrumentPicker';
 import AssignmentPanel from './AssignmentPanel';
 import { getOrchestraForInstruments } from '../lib/autoAssign';
