@@ -450,7 +450,7 @@ async function deleteRegistration(id, studentName) {
   const allGroups = useMemo(() => groupStudentRows(rows), [rows]);
   const activeFilters = { search, status: filterStatus, instrument: filterInstrument, teacher: filterTeacher, payment: filterPayment };
   const filteredGroups = allGroups.filter(g => filterRegistrations(g.members, activeFilters).length > 0);
-  const filtered = filteredGroups.flatMap(g => g.members);
+  const filtered = filteredGroups.flatMap(g => filterRegistrations(g.members, activeFilters));
 
   if (loading) {
     return (
