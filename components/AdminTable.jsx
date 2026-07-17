@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import StatusSelect, { STATUS_OPTIONS } from './StatusSelect';
+import StatusSelect, { STATUS_OPTIONS, STATUS_COLORS } from './StatusSelect';
 import { INSTRUMENTS } from './InstrumentPicker';
 import AssignmentPanel from './AssignmentPanel';
 import { getOrchestraForInstruments } from '../lib/autoAssign';
@@ -595,7 +595,9 @@ async function deleteRegistration(id, studentName) {
                               </div>
                             )}
                             <div className="flex gap-1 mt-1">
-                              <StatusSelect value={r.status} onChange={(val) => updateStatus(r.id, val)} disabled={updatingIds.includes(r.id)} />
+                              <span className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_COLORS[r.status] || 'bg-gray-100 text-gray-600'}`}>
+                                {r.status}
+                              </span>
                               <RegistrationStatusBadge status={r.registration_status} />
                             </div>
                           </div>
