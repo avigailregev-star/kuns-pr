@@ -39,30 +39,50 @@ function getTypeLabel(row) {
   return TYPE_LABELS[row.type] || row.type || '';
 }
 
-function buildExportRows(rows) {
+// Individual lessons get an auto-created 1-student group for attendance sync;
+// when the day/time was set via that group's schedule instead of directly on
+// the registration, fall back to it so exports/print show the same info as the table.
+function resolveAssignment(r, groups) {
+  const hasOwnDay = r.assigned_day != null && r.assigned_day !== '';
+  const linkedGroup = !hasOwnDay && r.group_id
+    ? groups.find(g => String(g.id) === String(r.group_id))
+    : null;
+  const groupSched = (linkedGroup?.group_schedules || [])
+    .filter(s => s.start_time)
+    .sort((a, b) => a.day_of_week - b.day_of_week)[0];
+  return {
+    day: hasOwnDay ? Number(r.assigned_day) : groupSched?.day_of_week,
+    time: hasOwnDay ? r.assigned_time : groupSched?.start_time,
+  };
+}
+
+function buildExportRows(rows, groups) {
   const headers = ['תאריך', 'תלמיד/ה', 'הורה', 'טלפון', 'אימייל', 'סוג', 'כלים', 'סטטוס', 'תשלום', 'מורה', 'יום', 'שעה', 'הערות'];
-  const dataRows = rows.map(r => [
-    new Date(r.created_at).toLocaleDateString('he-IL'),
-    r.student_name || '',
-    r.parent_name || '',
-    r.parent_phone || '',
-    r.parent_email || '',
-    getTypeLabel(r),
-    Array.isArray(r.instruments)
-      ? (r.instruments.length > 0 ? r.instruments.join('; ') : (r.selected_course || ''))
-      : (r.instruments || r.selected_course || ''),
-    r.status || '',
-    paymentStatusLabel(r.registration_status),
-    r.teacher || '',
-    r.assigned_day != null && r.assigned_day !== '' ? (DAY_NAMES[Number(r.assigned_day)] ?? r.assigned_day) : '',
-    r.assigned_time ? r.assigned_time.slice(0, 5) : '',
-    r.admin_notes || '',
-  ]);
+  const dataRows = rows.map(r => {
+    const { day, time } = resolveAssignment(r, groups);
+    return [
+      new Date(r.created_at).toLocaleDateString('he-IL'),
+      r.student_name || '',
+      r.parent_name || '',
+      r.parent_phone || '',
+      r.parent_email || '',
+      getTypeLabel(r),
+      Array.isArray(r.instruments)
+        ? (r.instruments.length > 0 ? r.instruments.join('; ') : (r.selected_course || ''))
+        : (r.instruments || r.selected_course || ''),
+      r.status || '',
+      paymentStatusLabel(r.registration_status),
+      r.teacher || '',
+      day != null ? (DAY_NAMES[day] ?? day) : '',
+      time ? time.slice(0, 5) : '',
+      r.admin_notes || '',
+    ];
+  });
   return { headers, dataRows };
 }
 
-async function exportToExcel(rows) {
-  const { headers, dataRows } = buildExportRows(rows);
+async function exportToExcel(rows, groups) {
+  const { headers, dataRows } = buildExportRows(rows, groups);
   const rowColors = assignRowColors(rows);
   const filename = `רישומים_${new Date().toLocaleDateString('he-IL').replace(/\//g, '-')}.xlsx`;
   await downloadExcelFile({ sheetName: 'רישומים', headers, rows: dataRows, rowColors, filename });
@@ -80,7 +100,7 @@ async function postRegistrationsToSheet(headers, rows) {
   }
 }
 
-function printTable(rows) {
+function printTable(rows, groups) {
   const content = `
     <html dir="rtl"><head><meta charset="utf-8">
     <title>רישומים</title>
@@ -93,9 +113,11 @@ function printTable(rows) {
     </style></head><body>
     <h2>רישומים – קונסרבטוריון</h2>
     <table>
-      <thead><tr><th>תאריך</th><th>תלמיד/ה</th><th>הורה</th><th>טלפון</th><th>סוג</th><th>כלים</th><th>סטטוס</th><th>מורה</th></tr></thead>
+      <thead><tr><th>תאריך</th><th>תלמיד/ה</th><th>הורה</th><th>טלפון</th><th>סוג</th><th>כלים</th><th>סטטוס</th><th>מורה</th><th>יום</th><th>שעה</th></tr></thead>
       <tbody>
-        ${rows.map(r => `<tr>
+        ${rows.map(r => {
+          const { day, time } = resolveAssignment(r, groups);
+          return `<tr>
           <td>${new Date(r.created_at).toLocaleDateString('he-IL')}</td>
           <td>${r.student_name || ''}</td>
           <td>${r.parent_name || ''}</td>
@@ -106,7 +128,10 @@ function printTable(rows) {
             : (r.instruments || r.selected_course || '')}</td>
           <td>${r.status || ''}</td>
           <td>${r.teacher || ''}</td>
-        </tr>`).join('')}
+          <td>${day != null ? (DAY_NAMES[day] ?? day) : ''}</td>
+          <td>${time ? time.slice(0, 5) : ''}</td>
+        </tr>`;
+        }).join('')}
       </tbody>
     </table>
     </body></html>`;
@@ -322,7 +347,7 @@ export default function AdminTable() {
     if (rows.length === 0 && !confirm('אין רישומים כרגע — הגיליון יימחק ויישאר ריק. להמשיך?')) return;
     setSheetExporting(true);
     try {
-      const { headers, dataRows } = buildExportRows(rows);
+      const { headers, dataRows } = buildExportRows(rows, groups);
       await postRegistrationsToSheet(headers, dataRows);
       alert('הייצוא לגיליון הושלם בהצלחה');
     } catch (err) {
@@ -533,7 +558,7 @@ async function deleteRegistration(id, studentName) {
           🔄 רענן
         </button>
         <button
-          onClick={() => exportToExcel(filtered)}
+          onClick={() => exportToExcel(filtered, groups)}
           className="px-4 py-2 border border-green-300 text-green-700 rounded-lg hover:bg-green-50 text-sm"
         >
           📊 ייצוא Excel
@@ -546,7 +571,7 @@ async function deleteRegistration(id, studentName) {
           {sheetExporting ? '⏳ מייצא...' : '📤 ייצוא לגיליון גוגל'}
         </button>
         <button
-          onClick={() => printTable(filtered)}
+          onClick={() => printTable(filtered, groups)}
           className="px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 text-sm"
         >
           🖨️ הדפסה
@@ -585,13 +610,15 @@ async function deleteRegistration(id, studentName) {
                       <span className="text-gray-300">—</span>
                     ) : (
                       <div className="space-y-1.5">
-                        {categoryRows.map(r => (
+                        {categoryRows.map(r => {
+                          const { day: displayDay, time: displayTime } = resolveAssignment(r, groups);
+                          return (
                           <div key={r.id} className="text-xs bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5">
                             <div className="font-medium text-gray-700">{r.selected_course || emptyLabel}</div>
-                            {r.teacher && r.assigned_day != null && (
+                            {r.teacher && displayDay != null && (
                               <div className="text-green-700">
-                                {r.teacher} · יום {DAY_NAMES[Number(r.assigned_day)]}
-                                {r.assigned_time ? ` ${r.assigned_time.slice(0, 5)}` : ''}
+                                {r.teacher} · יום {DAY_NAMES[displayDay]}
+                                {displayTime ? ` ${displayTime.slice(0, 5)}` : ''}
                               </div>
                             )}
                             <div className="flex gap-1 mt-1">
@@ -601,7 +628,8 @@ async function deleteRegistration(id, studentName) {
                               <RegistrationStatusBadge status={r.registration_status} />
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </td>
