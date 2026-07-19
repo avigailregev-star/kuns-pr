@@ -40,19 +40,19 @@ function getTypeLabel(row) {
 }
 
 // Individual lessons get an auto-created 1-student group for attendance sync;
-// when the day/time was set via that group's schedule instead of directly on
-// the registration, fall back to it so exports/print show the same info as the table.
+// the day and the time can each independently live on that group's schedule
+// instead of directly on the registration, so fall back to it field-by-field
+// (a row can have its own day but still be missing its own time, or vice versa).
 function resolveAssignment(r, groups) {
-  const hasOwnDay = r.assigned_day != null && r.assigned_day !== '';
-  const linkedGroup = !hasOwnDay && r.group_id
-    ? groups.find(g => String(g.id) === String(r.group_id))
-    : null;
-  const groupSched = (linkedGroup?.group_schedules || [])
+  const ownDay = r.assigned_day != null && r.assigned_day !== '' ? Number(r.assigned_day) : null;
+  const linkedGroup = r.group_id ? groups.find(g => String(g.id) === String(r.group_id)) : null;
+  const groupScheds = (linkedGroup?.group_schedules || [])
     .filter(s => s.start_time)
-    .sort((a, b) => a.day_of_week - b.day_of_week)[0];
+    .sort((a, b) => a.day_of_week - b.day_of_week);
+  const matchingSched = groupScheds.find(s => s.day_of_week === ownDay) || groupScheds[0];
   return {
-    day: hasOwnDay ? Number(r.assigned_day) : groupSched?.day_of_week,
-    time: hasOwnDay ? r.assigned_time : groupSched?.start_time,
+    day: ownDay != null ? ownDay : matchingSched?.day_of_week,
+    time: r.assigned_time || matchingSched?.start_time,
   };
 }
 
