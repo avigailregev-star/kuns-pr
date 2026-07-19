@@ -1,4 +1,4 @@
-import { DELETE } from './route';
+import { DELETE, PATCH } from './route';
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
@@ -101,5 +101,39 @@ describe('DELETE /api/registrations', () => {
     expect(studentUpdate).toBeDefined();
     expect(studentUpdate.eqCalls).toContainEqual(['name', 'דני כהן']);
     expect(studentUpdate.eqCalls.some(c => c[0] === 'group_id')).toBe(false);
+  });
+});
+
+describe('PATCH /api/registrations', () => {
+  test('writes attended_open_day to the update payload when provided', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [
+        { error: null }, // update
+      ],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+
+    const res = await PATCH(makeRequest({ id: 'r1', attended_open_day: true }));
+    expect(res.status).toBe(200);
+
+    const update = mockSupabase.calls.find(c => c.table === 'registrations' && c.method === 'update');
+    expect(update).toBeDefined();
+    expect(update.payload.attended_open_day).toBe(true);
+    expect(update.eqCalls).toContainEqual(['id', 'r1']);
+  });
+
+  test('omits attended_open_day from the update payload when not provided', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [
+        { error: null }, // update
+      ],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+
+    const res = await PATCH(makeRequest({ id: 'r1', admin_notes: 'hello' }));
+    expect(res.status).toBe(200);
+
+    const update = mockSupabase.calls.find(c => c.table === 'registrations' && c.method === 'update');
+    expect(update.payload).not.toHaveProperty('attended_open_day');
   });
 });
