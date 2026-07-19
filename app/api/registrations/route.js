@@ -78,7 +78,7 @@ export async function PATCH(request) {
   const PAYMENT_STATUS_MAP = { Pending: 'ממתין לתשלום', Confirmed: 'שולם', Cancelled: 'בוטל' };
 
   try {
-    const { id, admin_notes, registration_status, student_name, parent_name, parent_phone, parent_email } = await request.json();
+    const { id, admin_notes, registration_status, student_name, parent_name, parent_phone, parent_email, attended_open_day } = await request.json();
     const updateData = { updated_at: new Date().toISOString() };
     if (admin_notes !== undefined) updateData.admin_notes = admin_notes;
     if (registration_status !== undefined) updateData.registration_status = registration_status;
@@ -86,6 +86,7 @@ export async function PATCH(request) {
     if (parent_name !== undefined) updateData.parent_name = parent_name;
     if (parent_phone !== undefined) updateData.parent_phone = parent_phone;
     if (parent_email !== undefined) updateData.parent_email = parent_email;
+    if (attended_open_day !== undefined) updateData.attended_open_day = attended_open_day;
     const supabase = getSupabaseClient();
     const { error } = await supabase
       .from('registrations')

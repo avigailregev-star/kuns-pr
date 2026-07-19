@@ -472,6 +472,20 @@ async function deleteRegistration(id, studentName) {
     }
   }
 
+  async function markAttendedOpenDay(id) {
+    setUpdatingIds(prev => [...prev, id]);
+    try {
+      await fetch('/api/registrations', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, attended_open_day: true }),
+      });
+      setRows(prev => prev.map(r => r.id === id ? { ...r, attended_open_day: true } : r));
+    } finally {
+      setUpdatingIds(prev => prev.filter(x => x !== id));
+    }
+  }
+
   const allGroups = useMemo(() => groupStudentRows(rows), [rows]);
   const activeFilters = { search, status: filterStatus, instrument: filterInstrument, teacher: filterTeacher, payment: filterPayment };
   const filteredGroups = allGroups.filter(g => filterRegistrations(g.members, activeFilters).length > 0);
@@ -643,9 +657,15 @@ async function deleteRegistration(id, studentName) {
                       <td className="px-4 py-3 font-medium">
                         {contactRow.student_name}
                         {contactRow.attended_open_day === false && (
-                          <span className="mr-1 text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm('לסמן שהתקיימה שיחת היכרות?')) markAttendedOpenDay(contactRow.id);
+                            }}
+                            className="mr-1 text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium hover:bg-purple-200"
+                          >
                             טרם שיחת היכרות
-                          </span>
+                          </button>
                         )}
                         {contactRow.has_accommodations && (
                           <span className="mr-1 text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded-full font-medium">
