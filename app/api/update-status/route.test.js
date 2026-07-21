@@ -212,4 +212,44 @@ describe('POST /api/update-status — schedule conflict check', () => {
     const json = await res.json();
     expect(json.success).toBe(true);
   });
+
+  test('when assignedEndTime is omitted, uses the registration\'s own course length (not a 45-min default) to detect overlap', async () => {
+    // r1 is a 60-minute course starting 15:00 → really occupies 15:00-16:00.
+    // r2 (another student, same teacher) sits at 15:50-16:10 — this only overlaps
+    // if r1's real 60-minute length is used; a wrong 45-min default (ending 15:45)
+    // would miss it.
+    const mockSupabase = createMockSupabase({
+      registrations: [
+        { data: { selected_course: "פסנתר - שיעור המשך 60 דק'" }, error: null }, // current reg's own course, for duration fallback
+        {
+          data: [
+            {
+              id: 'r2',
+              student_name: 'שרה לוי',
+              assigned_day: 1,
+              assigned_time: '15:50',
+              assigned_end_time: '16:10',
+              selected_course: null,
+              status: 'שובץ',
+            },
+          ],
+          error: null,
+        }, // other registrations for this teacher
+      ],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+
+    const res = await POST(makeRequest({
+      id: 'r1',
+      newStatus: 'שובץ',
+      teacher: 'דנה כהן',
+      assignedDay: 1,
+      assignedTime: '15:00',
+      // no assignedEndTime
+    }));
+
+    const json = await res.json();
+    expect(res.status).toBe(409);
+    expect(json.error).toContain('שרה לוי');
+  });
 });

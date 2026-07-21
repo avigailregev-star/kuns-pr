@@ -28,7 +28,19 @@ export async function POST(request) {
       const toM = t => { const [h, m] = t.split(':').map(Number); return h * 60 + (m || 0); };
       const dayNum = Number(assignedDay);
       const newStart = toM(assignedTime);
-      const newEnd = assignedEndTime ? toM(assignedEndTime) : newStart + getLessonDuration(undefined);
+
+      let newEnd;
+      if (assignedEndTime) {
+        newEnd = toM(assignedEndTime);
+      } else {
+        const { data: currentReg, error: currentRegErr } = await supabase
+          .from('registrations')
+          .select('selected_course')
+          .eq('id', id)
+          .maybeSingle();
+        if (currentRegErr) console.error('schedule conflict check: current course fetch error:', currentRegErr.message);
+        newEnd = newStart + getLessonDuration(currentReg?.selected_course);
+      }
 
       if (!isNaN(dayNum)) {
         const excludedStatuses = ['בוטל', 'נדחה', 'רשימת המתנה', 'ממתין לשיחת היכרות'];

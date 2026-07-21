@@ -42,7 +42,8 @@ export async function DELETE(request) {
     const { data: reg } = await supabase
       .from('registrations').select('student_name, group_id').eq('id', id).single();
 
-    await supabase.from('message_log').delete().eq('registration_id', id);
+    // message_log.registration_id has ON DELETE CASCADE — deleting the
+    // registration removes its message_log rows automatically, atomically.
     const { error } = await supabase.from('registrations').delete().eq('id', id);
     if (error) return NextResponse.json({ error: 'שגיאה במחיקה' }, { status: 500 });
 

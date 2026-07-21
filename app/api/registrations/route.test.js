@@ -60,9 +60,6 @@ describe('DELETE /api/registrations', () => {
         { data: { student_name: 'דני כהן', group_id: 'g1' }, error: null }, // fetch before delete
         { error: null }, // delete
       ],
-      message_log: [
-        { error: null }, // delete
-      ],
       students: [
         { data: [{ id: 1, name: 'דני כהן' }], error: null }, // deactivate
       ],
@@ -77,15 +74,16 @@ describe('DELETE /api/registrations', () => {
     expect(studentUpdate.payload).toEqual({ is_active: false });
     expect(studentUpdate.eqCalls).toContainEqual(['name', 'דני כהן']);
     expect(studentUpdate.eqCalls).toContainEqual(['group_id', 'g1']);
+
+    // message_log is never touched manually — its ON DELETE CASCADE on
+    // registration_id handles cleanup atomically as part of the registrations delete.
+    expect(mockSupabase.calls.some(c => c.table === 'message_log')).toBe(false);
   });
 
   test('falls back to a name-only match when the deleted registration has no group_id', async () => {
     const mockSupabase = createMockSupabase({
       registrations: [
         { data: { student_name: 'דני כהן', group_id: null }, error: null }, // fetch before delete
-        { error: null }, // delete
-      ],
-      message_log: [
         { error: null }, // delete
       ],
       students: [

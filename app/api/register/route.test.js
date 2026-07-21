@@ -37,6 +37,8 @@ function createMockSupabase(responses, capturedInserts) {
       select: () => self,
       not: () => self,
       eq: () => self,
+      neq: () => self,
+      ilike: () => self,
       insert: (rows) => {
         if (!capturedInserts[table]) capturedInserts[table] = [];
         capturedInserts[table].push(rows);
@@ -159,6 +161,39 @@ describe('POST /api/register — closed_for_registration server-side check', () 
 
     expect(res.status).toBe(200);
     expect(json.success).toBe(true);
+    expect(capturedInserts.registrations[0][0].status).toBe('רשימת המתנה');
+  });
+});
+
+describe('POST /api/register — teacher quota check fails safe on DB error', () => {
+  test('a failed capacity count does not silently treat the teacher as available', async () => {
+    const capturedInserts = {};
+    const mockSupabase = createMockSupabase({
+      teachers: [
+        {
+          data: [{ id: 't1', name: 'דנה כהן', instrument_type: 'גיטרה', max_students: 5 }],
+          error: null,
+        },
+      ],
+      registrations: [
+        { count: null, error: { message: 'connection reset' } }, // quota count query fails
+        { data: { id: 'r1' }, error: null }, // main insert
+      ],
+    }, capturedInserts);
+    getSupabaseClient.mockReturnValue(mockSupabase);
+
+    const res = await POST(makeRequest({
+      ...baseBody,
+      type: 'new',
+      instruments: ['גיטרה'],
+      attendedOpenDay: true,
+      selectedTeacher: undefined,
+    }));
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.success).toBe(true);
+    // Can't confirm capacity → falls back to waitlist instead of assuming a free spot.
     expect(capturedInserts.registrations[0][0].status).toBe('רשימת המתנה');
   });
 });

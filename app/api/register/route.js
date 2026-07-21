@@ -116,12 +116,17 @@ export async function POST(request) {
             hasAvailableTeacher = true;
             break;
           }
-          const { count } = await supabase
+          const { count, error: countError } = await supabase
             .from('registrations')
             .select('id', { count: 'exact', head: true })
             .eq('teacher', teacher.name)
             .neq('type', 'continue')
             .not('status', 'in', '("בוטל","ממתין לשיחת היכרות")');
+
+          if (countError) {
+            console.error('Supabase count error:', countError.message);
+            continue;
+          }
 
           if (count < teacher.max_students) {
             hasAvailableTeacher = true;
