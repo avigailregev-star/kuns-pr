@@ -23,6 +23,11 @@ function timeToMins(t) {
 function minsToTime(m) {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 }
+function escapeHtml(text) {
+  return String(text ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+}
 
 const TYPE_LABELS = {
   new: 'חדש/ה',
@@ -118,18 +123,18 @@ function printTable(rows, groups) {
         ${rows.map(r => {
           const { day, time } = resolveAssignment(r, groups);
           return `<tr>
-          <td>${new Date(r.created_at).toLocaleDateString('he-IL')}</td>
-          <td>${r.student_name || ''}</td>
-          <td>${r.parent_name || ''}</td>
-          <td>${r.parent_phone || ''}</td>
-          <td>${getTypeLabel(r)}</td>
-          <td>${Array.isArray(r.instruments)
+          <td>${escapeHtml(new Date(r.created_at).toLocaleDateString('he-IL'))}</td>
+          <td>${escapeHtml(r.student_name)}</td>
+          <td>${escapeHtml(r.parent_name)}</td>
+          <td>${escapeHtml(r.parent_phone)}</td>
+          <td>${escapeHtml(getTypeLabel(r))}</td>
+          <td>${escapeHtml(Array.isArray(r.instruments)
             ? (r.instruments.length > 0 ? r.instruments.join(', ') : (r.selected_course || ''))
-            : (r.instruments || r.selected_course || '')}</td>
-          <td>${r.status || ''}</td>
-          <td>${r.teacher || ''}</td>
-          <td>${day != null ? (DAY_NAMES[day] ?? day) : ''}</td>
-          <td>${time ? time.slice(0, 5) : ''}</td>
+            : (r.instruments || r.selected_course || ''))}</td>
+          <td>${escapeHtml(r.status)}</td>
+          <td>${escapeHtml(r.teacher)}</td>
+          <td>${escapeHtml(day != null ? (DAY_NAMES[day] ?? day) : '')}</td>
+          <td>${escapeHtml(time ? time.slice(0, 5) : '')}</td>
         </tr>`;
         }).join('')}
       </tbody>

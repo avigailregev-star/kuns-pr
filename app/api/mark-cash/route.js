@@ -16,6 +16,11 @@ export async function POST(request) {
 
     const existing = reg?.admin_notes;
     const cashNote = 'נרשם ומתכנן לשלם במזומן';
+
+    if (existing && existing.includes(cashNote)) {
+      return NextResponse.json({ success: true });
+    }
+
     const newNotes = existing ? `${existing} | ${cashNote}` : cashNote;
 
     const { error } = await supabase

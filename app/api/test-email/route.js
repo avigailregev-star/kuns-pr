@@ -5,7 +5,7 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const secret = searchParams.get('secret');
 
-  if (secret !== process.env.NEXTAUTH_SECRET) {
+  if (secret !== process.env.DEBUG_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -40,7 +40,6 @@ export async function GET(request) {
       success: true,
       messageId: info.messageId,
       response: info.response,
-      BREVO_LOGIN: login,
     });
   } catch (err) {
     return NextResponse.json({
@@ -48,7 +47,6 @@ export async function GET(request) {
       error: err.message,
       code: err.code,
       response: err.response,
-      BREVO_LOGIN: login,
     });
   }
 }
