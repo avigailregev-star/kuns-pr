@@ -54,6 +54,7 @@ function FixedLessonsSection({ t, groups, groupStudentCounts, onChanged }) {
   const [label, setLabel] = useState('');
   const [day, setDay] = useState('');
   const [time, setTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [saving, setSaving] = useState(false);
 
   const teacherGroups = groups.filter(g => g.teacher_id === t.id);
@@ -73,6 +74,7 @@ function FixedLessonsSection({ t, groups, groupStudentCounts, onChanged }) {
           teacher_id: t.id,
           assigned_day: day,
           assigned_time: time,
+          assigned_end_time: endTime || undefined,
         }),
       });
       const json = await res.json();
@@ -83,6 +85,7 @@ function FixedLessonsSection({ t, groups, groupStudentCounts, onChanged }) {
       setLabel('');
       setDay('');
       setTime('');
+      setEndTime('');
       onChanged();
     } finally {
       setSaving(false);
@@ -117,7 +120,9 @@ function FixedLessonsSection({ t, groups, groupStudentCounts, onChanged }) {
               <div key={g.id} className="flex items-center justify-between text-xs bg-white border border-gray-200 rounded px-2 py-1">
                 <span>
                   {g.name}
-                  {sched ? ` · יום ${DAY_NAMES_TEACHER[sched.day_of_week]} ${sched.start_time.slice(0, 5)}` : ' · ללא שעה קבועה'}
+                  {sched
+                    ? ` · יום ${DAY_NAMES_TEACHER[sched.day_of_week]} ${sched.start_time.slice(0, 5)}${sched.end_time ? `–${sched.end_time.slice(0, 5)}` : ''}`
+                    : ' · ללא שעה קבועה'}
                   {` · ${groupStudentCounts[g.id] || 0} תלמידים`}
                 </span>
                 <button
@@ -135,7 +140,7 @@ function FixedLessonsSection({ t, groups, groupStudentCounts, onChanged }) {
       <div className="flex flex-wrap gap-2 items-center">
         <select
           value={label}
-          onChange={e => { setLabel(e.target.value); setDay(''); setTime(''); }}
+          onChange={e => { setLabel(e.target.value); setDay(''); setTime(''); setEndTime(''); }}
           className="border border-gray-300 rounded px-2 py-1 text-xs"
           dir="rtl"
         >
@@ -149,7 +154,7 @@ function FixedLessonsSection({ t, groups, groupStudentCounts, onChanged }) {
             <button
               key={r.day_of_week}
               type="button"
-              onClick={() => { setDay(String(r.day_of_week)); setTime(r.start_time || ''); }}
+              onClick={() => { setDay(String(r.day_of_week)); setTime(r.start_time || ''); setEndTime(r.end_time || ''); }}
               className={`text-xs px-2 py-1 rounded border ${
                 String(day) === String(r.day_of_week)
                   ? 'border-purple-500 bg-purple-50 text-purple-700'
@@ -180,6 +185,18 @@ function FixedLessonsSection({ t, groups, groupStudentCounts, onChanged }) {
             onChange={e => setTime(e.target.value)}
             className="border border-gray-300 rounded px-2 py-1 text-xs"
           />
+        )}
+        {label && day !== '' && time && (
+          <>
+            <span className="text-xs text-gray-400">עד</span>
+            <input
+              type="time"
+              dir="ltr"
+              value={endTime}
+              onChange={e => setEndTime(e.target.value)}
+              className="border border-gray-300 rounded px-2 py-1 text-xs"
+            />
+          </>
         )}
         <button
           type="button"

@@ -11,7 +11,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { name, lesson_type, is_mangan_school, school_name, teacher_id, assigned_day, assigned_time, student_registration_ids } = body;
+    const { name, lesson_type, is_mangan_school, school_name, teacher_id, assigned_day, assigned_time, assigned_end_time, student_registration_ids } = body;
 
     if (!name?.trim()) {
       return NextResponse.json({ error: 'שם קבוצה הוא שדה חובה' }, { status: 400 });
@@ -32,7 +32,7 @@ export async function POST(request) {
       const toM = t => { const [h, m] = t.split(':').map(Number); return h * 60 + (m || 0); };
       const ltDur = lt => (lt === 'individual_45' || lt === 'melodies_individual') ? 45 : 60;
       const newStart = toM(assigned_time);
-      const newEnd = newStart + ltDur(lesson_type);
+      const newEnd = assigned_end_time ? toM(assigned_end_time) : newStart + ltDur(lesson_type);
       const dayNum = Number(assigned_day);
 
       for (const g of (existing || [])) {
@@ -73,6 +73,7 @@ export async function POST(request) {
         group_id: data.id,
         day_of_week: assigned_day,
         start_time: assigned_time,
+        ...(assigned_end_time ? { end_time: assigned_end_time } : {}),
       });
       if (schedErr) console.error('group_schedules insert error:', schedErr.message);
     }
