@@ -6,7 +6,7 @@ import { INSTRUMENTS } from './InstrumentPicker';
 import AssignmentPanel from './AssignmentPanel';
 import { getOrchestraForInstruments } from '../lib/autoAssign';
 import { getLessonDuration } from '../lib/lessonDuration';
-import { getLessonTypeValue, computeGroupName, THEORY_LABEL, ENSEMBLE_LABELS } from '../lib/groupNaming';
+import { getLessonTypeValue, computeGroupName, ENSEMBLE_LABELS, THEORY_LABELS, matchesGroupLabel } from '../lib/groupNaming';
 import { assignRowColors, downloadExcelFile, paymentStatusLabel } from '../lib/excelExport';
 import { filterRegistrations } from '../lib/registrationFilters';
 import { groupStudentRows } from '../lib/groupStudentRows';
@@ -178,7 +178,6 @@ export default function AdminTable() {
   const [groupTypeFilter, setGroupTypeFilter] = useState({}); // { [rowId]: label }
   const [editingDetails, setEditingDetails] = useState({});
   const [addonPickerFor, setAddonPickerFor] = useState(null); // { rowId, kind: 'theory' | 'ensemble' }
-  const [addonNewLabel, setAddonNewLabel] = useState('');
   const [addonSaving, setAddonSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -400,13 +399,13 @@ export default function AdminTable() {
     await fetchData();
   }
 
-  async function handleAddAddon(row, { groupId, newLabel } = {}) {
+  async function handleAddAddon(row, groupId) {
     setAddonSaving(true);
     try {
       const res = await fetch('/api/registrations/addon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sourceId: row.id, groupId, newLabel }),
+        body: JSON.stringify({ sourceId: row.id, groupId }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -414,7 +413,6 @@ export default function AdminTable() {
         return;
       }
       setAddonPickerFor(null);
-      setAddonNewLabel('');
       await fetchData();
       setExpandedRow(row.id);
     } finally {
@@ -863,7 +861,7 @@ async function deleteRegistration(id, studentName) {
                                 ) : section.addonKind ? (
                                   <button
                                     type="button"
-                                    onClick={() => { setAddonPickerFor({ rowId: contactRow.id, kind: section.addonKind === 'ensemble' ? 'ensemble' : 'theory' }); setAddonNewLabel(''); }}
+                                    onClick={() => setAddonPickerFor({ rowId: contactRow.id, kind: section.addonKind === 'ensemble' ? 'ensemble' : 'theory', label: '' })}
                                     className="text-xs px-3 py-1.5 rounded-lg border border-dashed border-indigo-300 text-indigo-700 hover:bg-indigo-50 w-full"
                                   >
                                     + הוסף {section.addonKind === 'ensemble' ? 'הרכב' : 'תיאוריה'}
@@ -874,10 +872,24 @@ async function deleteRegistration(id, studentName) {
 
                                 {addonPickerFor?.rowId === contactRow.id && addonPickerFor.kind === section.addonKind && (() => {
                                   const wantedTypes = addonPickerFor.kind === 'theory' ? ['theory'] : ['orchestra', 'choir'];
-                                  const matching = groups.filter(g => wantedTypes.includes(g.lesson_type));
+                                  const labelOptions = addonPickerFor.kind === 'theory' ? THEORY_LABELS : ENSEMBLE_LABELS;
+                                  const label = addonPickerFor.label || '';
+                                  const matching = label
+                                    ? groups.filter(g => wantedTypes.includes(g.lesson_type) && matchesGroupLabel(g.name, label))
+                                    : [];
                                   return (
                                     <div className="border border-gray-200 rounded-lg p-2 space-y-1 max-h-56 overflow-y-auto mt-2">
-                                      {matching.map(g => {
+                                      <select
+                                        className="admin-input w-full"
+                                        value={label}
+                                        onChange={e => setAddonPickerFor(prev => ({ ...prev, label: e.target.value }))}
+                                      >
+                                        <option value="">— בחר/י סוג —</option>
+                                        {labelOptions.map(l => (
+                                          <option key={l} value={l}>{l}</option>
+                                        ))}
+                                      </select>
+                                      {label && matching.map(g => {
                                         const teacherName = teachers.find(t => t.id === g.teacher_id)?.name || '—';
                                         const sched = (g.group_schedules || [])
                                           .filter(s => s.start_time)
@@ -887,7 +899,7 @@ async function deleteRegistration(id, studentName) {
                                             key={g.id}
                                             type="button"
                                             disabled={addonSaving}
-                                            onClick={() => handleAddAddon(contactRow, { groupId: g.id })}
+                                            onClick={() => handleAddAddon(contactRow, g.id)}
                                             className="block w-full text-right px-2 py-1.5 text-sm rounded-lg hover:bg-indigo-50 disabled:opacity-40"
                                           >
                                             {g.name} · {teacherName}
@@ -895,39 +907,8 @@ async function deleteRegistration(id, studentName) {
                                           </button>
                                         );
                                       })}
-                                      {matching.length === 0 && (
-                                        <p className="text-xs text-gray-400 px-2 py-1">אין קבוצות קיימות מסוג זה</p>
-                                      )}
-                                      {addonPickerFor.kind === 'theory' ? (
-                                        <button
-                                          type="button"
-                                          disabled={addonSaving}
-                                          onClick={() => handleAddAddon(contactRow, { newLabel: THEORY_LABEL })}
-                                          className="block w-full text-right px-2 py-1.5 text-sm rounded-lg text-purple-700 hover:bg-purple-50 disabled:opacity-40"
-                                        >
-                                          ➕ צור שיעור חדש
-                                        </button>
-                                      ) : (
-                                        <div className="flex gap-2 items-center pt-1">
-                                          <select
-                                            className="admin-input flex-1"
-                                            value={addonNewLabel}
-                                            onChange={e => setAddonNewLabel(e.target.value)}
-                                          >
-                                            <option value="">➕ צור שיעור חדש — בחר/י סוג —</option>
-                                            {ENSEMBLE_LABELS.map(label => (
-                                              <option key={label} value={label}>{label}</option>
-                                            ))}
-                                          </select>
-                                          <button
-                                            type="button"
-                                            disabled={addonSaving || !addonNewLabel}
-                                            onClick={() => handleAddAddon(contactRow, { newLabel: addonNewLabel })}
-                                            className="text-xs px-3 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40"
-                                          >
-                                            צור
-                                          </button>
-                                        </div>
+                                      {label && matching.length === 0 && (
+                                        <p className="text-xs text-gray-400 px-2 py-1">אין שיעורים קבועים מסוג זה — יש להוסיף בטאב מורים</p>
                                       )}
                                       <button
                                         type="button"
