@@ -4,7 +4,7 @@ import React from 'react';
 import StatusSelect from './StatusSelect';
 import { getLessonDuration } from '../lib/lessonDuration';
 import { freeMinutesOnDay, getGroupLessonDuration } from '../lib/teacherCapacity';
-import { LESSON_TYPE_OPTIONS, getLessonTypeValue, matchesLessonType, groupBaseLabel } from '../lib/groupNaming';
+import { LESSON_TYPE_OPTIONS, getLessonTypeValue, matchesLessonType, matchesGroupLabel, groupBaseLabel } from '../lib/groupNaming';
 import { FIXED_COURSE_TIMES, filterRangesToFixedDay } from '../lib/fixedCourseDays';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
@@ -369,7 +369,7 @@ export default function AssignmentPanel({
           const selectedTeacherForGroups = teachers.find(t => t.name === row.teacher);
           const selectedType = groupTypeFilter[row.id] || '';
           const matchingGroups = selectedType
-            ? groups.filter(g => g.teacher_id === selectedTeacherForGroups?.id && matchesLessonType(g.name, selectedType))
+            ? groups.filter(g => g.teacher_id === selectedTeacherForGroups?.id && (matchesLessonType(g.name, selectedType) || matchesGroupLabel(g.name, selectedType)))
             : [];
 
           return (
