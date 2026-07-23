@@ -4,7 +4,7 @@ import React from 'react';
 import StatusSelect from './StatusSelect';
 import { getLessonDuration } from '../lib/lessonDuration';
 import { freeMinutesOnDay, getGroupLessonDuration } from '../lib/teacherCapacity';
-import { LESSON_TYPE_OPTIONS, getLessonTypeValue, matchesLessonType } from '../lib/groupNaming';
+import { LESSON_TYPE_OPTIONS, getLessonTypeValue, matchesLessonType, groupBaseLabel } from '../lib/groupNaming';
 import { FIXED_COURSE_TIMES, filterRangesToFixedDay } from '../lib/fixedCourseDays';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
@@ -54,7 +54,7 @@ export default function AssignmentPanel({
           disabled={updatingIds.includes(row.id)}
         />
       </div>
-      {row.linked_registration_id && getLessonTypeValue(row.selected_course) === 'theory' && (() => {
+      {row.linked_registration_id && getLessonTypeValue(groupBaseLabel(row.selected_course)) === 'theory' && (() => {
         // Match either the source registration itself (r.id === row.linked_registration_id)
         // or a sibling add-on row that shares the same source (r.linked_registration_id === row.linked_registration_id).
         const family = rows.filter(r =>

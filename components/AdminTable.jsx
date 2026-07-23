@@ -177,7 +177,7 @@ export default function AdminTable() {
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [groupTypeFilter, setGroupTypeFilter] = useState({}); // { [rowId]: label }
   const [editingDetails, setEditingDetails] = useState({});
-  const [addonPickerFor, setAddonPickerFor] = useState(null); // { rowId, kind: 'theory' | 'ensemble' }
+  const [addonPickerFor, setAddonPickerFor] = useState(null); // { rowId, kind: 'theory' | 'ensemble', label }
   const [addonSaving, setAddonSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
