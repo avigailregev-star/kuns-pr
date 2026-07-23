@@ -61,18 +61,13 @@ const sourceReg = {
 };
 
 describe('POST /api/registrations/addon — validation', () => {
-  test('rejects when neither groupId nor newLabel is given', async () => {
+  test('rejects when groupId is missing', async () => {
     const res = await POST(makeRequest({ sourceId: 'r1' }));
     expect(res.status).toBe(400);
   });
 
-  test('rejects when both groupId and newLabel are given', async () => {
-    const res = await POST(makeRequest({ sourceId: 'r1', groupId: 'g1', newLabel: 'תיאוריה' }));
-    expect(res.status).toBe(400);
-  });
-
-  test('rejects an unrecognized newLabel', async () => {
-    const res = await POST(makeRequest({ sourceId: 'r1', newLabel: 'משהו לא קיים' }));
+  test('rejects when sourceId is missing', async () => {
+    const res = await POST(makeRequest({ groupId: 'g1' }));
     expect(res.status).toBe(400);
   });
 
@@ -82,29 +77,8 @@ describe('POST /api/registrations/addon — validation', () => {
     });
     getSupabaseClient.mockReturnValue(mockSupabase);
 
-    const res = await POST(makeRequest({ sourceId: 'missing', newLabel: 'תיאוריה' }));
+    const res = await POST(makeRequest({ sourceId: 'missing', groupId: 'g1' }));
     expect(res.status).toBe(404);
-  });
-});
-
-describe('POST /api/registrations/addon — create a new (unscheduled) add-on', () => {
-  test('creates a theory add-on with status חדש and no teacher/day/time', async () => {
-    const mockSupabase = createMockSupabase({
-      registrations: [
-        { data: sourceReg, error: null },       // source fetch
-        { data: [], error: null },               // existing-theory check
-        { data: { id: 'new1', ...sourceReg, selected_course: 'תיאוריה', linked_registration_id: 'r1', status: 'חדש' }, error: null }, // insert
-      ],
-    });
-    getSupabaseClient.mockReturnValue(mockSupabase);
-
-    const res = await POST(makeRequest({ sourceId: 'r1', newLabel: 'תיאוריה' }));
-    const json = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(json.data.selected_course).toBe('תיאוריה');
-    expect(json.data.status).toBe('חדש');
-    expect(json.data.linked_registration_id).toBe('r1');
   });
 });
 
@@ -135,25 +109,6 @@ describe('POST /api/registrations/addon — attach to an existing group', () => 
     expect(json.data.selected_course).toBe('תזמורת כלי קשת');
     expect(json.data.status).toBe('שובץ');
     expect(json.data.teacher).toBe('רותם לוי');
-  });
-
-  test('rejects with 409 when attaching to a theory group and the student already has an active theory add-on', async () => {
-    const mockSupabase = createMockSupabase({
-      registrations: [
-        { data: sourceReg, error: null }, // source fetch
-        { data: [{ id: 'existing-theory', status: 'שובץ', selected_course: 'תיאוריה' }], error: null }, // existing-theory check
-      ],
-      groups: [
-        { data: { id: 'g-theory', name: 'תיאוריה', teacher_id: null, lesson_type: 'theory', group_schedules: [] }, error: null },
-      ],
-    });
-    getSupabaseClient.mockReturnValue(mockSupabase);
-
-    const res = await POST(makeRequest({ sourceId: 'r1', groupId: 'g-theory' }));
-    expect(res.status).toBe(409);
-
-    // No insert was attempted.
-    expect(mockSupabase.from.mock.calls.map(c => c[0])).toEqual(['registrations', 'groups', 'registrations']);
   });
 
   test('returns 404 when the given groupId does not match any group', async () => {
@@ -227,36 +182,63 @@ describe('POST /api/registrations/addon — attach to an existing group', () => 
   });
 });
 
-describe('POST /api/registrations/addon — duplicate theory guard', () => {
-  test('rejects with 409 when the student already has an active theory add-on', async () => {
+describe('POST /api/registrations/addon — per-label duplicate guard', () => {
+  test('rejects with 409 when the student already has an active registration of the exact same numbered group', async () => {
     const mockSupabase = createMockSupabase({
       registrations: [
         { data: sourceReg, error: null }, // source fetch
-        { data: [{ id: 'existing-theory', status: 'שובץ', selected_course: 'תיאוריה' }], error: null }, // existing-theory check
+        { data: [{ id: 'existing', status: 'שובץ', selected_course: 'פיתוח קשב 1' }], error: null }, // existing-linked check
+      ],
+      groups: [
+        { data: { id: 'g-2', name: 'פיתוח קשב 2', teacher_id: null, lesson_type: 'theory', group_schedules: [] }, error: null },
       ],
     });
     getSupabaseClient.mockReturnValue(mockSupabase);
 
-    const res = await POST(makeRequest({ sourceId: 'r1', newLabel: 'תיאוריה' }));
+    const res = await POST(makeRequest({ sourceId: 'r1', groupId: 'g-2' }));
     expect(res.status).toBe(409);
 
     // No insert was attempted.
-    expect(mockSupabase.from.mock.calls.map(c => c[0])).toEqual(['registrations', 'registrations']);
+    expect(mockSupabase.from.mock.calls.map(c => c[0])).toEqual(['registrations', 'groups', 'registrations']);
   });
 
-  test('rejects with 500 when the existing-theory check query errors', async () => {
+  test('allows joining a different theory label even with an existing active theory add-on', async () => {
     const mockSupabase = createMockSupabase({
       registrations: [
         { data: sourceReg, error: null }, // source fetch
-        { data: null, error: { message: 'Database connection error' } }, // existing-theory check fails
+        { data: [{ id: 'existing', status: 'שובץ', selected_course: 'פיתוח קשב 1' }], error: null }, // existing-linked check
+        { data: { id: 'new5', ...sourceReg, selected_course: 'קומפוזיציה 1', linked_registration_id: 'r1', status: 'שובץ', teacher: null, assigned_day: null, assigned_time: null, group_id: 'g-comp' }, error: null }, // insert
+      ],
+      groups: [
+        { data: { id: 'g-comp', name: 'קומפוזיציה 1', teacher_id: null, lesson_type: 'theory', group_schedules: [] }, error: null },
+      ],
+      students: [
+        { data: null, error: null }, // existing-student check: not found
+        { error: null },              // insert
       ],
     });
     getSupabaseClient.mockReturnValue(mockSupabase);
 
-    const res = await POST(makeRequest({ sourceId: 'r1', newLabel: 'תיאוריה' }));
-    expect(res.status).toBe(500);
+    const res = await POST(makeRequest({ sourceId: 'r1', groupId: 'g-comp' }));
+    const json = await res.json();
 
-    // No insert was attempted.
-    expect(mockSupabase.from.mock.calls.map(c => c[0])).toEqual(['registrations', 'registrations']);
+    expect(res.status).toBe(200);
+    expect(json.data.selected_course).toBe('קומפוזיציה 1');
+  });
+
+  test('rejects with 500 when the existing-linked check query errors', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [
+        { data: sourceReg, error: null }, // source fetch
+        { data: null, error: { message: 'Database connection error' } }, // existing-linked check fails
+      ],
+      groups: [
+        { data: { id: 'g-1', name: 'תיאוריה 1', teacher_id: null, lesson_type: 'theory', group_schedules: [] }, error: null },
+      ],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+
+    const res = await POST(makeRequest({ sourceId: 'r1', groupId: 'g-1' }));
+    expect(res.status).toBe(500);
   });
 });
