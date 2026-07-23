@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import InstrumentPicker from './InstrumentPicker';
-import DaysPicker from './DaysPicker';
 import AgreementScroll from './AgreementScroll';
 import { getPaymentLink, getCurrentPriceInfo, COURSE_GROUPS, PAYMENT_LINKS } from '../lib/paymentLinks';
 import { FIXED_COURSE_DAYS, FIXED_COURSE_TIMES } from '../lib/fixedCourseDays';
@@ -64,7 +63,6 @@ const STEP_DEFS = {
   personal:   { label: 'פרטים',    icon: '👤' },
   instrument: { label: 'כלי נגינה', icon: '🎸' },
   course:     { label: 'קורס',     icon: '🎼' },
-  days:       { label: 'זמינות',   icon: '📅' },
   agreement:  { label: 'הסכם',     icon: '📋' },
 };
 
@@ -768,26 +766,6 @@ export default function RegistrationForm() {
                   </div>
                 ) : null;
               })()}
-            </div>
-          )}
-
-          {/* ── Unavailable Days ── */}
-          {currentStepId === 'days' && !isInterviewFlow && (
-            <div className="space-y-5">
-              <div className="mb-6">
-                <h2 className="text-xl font-bold text-white mb-1">ימים לא זמינים</h2>
-                <p className="text-slate-400 text-sm">סמנו ימים שבהם לא תוכלו להגיע לשיעורים (לא חובה)</p>
-              </div>
-
-              <DaysPicker value={form.unavailableDays} onChange={(v) => update('unavailableDays', v)} />
-
-              {form.unavailableDays.length === 0 ? (
-                <p className="text-xs text-slate-500 text-center mt-4">לא נבחרו ימים — גמישות מלאה ✓</p>
-              ) : (
-                <p className="text-xs text-red-400/80 text-center">
-                  לא זמינים: {form.unavailableDays.map((d) => `יום ${d}`).join(', ')}
-                </p>
-              )}
             </div>
           )}
 

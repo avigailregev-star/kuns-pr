@@ -256,14 +256,21 @@ export default function AdminTable() {
   async function updateStatus(id, newStatus) {
     setUpdatingIds(prev => [...prev, id]);
     try {
-      await fetch('/api/update-status', {
+      const res = await fetch('/api/update-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, newStatus }),
       });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || 'שגיאה בעדכון הסטטוס — נסה שוב');
+        return;
+      }
       setRows((prev) =>
         prev.map((r) => r.id === id ? { ...r, status: newStatus } : r)
       );
+    } catch {
+      alert('שגיאת רשת — בדוק חיבור ונסה שוב');
     } finally {
       setUpdatingIds(prev => prev.filter(x => x !== id));
     }
@@ -435,13 +442,20 @@ export default function AdminTable() {
     if (!details) return;
     setUpdatingIds(prev => [...prev, id]);
     try {
-      await fetch('/api/registrations', {
+      const res = await fetch('/api/registrations', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, ...details, updated_at: new Date().toISOString() }),
       });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || 'שגיאה בשמירת הפרטים — נסה שוב');
+        return;
+      }
       setRows(prev => prev.map(r => r.id === id ? { ...r, ...details } : r));
       setEditingDetails(prev => { const n = { ...prev }; delete n[id]; return n; });
+    } catch {
+      alert('שגיאת רשת — בדוק חיבור ונסה שוב');
     } finally {
       setUpdatingIds(prev => prev.filter(x => x !== id));
     }
@@ -451,13 +465,20 @@ async function deleteRegistration(id, studentName) {
     if (!confirm(`למחוק לחלוטין את הרישום של ${studentName}?\nפעולה זו אינה הפיכה.`)) return;
     setUpdatingIds(prev => [...prev, id]);
     try {
-      await fetch('/api/registrations', {
+      const res = await fetch('/api/registrations', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),
       });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || 'שגיאה במחיקה — נסה שוב');
+        return;
+      }
       setRows(prev => prev.filter(r => r.id !== id));
       setExpandedRow(null);
+    } catch {
+      alert('שגיאת רשת — בדוק חיבור ונסה שוב');
     } finally {
       setUpdatingIds(prev => prev.filter(x => x !== id));
     }
@@ -466,12 +487,19 @@ async function deleteRegistration(id, studentName) {
   async function updatePaymentStatus(id, newPaymentStatus) {
     setUpdatingIds(prev => [...prev, id]);
     try {
-      await fetch('/api/registrations', {
+      const res = await fetch('/api/registrations', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, registration_status: newPaymentStatus }),
       });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || 'שגיאה בעדכון סטטוס התשלום — נסה שוב');
+        return;
+      }
       setRows((prev) => prev.map((r) => r.id === id ? { ...r, registration_status: newPaymentStatus } : r));
+    } catch {
+      alert('שגיאת רשת — בדוק חיבור ונסה שוב');
     } finally {
       setUpdatingIds(prev => prev.filter(x => x !== id));
     }
@@ -480,12 +508,19 @@ async function deleteRegistration(id, studentName) {
   async function markAttendedOpenDay(id) {
     setUpdatingIds(prev => [...prev, id]);
     try {
-      await fetch('/api/registrations', {
+      const res = await fetch('/api/registrations', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, attended_open_day: true }),
       });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || 'שגיאה בסימון הנוכחות — נסה שוב');
+        return;
+      }
       setRows(prev => prev.map(r => r.id === id ? { ...r, attended_open_day: true } : r));
+    } catch {
+      alert('שגיאת רשת — בדוק חיבור ונסה שוב');
     } finally {
       setUpdatingIds(prev => prev.filter(x => x !== id));
     }
