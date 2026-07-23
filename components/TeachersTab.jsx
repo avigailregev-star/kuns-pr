@@ -3,9 +3,13 @@
 import { useState, useEffect } from 'react';
 import TeacherForm from './TeacherForm';
 import ImportAssignments from './ImportAssignments';
+import { LESSON_TYPE_OPTIONS, getLessonTypeValue, nextNumberedGroupName } from '../lib/groupNaming';
 
 const DAY_NAMES_TEACHER = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const HEBREW_TO_NUM = { 'א': 0, 'ב': 1, 'ג': 2, 'ד': 3, 'ה': 4, 'ו': 5, 'ז': 6 };
+const FIXED_GROUP_TYPE_LABELS = LESSON_TYPE_OPTIONS
+  .filter(o => ['theory', 'orchestra', 'choir'].includes(o.value))
+  .map(o => o.label);
 
 function formatDayTeacher(assignedDay) {
   if (assignedDay == null || assignedDay === '') return null;
@@ -46,7 +50,137 @@ function hasSharedGroupSchedule(s, groupsById) {
   return (group.group_schedules || []).some(sc => sc.start_time);
 }
 
-function TeacherCard({ t, registrations, groupsById, onEdit, onDelete, onStudentUpdated }) {
+function FixedLessonsSection({ t, groups, groupStudentCounts, onChanged }) {
+  const [label, setLabel] = useState('');
+  const [day, setDay] = useState('');
+  const [time, setTime] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const teacherGroups = groups.filter(g => g.teacher_id === t.id);
+  const ranges = t.teacher_availability_ranges || [];
+
+  async function handleSave() {
+    if (!label || day === '' || !time) return;
+    setSaving(true);
+    try {
+      const name = nextNumberedGroupName(label, groups.map(g => g.name));
+      const res = await fetch('/api/groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          lesson_type: getLessonTypeValue(label),
+          teacher_id: t.id,
+          assigned_day: day,
+          assigned_time: time,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error || 'שגיאה ביצירת שיעור קבוע');
+        return;
+      }
+      setLabel('');
+      setDay('');
+      setTime('');
+      onChanged();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(g) {
+    if (!confirm(`למחוק את הקבוצה "${g.name}"?\nתלמידי הקבוצה יוסרו גם כן מאפליקציית הנוכחות.`)) return;
+    const res = await fetch('/api/groups', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: g.id }),
+    });
+    if (res.ok) {
+      onChanged();
+    } else {
+      const json = await res.json();
+      alert(json.error || 'שגיאה במחיקה');
+    }
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-gray-200">
+      <h5 className="text-sm font-semibold text-gray-700 mb-2">שיעורים קבועים</h5>
+      {teacherGroups.length === 0 ? (
+        <p className="text-xs text-gray-400 mb-2">אין שיעורים קבועים עדיין</p>
+      ) : (
+        <div className="space-y-1 mb-2">
+          {teacherGroups.map(g => {
+            const sched = (g.group_schedules || []).find(s => s.start_time);
+            return (
+              <div key={g.id} className="flex items-center justify-between text-xs bg-white border border-gray-200 rounded px-2 py-1">
+                <span>
+                  {g.name}
+                  {sched ? ` · יום ${DAY_NAMES_TEACHER[sched.day_of_week]} ${sched.start_time.slice(0, 5)}` : ' · ללא שעה קבועה'}
+                  {` · ${groupStudentCounts[g.id] || 0} תלמידים`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(g)}
+                  className="text-red-400 hover:text-red-600"
+                >
+                  מחק
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div className="flex flex-wrap gap-2 items-center">
+        <select
+          value={label}
+          onChange={e => { setLabel(e.target.value); setDay(''); setTime(''); }}
+          className="border border-gray-300 rounded px-2 py-1 text-xs"
+          dir="rtl"
+        >
+          <option value="">— סוג —</option>
+          {FIXED_GROUP_TYPE_LABELS.map(l => (
+            <option key={l} value={l}>{l}</option>
+          ))}
+        </select>
+        {label && ranges.map(r => (
+          <button
+            key={r.day_of_week}
+            type="button"
+            onClick={() => { setDay(String(r.day_of_week)); setTime(r.start_time || ''); }}
+            className={`text-xs px-2 py-1 rounded border ${
+              String(day) === String(r.day_of_week)
+                ? 'border-purple-500 bg-purple-50 text-purple-700'
+                : 'border-gray-300 text-gray-600'
+            }`}
+          >
+            יום {DAY_NAMES_TEACHER[r.day_of_week]}
+          </button>
+        ))}
+        {label && day !== '' && (
+          <input
+            type="time"
+            dir="ltr"
+            value={time}
+            onChange={e => setTime(e.target.value)}
+            className="border border-gray-300 rounded px-2 py-1 text-xs"
+          />
+        )}
+        <button
+          type="button"
+          disabled={!label || day === '' || !time || saving}
+          onClick={handleSave}
+          className="text-xs bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 disabled:opacity-40"
+        >
+          + הוסף שיעור קבוע
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TeacherCard({ t, registrations, groupsById, groups, groupStudentCounts, onEdit, onDelete, onStudentUpdated, onGroupsChanged }) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editDay, setEditDay] = useState('');
@@ -237,6 +371,7 @@ function TeacherCard({ t, registrations, groupsById, onEdit, onDelete, onStudent
               ))}
             </div>
           )}
+          <FixedLessonsSection t={t} groups={groups} groupStudentCounts={groupStudentCounts} onChanged={onGroupsChanged} />
         </div>
       )}
     </div>
@@ -247,6 +382,7 @@ export default function TeachersTab() {
   const [teachers, setTeachers] = useState([]);
   const [registrations, setRegistrations] = useState([]);
   const [groupsById, setGroupsById] = useState({});
+  const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -268,6 +404,7 @@ export default function TeachersTab() {
     setTeachers(tJson.data || []);
     setRegistrations((rJson.data || []).filter(r => r.teacher));
     setGroupsById(Object.fromEntries((gJson.data || []).map(g => [g.id, g])));
+    setGroups(gJson.data || []);
     setLoading(false);
   }
 
@@ -301,6 +438,11 @@ export default function TeachersTab() {
   }
 
   if (loading) return <p className="text-gray-500 text-sm">טוען מורים...</p>;
+
+  const groupStudentCounts = {};
+  for (const r of registrations) {
+    if (r.group_id != null) groupStudentCounts[r.group_id] = (groupStudentCounts[r.group_id] || 0) + 1;
+  }
 
   return (
     <div className="space-y-4">
@@ -348,9 +490,12 @@ export default function TeachersTab() {
                 t={t}
                 registrations={registrations}
                 groupsById={groupsById}
+                groups={groups}
+                groupStudentCounts={groupStudentCounts}
                 onEdit={() => setEditing(t)}
                 onDelete={() => handleDelete(t.id)}
                 onStudentUpdated={fetchAll}
+                onGroupsChanged={fetchAll}
               />
             )}
           </div>
