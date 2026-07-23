@@ -144,19 +144,33 @@ function FixedLessonsSection({ t, groups, groupStudentCounts, onChanged }) {
             <option key={l} value={l}>{l}</option>
           ))}
         </select>
-        {label && ranges.map(r => (
-          <button
-            key={r.day_of_week}
-            type="button"
-            onClick={() => { setDay(String(r.day_of_week)); setTime(r.start_time || ''); }}
-            className={`text-xs px-2 py-1 rounded border ${
-              String(day) === String(r.day_of_week)
-                ? 'border-purple-500 bg-purple-50 text-purple-700'
-                : 'border-gray-300 text-gray-600'
-            }`}
+        {label && (ranges.length > 0 ? (
+          ranges.map(r => (
+            <button
+              key={r.day_of_week}
+              type="button"
+              onClick={() => { setDay(String(r.day_of_week)); setTime(r.start_time || ''); }}
+              className={`text-xs px-2 py-1 rounded border ${
+                String(day) === String(r.day_of_week)
+                  ? 'border-purple-500 bg-purple-50 text-purple-700'
+                  : 'border-gray-300 text-gray-600'
+              }`}
+            >
+              יום {DAY_NAMES_TEACHER[r.day_of_week]}
+            </button>
+          ))
+        ) : (
+          <select
+            value={day}
+            onChange={e => setDay(e.target.value)}
+            className="border border-gray-300 rounded px-2 py-1 text-xs"
+            dir="rtl"
           >
-            יום {DAY_NAMES_TEACHER[r.day_of_week]}
-          </button>
+            <option value="">— יום —</option>
+            {DAY_NAMES_TEACHER.map((name, i) => (
+              <option key={i} value={String(i)}>יום {name}</option>
+            ))}
+          </select>
         ))}
         {label && day !== '' && (
           <input
