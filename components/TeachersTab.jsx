@@ -4,13 +4,10 @@ import { useState, useEffect } from 'react';
 import TeacherForm from './TeacherForm';
 import ImportAssignments from './ImportAssignments';
 import { LESSON_TYPE_OPTIONS, getLessonTypeValue, nextNumberedGroupName } from '../lib/groupNaming';
+import { categoryForLabel, mergeFixedLessonTypes } from '../lib/fixedLessonTypes';
 
 const DAY_NAMES_TEACHER = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const HEBREW_TO_NUM = { 'א': 0, 'ב': 1, 'ג': 2, 'ד': 3, 'ה': 4, 'ו': 5, 'ז': 6 };
-const FIXED_GROUP_TYPE_LABELS = LESSON_TYPE_OPTIONS
-  .filter(o => ['theory', 'orchestra', 'choir'].includes(o.value))
-  .map(o => o.label);
-
 function formatDayTeacher(assignedDay) {
   if (assignedDay == null || assignedDay === '') return null;
   const num = Number(assignedDay);
@@ -50,12 +47,17 @@ function hasSharedGroupSchedule(s, groupsById) {
   return (group.group_schedules || []).some(sc => sc.start_time);
 }
 
-function FixedLessonsSection({ t, groups, groupStudentCounts, onChanged }) {
+function FixedLessonsSection({ t, groups, groupStudentCounts, fixedLessonTypes, onChanged, onTypesChanged }) {
   const [label, setLabel] = useState('');
   const [day, setDay] = useState('');
   const [time, setTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [saving, setSaving] = useState(false);
+  const [addingType, setAddingType] = useState(false);
+  const [newTypeLabel, setNewTypeLabel] = useState('');
+  const [newTypeCategory, setNewTypeCategory] = useState('');
+  const [typeSaving, setTypeSaving] = useState(false);
+  const [typeError, setTypeError] = useState('');
 
   const teacherGroups = groups.filter(g => g.teacher_id === t.id);
   const ranges = t.teacher_availability_ranges || [];
@@ -70,7 +72,7 @@ function FixedLessonsSection({ t, groups, groupStudentCounts, onChanged }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
-          lesson_type: getLessonTypeValue(label),
+          lesson_type: categoryForLabel(label, fixedLessonTypes) || getLessonTypeValue(label),
           teacher_id: t.id,
           assigned_day: day,
           assigned_time: time,
@@ -107,6 +109,32 @@ function FixedLessonsSection({ t, groups, groupStudentCounts, onChanged }) {
     }
   }
 
+  async function handleAddType() {
+    const cleanLabel = newTypeLabel.trim();
+    if (!cleanLabel || !newTypeCategory) return;
+    setTypeSaving(true);
+    setTypeError('');
+    try {
+      const res = await fetch('/api/fixed-lesson-types', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: cleanLabel, category: newTypeCategory }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setTypeError(json.error || 'שגיאה בהוספת סוג');
+        return;
+      }
+      await onTypesChanged();
+      setLabel(json.data.label);
+      setAddingType(false);
+      setNewTypeLabel('');
+      setNewTypeCategory('');
+    } finally {
+      setTypeSaving(false);
+    }
+  }
+
   return (
     <div className="mt-3 pt-3 border-t border-gray-200">
       <h5 className="text-sm font-semibold text-gray-700 mb-2">שיעורים קבועים</h5>
@@ -140,15 +168,51 @@ function FixedLessonsSection({ t, groups, groupStudentCounts, onChanged }) {
       <div className="flex flex-wrap gap-2 items-center">
         <select
           value={label}
-          onChange={e => { setLabel(e.target.value); setDay(''); setTime(''); setEndTime(''); }}
+          onChange={e => {
+            if (e.target.value === '__add_new__') {
+              setAddingType(true);
+              setLabel('');
+            } else {
+              setAddingType(false);
+              setLabel(e.target.value);
+            }
+            setDay(''); setTime(''); setEndTime(''); setTypeError('');
+          }}
           className="border border-gray-300 rounded px-2 py-1 text-xs"
           dir="rtl"
         >
           <option value="">— סוג —</option>
-          {FIXED_GROUP_TYPE_LABELS.map(l => (
+          {fixedLessonTypes.map(({ label: l }) => (
             <option key={l} value={l}>{l}</option>
           ))}
+          <option value="__add_new__">➕ הוסף סוג חדש</option>
         </select>
+        {addingType && (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 p-2">
+            <input
+              value={newTypeLabel}
+              onChange={e => setNewTypeLabel(e.target.value)}
+              placeholder="שם סוג חדש"
+              className="border border-gray-300 rounded px-2 py-1 text-xs bg-white"
+              autoFocus
+            />
+            <select
+              value={newTypeCategory}
+              onChange={e => setNewTypeCategory(e.target.value)}
+              className="border border-gray-300 rounded px-2 py-1 text-xs bg-white"
+            >
+              <option value="">— קטגוריה —</option>
+              <option value="theory">תיאוריה / קבוצתי</option>
+              <option value="choir">מקהלה</option>
+              <option value="orchestra">תזמורת / הרכב</option>
+            </select>
+            <button type="button" onClick={handleAddType} disabled={!newTypeLabel.trim() || !newTypeCategory || typeSaving} className="text-xs bg-purple-600 text-white px-3 py-1 rounded disabled:opacity-40">
+              {typeSaving ? 'שומר...' : 'שמור סוג'}
+            </button>
+            <button type="button" onClick={() => { setAddingType(false); setTypeError(''); }} className="text-xs text-gray-500">ביטול</button>
+            {typeError && <span className="w-full text-xs text-red-600">{typeError}</span>}
+          </div>
+        )}
         {label && (ranges.length > 0 ? (
           ranges.map(r => (
             <button
@@ -211,7 +275,7 @@ function FixedLessonsSection({ t, groups, groupStudentCounts, onChanged }) {
   );
 }
 
-function TeacherCard({ t, registrations, groupsById, groups, groupStudentCounts, onEdit, onDelete, onStudentUpdated, onGroupsChanged }) {
+function TeacherCard({ t, registrations, groupsById, groups, groupStudentCounts, fixedLessonTypes, onEdit, onDelete, onStudentUpdated, onGroupsChanged, onTypesChanged }) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editDay, setEditDay] = useState('');
@@ -402,7 +466,7 @@ function TeacherCard({ t, registrations, groupsById, groups, groupStudentCounts,
               ))}
             </div>
           )}
-          <FixedLessonsSection t={t} groups={groups} groupStudentCounts={groupStudentCounts} onChanged={onGroupsChanged} />
+          <FixedLessonsSection t={t} groups={groups} groupStudentCounts={groupStudentCounts} fixedLessonTypes={fixedLessonTypes} onChanged={onGroupsChanged} onTypesChanged={onTypesChanged} />
         </div>
       )}
     </div>
@@ -414,6 +478,7 @@ export default function TeachersTab() {
   const [registrations, setRegistrations] = useState([]);
   const [groupsById, setGroupsById] = useState({});
   const [groups, setGroups] = useState([]);
+  const [fixedLessonTypes, setFixedLessonTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -426,16 +491,18 @@ export default function TeachersTab() {
 
   async function fetchAll() {
     setLoading(true);
-    const [tRes, rRes, gRes] = await Promise.all([
+    const [tRes, rRes, gRes, ftRes] = await Promise.all([
       fetch('/api/teachers'),
       fetch('/api/registrations'),
       fetch('/api/groups'),
+      fetch('/api/fixed-lesson-types'),
     ]);
-    const [tJson, rJson, gJson] = await Promise.all([tRes.json(), rRes.json(), gRes.json()]);
+    const [tJson, rJson, gJson, ftJson] = await Promise.all([tRes.json(), rRes.json(), gRes.json(), ftRes.json()]);
     setTeachers(tJson.data || []);
     setRegistrations((rJson.data || []).filter(r => r.teacher));
     setGroupsById(Object.fromEntries((gJson.data || []).map(g => [g.id, g])));
     setGroups(gJson.data || []);
+    setFixedLessonTypes(mergeFixedLessonTypes(ftJson.data || []));
     setLoading(false);
   }
 
@@ -443,6 +510,12 @@ export default function TeachersTab() {
     const res = await fetch('/api/teachers');
     const json = await res.json();
     setTeachers(json.data || []);
+  }
+
+  async function fetchFixedLessonTypes() {
+    const res = await fetch('/api/fixed-lesson-types');
+    const json = await res.json();
+    setFixedLessonTypes(mergeFixedLessonTypes(json.data || []));
   }
 
   async function handleSave(data) {
@@ -523,10 +596,12 @@ export default function TeachersTab() {
                 groupsById={groupsById}
                 groups={groups}
                 groupStudentCounts={groupStudentCounts}
+                fixedLessonTypes={fixedLessonTypes}
                 onEdit={() => setEditing(t)}
                 onDelete={() => handleDelete(t.id)}
                 onStudentUpdated={fetchAll}
                 onGroupsChanged={fetchAll}
+                onTypesChanged={fetchFixedLessonTypes}
               />
             )}
           </div>

@@ -6,10 +6,11 @@ import { INSTRUMENTS } from './InstrumentPicker';
 import AssignmentPanel from './AssignmentPanel';
 import { getOrchestraForInstruments } from '../lib/autoAssign';
 import { getLessonDuration } from '../lib/lessonDuration';
-import { getLessonTypeValue, computeGroupName, ENSEMBLE_LABELS, THEORY_LABELS, matchesGroupLabel } from '../lib/groupNaming';
+import { getLessonTypeValue, computeGroupName, matchesGroupLabel } from '../lib/groupNaming';
 import { assignRowColors, downloadExcelFile, paymentStatusLabel } from '../lib/excelExport';
 import { filterRegistrations } from '../lib/registrationFilters';
 import { groupStudentRows } from '../lib/groupStudentRows';
+import { labelsForCategories, mergeFixedLessonTypes } from '../lib/fixedLessonTypes';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const INDIVIDUAL_LESSON_TYPES = new Set(['individual_45', 'individual_60', 'melodies_individual']);
@@ -179,19 +180,22 @@ export default function AdminTable() {
   const [editingDetails, setEditingDetails] = useState({});
   const [addonPickerFor, setAddonPickerFor] = useState(null); // { rowId, kind: 'theory' | 'ensemble', label }
   const [addonSaving, setAddonSaving] = useState(false);
+  const [fixedLessonTypes, setFixedLessonTypes] = useState([]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [regRes, groupsRes, teachersRes] = await Promise.all([
+      const [regRes, groupsRes, teachersRes, fixedTypesRes] = await Promise.all([
         fetch('/api/registrations'),
         fetch('/api/groups'),
         fetch('/api/teachers'),
+        fetch('/api/fixed-lesson-types'),
       ]);
-      const [regJson, groupsJson, teachersJson] = await Promise.all([
+      const [regJson, groupsJson, teachersJson, fixedTypesJson] = await Promise.all([
         regRes.json(),
         groupsRes.json(),
         teachersRes.json(),
+        fixedTypesRes.json(),
       ]);
       const teachersList = teachersJson.data || [];
       const regs = (regJson.data || []).map(row => {
@@ -212,6 +216,7 @@ export default function AdminTable() {
       setRows(regs);
       setGroups(groupsJson.data || []);
       setTeachers(teachersList);
+      setFixedLessonTypes(mergeFixedLessonTypes(fixedTypesJson.data || []));
       setSelectedGroups(prev => {
         const next = { ...prev };
         for (const r of regs) {
@@ -907,7 +912,9 @@ async function deleteRegistration(id, studentName) {
 
                                 {addonPickerFor?.rowId === contactRow.id && addonPickerFor.kind === section.addonKind && (() => {
                                   const wantedTypes = addonPickerFor.kind === 'theory' ? ['theory'] : ['orchestra', 'choir'];
-                                  const labelOptions = addonPickerFor.kind === 'theory' ? THEORY_LABELS : ENSEMBLE_LABELS;
+                                  const labelOptions = addonPickerFor.kind === 'theory'
+                                    ? labelsForCategories(fixedLessonTypes, ['theory'])
+                                    : labelsForCategories(fixedLessonTypes, ['orchestra', 'choir']);
                                   const label = addonPickerFor.label || '';
                                   const matching = label
                                     ? groups.filter(g => wantedTypes.includes(g.lesson_type) && matchesGroupLabel(g.name, label))
@@ -943,7 +950,7 @@ async function deleteRegistration(id, studentName) {
                                         );
                                       })}
                                       {label && matching.length === 0 && (
-                                        <p className="text-xs text-gray-400 px-2 py-1">אין שיעורים קבועים מסוג זה — יש להוסיף בטאב מורים</p>
+                                        <p className="text-xs text-gray-400 px-2 py-1">אין שיעורים קבועים מסוג זה — יש להוסיף שיעור בכרטיס המורה</p>
                                       )}
                                       <button
                                         type="button"

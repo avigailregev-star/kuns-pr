@@ -60,3 +60,12 @@ ALTER TABLE teachers ADD COLUMN IF NOT EXISTS max_students integer;
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS weekly_hours_quota numeric;
 ALTER TABLE teacher_availability_ranges ADD COLUMN IF NOT EXISTS closed_for_registration boolean NOT NULL DEFAULT false;
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS linked_registration_id uuid REFERENCES registrations(id) ON DELETE SET NULL;
+
+CREATE TABLE IF NOT EXISTS fixed_lesson_types (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  label text NOT NULL UNIQUE,
+  category text NOT NULL CHECK (category IN ('theory', 'choir', 'orchestra')),
+  sort_order integer NOT NULL DEFAULT 1000,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE fixed_lesson_types DISABLE ROW LEVEL SECURITY;
