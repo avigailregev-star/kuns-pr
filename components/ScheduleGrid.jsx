@@ -6,8 +6,6 @@ import { buildScheduleGrid, minsToTime, SLOT_MINUTES } from '../lib/scheduleGrid
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי'];
 const BLOCKED_STATUSES = ['נדחה', 'בוטל', 'רשימת המתנה'];
 const SLOT_HEIGHT = 44; // px — gives a 45-minute lesson enough room for all of its details
-const BASE_DAY_WIDTH = 240;
-const CONFLICT_COLUMN_WIDTH = 116;
 
 export default function ScheduleGrid() {
   const [teachers, setTeachers] = useState([]);
@@ -49,19 +47,6 @@ export default function ScheduleGrid() {
     return buildScheduleGrid(registrations, { teacherName: selectedTeacher, blockedStatuses: BLOCKED_STATUSES, groupsById });
   }, [registrations, groupsById, selectedTeacher]);
 
-  const dayWidths = useMemo(() => {
-    if (!grid) return [];
-    return DAY_NAMES.map((_, dayIdx) => {
-      const largestOverlap = Math.max(
-        1,
-        ...grid.lessons
-          .filter((lesson) => lesson.day === dayIdx)
-          .map((lesson) => lesson.columnCount)
-      );
-      return Math.max(BASE_DAY_WIDTH, largestOverlap * CONFLICT_COLUMN_WIDTH);
-    });
-  }, [grid]);
-
   if (loading) return <p className="text-gray-500">טוען...</p>;
   if (error) return <p className="text-red-600">{error}</p>;
 
@@ -90,8 +75,8 @@ export default function ScheduleGrid() {
       {teachers.length === 0 && <p className="text-gray-500">אין מורים במערכת.</p>}
 
       {grid && (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="flex w-max min-w-full text-sm">
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="flex w-full min-w-0 text-sm">
             <div className="sticky right-0 z-20 w-20 shrink-0 border-l border-gray-200 bg-white shadow-[-4px_0_8px_-6px_rgba(0,0,0,0.35)]">
               <div className="sticky top-0 z-10 flex h-12 items-center justify-center border-b border-gray-200 bg-gray-50 font-semibold text-gray-500">
                 שעה
@@ -110,8 +95,7 @@ export default function ScheduleGrid() {
             {DAY_NAMES.map((name, dayIdx) => (
               <div
                 key={name}
-                className="relative shrink-0 border-l border-gray-200"
-                style={{ width: dayWidths[dayIdx] }}
+                className="relative min-w-0 flex-1 border-l border-gray-200"
               >
                 <div className="sticky top-0 z-10 flex h-12 items-center justify-center border-b border-gray-200 bg-gray-50 font-semibold text-gray-700">
                   יום {name}
