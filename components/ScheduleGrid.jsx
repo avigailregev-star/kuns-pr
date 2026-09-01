@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { buildScheduleGrid, minsToTime, SLOT_MINUTES } from '../lib/scheduleGrid';
 
-const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'];
+const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי'];
 const BLOCKED_STATUSES = ['נדחה', 'בוטל', 'רשימת המתנה'];
 const SLOT_HEIGHT = 44; // px — gives a 45-minute lesson enough room for all of its details
 const BASE_DAY_WIDTH = 240;
