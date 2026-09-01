@@ -305,7 +305,14 @@ export default function AdminTable() {
       !INDIVIDUAL_LESSON_TYPES.has(linkedGroup.lesson_type) &&
       (linkedGroup.group_schedules || []).some(sc => sc.start_time);
     const isGroupAssignment = !!orchestraAuto || isSharedGroupSchedule;
-    if (newStatus === 'שובץ' && !isGroupAssignment && !row.assigned_time) {
+    // A private lesson's time may already live on its one-student attendance
+    // group even when registrations.assigned_time is empty. Use the same
+    // field-by-field fallback as the UI/export before reporting a missing time.
+    const resolvedTime = resolveAssignment(
+      groupIdForCheck ? { ...row, group_id: groupIdForCheck } : row,
+      groups
+    ).time;
+    if (newStatus === 'שובץ' && !isGroupAssignment && !resolvedTime) {
       alert('יש לבחור שעה כדי לשבץ תלמיד/ה לשיעור פרטני');
       return;
     }
