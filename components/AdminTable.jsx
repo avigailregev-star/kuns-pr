@@ -170,6 +170,8 @@ export default function AdminTable() {
   const [filterPayment, setFilterPayment] = useState('');
   const [updatingIds, setUpdatingIds] = useState([]);
   const [savedIds, setSavedIds] = useState([]);
+  const [savingGroupKeys, setSavingGroupKeys] = useState([]);
+  const [savedGroupKeys, setSavedGroupKeys] = useState([]);
   const [sheetExporting, setSheetExporting] = useState(false);
   const [expandedRow, setExpandedRow] = useState(null);
   const [selectedGroups, setSelectedGroups] = useState({});
@@ -314,7 +316,7 @@ export default function AdminTable() {
     ).time;
     if (newStatus === 'שובץ' && !isGroupAssignment && !resolvedTime) {
       alert('יש לבחור שעה כדי לשבץ תלמיד/ה לשיעור פרטני');
-      return;
+      return false;
     }
 
     setUpdatingIds(prev => [...prev, row.id]);
@@ -338,7 +340,7 @@ export default function AdminTable() {
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         alert(json.error || 'שגיאה בשמירה — נסה שוב');
-        return;
+        return false;
       }
       setSavedIds(prev => [...prev, row.id]);
       setTimeout(() => setSavedIds(prev => prev.filter(x => x !== row.id)), 3000);
@@ -352,17 +354,32 @@ export default function AdminTable() {
         ));
       }
       await refreshTeachers();
+      return true;
     } catch {
       alert('שגיאת רשת — בדוק חיבור ונסה שוב');
+      return false;
     } finally {
       setUpdatingIds(prev => prev.filter(x => x !== row.id));
     }
   }
 
   async function saveAllInGroup(group) {
+    setSavingGroupKeys(prev => [...prev, group.key]);
+    setSavedGroupKeys(prev => prev.filter(key => key !== group.key));
     const allLessons = [...group.categories.individual, ...group.categories.ensemble, ...group.categories.theory];
-    for (const lesson of allLessons) {
-      await saveAssignment(lesson);
+    try {
+      for (const lesson of allLessons) {
+        const saved = await saveAssignment(lesson);
+        if (!saved) return;
+      }
+
+      // Reload from the server so the success state confirms persistence, not
+      // just the temporary selection held in the browser.
+      await fetchData();
+      setSavedGroupKeys(prev => [...prev, group.key]);
+      setTimeout(() => setSavedGroupKeys(prev => prev.filter(key => key !== group.key)), 3000);
+    } finally {
+      setSavingGroupKeys(prev => prev.filter(key => key !== group.key));
     }
   }
 
@@ -995,9 +1012,14 @@ async function deleteRegistration(id, studentName) {
                           <div className="flex justify-end mt-4">
                             <button
                               onClick={() => saveAllInGroup(group)}
-                              className="text-sm px-4 py-2 rounded-xl font-semibold btn-primary"
+                              disabled={savingGroupKeys.includes(group.key)}
+                              className={`text-sm px-4 py-2 rounded-xl font-semibold transition-colors disabled:opacity-50 ${savedGroupKeys.includes(group.key) ? 'bg-green-500 text-white' : 'btn-primary'}`}
                             >
-                              💾 שמור הכל
+                              {savingGroupKeys.includes(group.key)
+                                ? '⏳ שומר הכל...'
+                                : savedGroupKeys.includes(group.key)
+                                  ? '✓ הכל נשמר!'
+                                  : '💾 שמור הכל'}
                             </button>
                           </div>
                         </td>
