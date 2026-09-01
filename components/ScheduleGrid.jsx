@@ -5,8 +5,9 @@ import { buildScheduleGrid, minsToTime, SLOT_MINUTES } from '../lib/scheduleGrid
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'];
 const BLOCKED_STATUSES = ['נדחה', 'בוטל', 'רשימת המתנה'];
-const SLOT_HEIGHT = 28; // px
-const MIN_LESSON_BLOCK_HEIGHT = 48; // px — smallest space that fits 3 lines of text without clipping
+const SLOT_HEIGHT = 44; // px — gives a 45-minute lesson enough room for all of its details
+const BASE_DAY_WIDTH = 240;
+const CONFLICT_COLUMN_WIDTH = 116;
 
 export default function ScheduleGrid() {
   const [teachers, setTeachers] = useState([]);
@@ -48,79 +49,106 @@ export default function ScheduleGrid() {
     return buildScheduleGrid(registrations, { teacherName: selectedTeacher, blockedStatuses: BLOCKED_STATUSES, groupsById });
   }, [registrations, groupsById, selectedTeacher]);
 
+  const dayWidths = useMemo(() => {
+    if (!grid) return [];
+    return DAY_NAMES.map((_, dayIdx) => {
+      const largestOverlap = Math.max(
+        1,
+        ...grid.lessons
+          .filter((lesson) => lesson.day === dayIdx)
+          .map((lesson) => lesson.columnCount)
+      );
+      return Math.max(BASE_DAY_WIDTH, largestOverlap * CONFLICT_COLUMN_WIDTH);
+    });
+  }, [grid]);
+
   if (loading) return <p className="text-gray-500">טוען...</p>;
   if (error) return <p className="text-red-600">{error}</p>;
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">מערכת שעות</h1>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">מערכת שעות</h1>
+          <p className="mt-1 text-sm text-gray-500">תצוגה שבועית של השיעורים והשיבוצים</p>
+        </div>
 
-      <select
-        value={selectedTeacher}
-        onChange={(e) => setSelectedTeacher(e.target.value)}
-        className="mb-4 border border-gray-300 rounded px-3 py-2 text-sm"
-      >
-        {teachers.map((t) => (
-          <option key={t.id} value={t.name}>{t.name}</option>
-        ))}
-      </select>
+        <label className="block min-w-60 text-sm font-medium text-gray-700">
+          <span className="mb-1.5 block">בחירת מורה</span>
+          <select
+            value={selectedTeacher}
+            onChange={(e) => setSelectedTeacher(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+          >
+            {teachers.map((t) => (
+              <option key={t.id} value={t.name}>{t.name}</option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       {teachers.length === 0 && <p className="text-gray-500">אין מורים במערכת.</p>}
 
       {grid && (
-        <div className="flex border border-gray-200 text-xs w-fit">
-          <div className="w-16 shrink-0">
-            <div className="h-10 border-b border-gray-200 bg-gray-50" />
-            {grid.slots.map((slotMins) => (
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="flex w-max min-w-full text-sm">
+            <div className="sticky right-0 z-20 w-20 shrink-0 border-l border-gray-200 bg-white shadow-[-4px_0_8px_-6px_rgba(0,0,0,0.35)]">
+              <div className="sticky top-0 z-10 flex h-12 items-center justify-center border-b border-gray-200 bg-gray-50 font-semibold text-gray-500">
+                שעה
+              </div>
+              {grid.slots.map((slotMins) => (
+                <div
+                  key={slotMins}
+                  className="flex items-start justify-center border-b border-gray-100 pt-2 text-xs font-medium text-gray-500"
+                  style={{ height: SLOT_HEIGHT }}
+                >
+                  {minsToTime(slotMins)}
+                </div>
+              ))}
+            </div>
+
+            {DAY_NAMES.map((name, dayIdx) => (
               <div
-                key={slotMins}
-                className="border-b border-gray-100 flex items-center justify-center text-gray-400"
-                style={{ height: SLOT_HEIGHT }}
+                key={name}
+                className="relative shrink-0 border-l border-gray-200"
+                style={{ width: dayWidths[dayIdx] }}
               >
-                {minsToTime(slotMins)}
+                <div className="sticky top-0 z-10 flex h-12 items-center justify-center border-b border-gray-200 bg-gray-50 font-semibold text-gray-700">
+                  יום {name}
+                </div>
+                <div className="relative" style={{ height: grid.slots.length * SLOT_HEIGHT }}>
+                  {grid.slots.map((slotMins) => (
+                    <div key={slotMins} className="border-b border-gray-100" style={{ height: SLOT_HEIGHT }} />
+                  ))}
+                  {grid.lessons
+                    .filter((l) => l.day === dayIdx)
+                    .map((lesson) => (
+                      <div
+                        key={lesson.id}
+                        title={`${lesson.studentName} | ${minsToTime(lesson.startMins)}–${minsToTime(lesson.endMins)} | ${lesson.course}`}
+                        className={`absolute overflow-hidden rounded-lg px-2.5 py-1.5 shadow-sm ${
+                          lesson.conflict
+                            ? 'border-2 border-red-400 bg-red-50'
+                            : 'border border-emerald-300 bg-emerald-50'
+                        }`}
+                        style={{
+                          top: ((lesson.startMins - grid.rangeStart) / SLOT_MINUTES) * SLOT_HEIGHT + 2,
+                          height: ((lesson.endMins - lesson.startMins) / SLOT_MINUTES) * SLOT_HEIGHT - 4,
+                          left: `calc(${(lesson.columnIndex / lesson.columnCount) * 100}% + 2px)`,
+                          width: `calc(${100 / lesson.columnCount}% - 4px)`,
+                        }}
+                      >
+                        <div className="truncate text-sm font-semibold leading-5 text-gray-900">{lesson.studentName}</div>
+                        <div className="truncate text-xs leading-4 text-gray-600" dir="ltr">
+                          {minsToTime(lesson.startMins)}–{minsToTime(lesson.endMins)}
+                        </div>
+                        <div className="truncate text-xs leading-4 text-gray-500">{lesson.course}</div>
+                      </div>
+                    ))}
+                </div>
               </div>
             ))}
           </div>
-
-          {DAY_NAMES.map((name, dayIdx) => (
-            <div key={name} className="w-40 border-r border-gray-200 relative">
-              <div className="h-10 border-b border-gray-200 bg-gray-50 flex items-center justify-center font-medium text-gray-700">
-                {name}
-              </div>
-              <div className="relative" style={{ height: grid.slots.length * SLOT_HEIGHT }}>
-                {grid.slots.map((slotMins) => (
-                  <div key={slotMins} className="border-b border-gray-100" style={{ height: SLOT_HEIGHT }} />
-                ))}
-                {grid.lessons
-                  .filter((l) => l.day === dayIdx)
-                  .map((lesson) => (
-                    <div
-                      key={lesson.id}
-                      className={`absolute rounded px-1 py-0.5 overflow-hidden text-[11px] ${
-                        lesson.conflict
-                          ? 'bg-red-50 border-2 border-red-400'
-                          : 'bg-green-50 border border-green-300'
-                      }`}
-                      style={{
-                        top: ((lesson.startMins - grid.rangeStart) / SLOT_MINUTES) * SLOT_HEIGHT,
-                        height: Math.max(
-                          MIN_LESSON_BLOCK_HEIGHT,
-                          ((lesson.endMins - lesson.startMins) / SLOT_MINUTES) * SLOT_HEIGHT
-                        ),
-                        left: `${(lesson.columnIndex / lesson.columnCount) * 100}%`,
-                        width: `${100 / lesson.columnCount}%`,
-                      }}
-                    >
-                      <div className="font-medium text-gray-800 truncate">{lesson.studentName}</div>
-                      <div className="text-gray-500 truncate" dir="ltr">
-                        {minsToTime(lesson.startMins)}–{minsToTime(lesson.endMins)}
-                      </div>
-                      <div className="text-gray-500 truncate">{lesson.course}</div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          ))}
         </div>
       )}
     </div>
