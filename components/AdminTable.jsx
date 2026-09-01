@@ -536,7 +536,7 @@ async function deleteRegistration(id, studentName) {
     }
   }
 
-  const allGroups = useMemo(() => groupStudentRows(rows), [rows]);
+  const allGroups = useMemo(() => groupStudentRows(rows, groups), [rows, groups]);
   const activeFilters = { search, status: filterStatus, instrument: filterInstrument, teacher: filterTeacher, payment: filterPayment };
   const filteredGroups = allGroups.filter(g => filterRegistrations(g.members, activeFilters).length > 0);
   const filtered = filteredGroups.flatMap(g => filterRegistrations(g.members, activeFilters));
