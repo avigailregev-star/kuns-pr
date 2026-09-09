@@ -1,0 +1,9 @@
+.backups
+.superpowers
+.claude
+docs
+migrations
+**/*.test.js
+test.py
+public/presentation.html
+.env*

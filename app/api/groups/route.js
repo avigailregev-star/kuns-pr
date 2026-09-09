@@ -169,6 +169,71 @@ export async function DELETE(request) {
   }
 }
 
+export async function PATCH(request) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: 'אינך מורשה' }, { status: 401 });
+
+  try {
+    const { id, name, assigned_day, assigned_time, assigned_end_time } = await request.json();
+    if (!id || !name?.trim() || assigned_day == null || !assigned_time) {
+      return NextResponse.json({ error: 'יש למלא שם, יום ושעת התחלה' }, { status: 400 });
+    }
+
+    const supabase = getSupabaseClient();
+    const { data: group, error: groupErr } = await supabase
+      .from('groups').select('id, teacher_id, lesson_type').eq('id', id).maybeSingle();
+    if (groupErr || !group) return NextResponse.json({ error: 'השיעור לא נמצא' }, { status: 404 });
+    if (!['theory', 'choir', 'orchestra'].includes(group.lesson_type)) {
+      return NextResponse.json({ error: 'ניתן לערוך כאן רק שיעור קבוצתי קבוע' }, { status: 400 });
+    }
+
+    const toMins = value => { const [hours, mins] = value.split(':').map(Number); return hours * 60 + (mins || 0); };
+    const start = toMins(assigned_time);
+    const end = assigned_end_time ? toMins(assigned_end_time) : start + 60;
+    if (end <= start) return NextResponse.json({ error: 'שעת הסיום חייבת להיות אחרי שעת ההתחלה' }, { status: 400 });
+
+    const { data: otherGroups } = await supabase
+      .from('groups')
+      .select('id, group_schedules(day_of_week, start_time, end_time)')
+      .eq('teacher_id', group.teacher_id)
+      .neq('id', id);
+    for (const other of (otherGroups || [])) {
+      for (const schedule of (other.group_schedules || [])) {
+        if (Number(schedule.day_of_week) !== Number(assigned_day) || !schedule.start_time) continue;
+        const otherStart = toMins(schedule.start_time);
+        const otherEnd = schedule.end_time ? toMins(schedule.end_time) : otherStart + 60;
+        if (start < otherEnd && otherStart < end) {
+          return NextResponse.json({ error: `חפיפה עם שיעור קיים בשעה ${schedule.start_time.slice(0, 5)}` }, { status: 409 });
+        }
+      }
+    }
+
+    const { error: nameErr } = await supabase.from('groups').update({ name: name.trim() }).eq('id', id);
+    if (nameErr) return NextResponse.json({ error: 'שגיאה בעדכון שם השיעור' }, { status: 500 });
+
+    const { data: schedules, error: schedulesErr } = await supabase
+      .from('group_schedules').select('id').eq('group_id', id).order('id').limit(1);
+    if (schedulesErr) return NextResponse.json({ error: 'שגיאה בקריאת שעות השיעור' }, { status: 500 });
+    const scheduleData = { day_of_week: assigned_day, start_time: assigned_time, end_time: assigned_end_time || null };
+    const scheduleResult = schedules?.[0]
+      ? await supabase.from('group_schedules').update(scheduleData).eq('id', schedules[0].id)
+      : await supabase.from('group_schedules').insert({ group_id: id, ...scheduleData });
+    if (scheduleResult.error) return NextResponse.json({ error: 'שגיאה בעדכון שעות השיעור' }, { status: 500 });
+
+    await supabase.from('registrations').update({
+      selected_course: name.trim(),
+      assigned_day,
+      assigned_time,
+      assigned_end_time: assigned_end_time || null,
+    }).eq('group_id', id);
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error('Groups PATCH error:', err);
+    return NextResponse.json({ error: 'שגיאת שרת פנימית' }, { status: 500 });
+  }
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) {

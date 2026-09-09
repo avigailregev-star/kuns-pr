@@ -1,13 +1,13 @@
 import AdminTable from '../../../components/AdminTable';
 import TeachersTab from '../../../components/TeachersTab';
-import ScheduleGrid from '../../../components/ScheduleGrid';
 
 export const metadata = {
   title: 'לוח בקרה | ניהול קונסרבטוריון',
 };
 
 export default function AdminDashboard({ searchParams }) {
-  const tab = searchParams?.tab || 'registrations';
+  const requestedTab = searchParams?.tab || 'registrations';
+  const tab = requestedTab === 'schedule' ? 'teachers' : requestedTab;
 
   return (
     <div>
@@ -24,6 +24,12 @@ export default function AdminDashboard({ searchParams }) {
           רישומים
         </a>
         <a
+          href="/admin?tab=handled"
+          className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${tab === 'handled' ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+        >
+          טופל
+        </a>
+        <a
           href="/admin?tab=teachers"
           className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${
             tab === 'teachers'
@@ -32,16 +38,6 @@ export default function AdminDashboard({ searchParams }) {
           }`}
         >
           מורים
-        </a>
-        <a
-          href="/admin?tab=schedule"
-          className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${
-            tab === 'schedule'
-              ? 'border-purple-600 text-purple-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          מערכת שעות
         </a>
       </div>
 
@@ -54,7 +50,13 @@ export default function AdminDashboard({ searchParams }) {
 
       {tab === 'teachers' && <TeachersTab />}
 
-      {tab === 'schedule' && <ScheduleGrid />}
+      {tab === 'handled' && (
+        <>
+          <h1 className="text-2xl font-bold text-gray-800 mb-6">טופל — השיבוץ והתשלום הושלמו</h1>
+          <AdminTable view="handled" />
+        </>
+      )}
+
     </div>
   );
 }

@@ -13,12 +13,12 @@ export async function POST(request) {
   }
 
   try {
-    const { sourceId, groupId } = await request.json();
+    const { sourceId, groupId, kind } = await request.json();
 
     if (!sourceId) {
       return NextResponse.json({ error: 'חסר מזהה תלמיד/ה' }, { status: 400 });
     }
-    if (!groupId) {
+    if (!groupId && kind !== 'individual') {
       return NextResponse.json({ error: 'יש לבחור קבוצה' }, { status: 400 });
     }
 
@@ -26,11 +26,29 @@ export async function POST(request) {
 
     const { data: source, error: sourceErr } = await supabase
       .from('registrations')
-      .select('student_name, student_phone, parent_name, parent_phone, parent_email, birthdate, grade, school_name, has_accommodations, type, instruments')
+      .select('student_name, student_phone, parent_name, parent_phone, parent_email, birthdate, grade, school_name, has_accommodations, type, instruments, group_id, status, registration_status')
       .eq('id', sourceId)
       .maybeSingle();
     if (sourceErr || !source) {
       return NextResponse.json({ error: 'תלמיד/ה לא נמצא/ה' }, { status: 404 });
+    }
+
+    if (kind === 'individual') {
+      const { data: newReg, error: insertErr } = await supabase
+        .from('registrations')
+        .insert({
+          ...source,
+          selected_course: null,
+          linked_registration_id: sourceId,
+          status: 'חדש',
+        })
+        .select('*')
+        .single();
+      if (insertErr || !newReg) {
+        console.error('addon: individual insert error', insertErr?.message);
+        return NextResponse.json({ error: 'שגיאה ביצירת רישום פרטני' }, { status: 500 });
+      }
+      return NextResponse.json({ data: newReg });
     }
 
     const { data: group, error: groupErr } = await supabase
@@ -40,6 +58,15 @@ export async function POST(request) {
       .maybeSingle();
     if (groupErr || !group) {
       return NextResponse.json({ error: 'קבוצה לא נמצאה' }, { status: 404 });
+    }
+
+    if (String(source.group_id || '') === String(group.id)) {
+      return NextResponse.json({ error: 'לתלמיד/ה כבר יש שיבוץ פעיל בקבוצה זו' }, { status: 409 });
+    }
+
+    const allowedTypes = kind === 'theory' ? ['theory'] : kind === 'ensemble' ? ['orchestra', 'choir'] : ['theory', 'orchestra', 'choir'];
+    if (!allowedTypes.includes(group.lesson_type)) {
+      return NextResponse.json({ error: 'יש לבחור שיבוץ מהתחום המתאים בלבד' }, { status: 400 });
     }
 
     if (group.lesson_type === 'theory') {

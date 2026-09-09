@@ -6,6 +6,7 @@ import { sendToMake } from '../../../lib/makeWebhook';
 import { sendAssignmentEmail } from '../../../lib/email';
 import { syncRegistrationToAttendance } from '../../../lib/syncToAttendance';
 import { getLessonDuration } from '../../../lib/lessonDuration';
+import { saveIndividualSchedule } from '../../../lib/saveIndividualSchedule';
 
 export async function POST(request) {
   const session = await getServerSession(authOptions);
@@ -22,6 +23,33 @@ export async function POST(request) {
     }
 
     const supabase = getSupabaseClient();
+    if (body.scheduleMode === 'clear') {
+      const { data: current, error: currentError } = await supabase
+        .from('registrations')
+        .select('id, student_name, group_id')
+        .eq('id', id)
+        .maybeSingle();
+      if (currentError) return NextResponse.json({ error: 'לא ניתן לבדוק את הרישום כרגע' }, { status: 503 });
+      if (!current) return NextResponse.json({ error: 'הרישום לא נמצא' }, { status: 404 });
+
+      const { error: clearError } = await supabase.from('registrations').update({
+        teacher: null,
+        assigned_day: null,
+        assigned_time: null,
+        assigned_end_time: null,
+        group_id: null,
+        status: 'חדש',
+        updated_at: new Date().toISOString(),
+      }).eq('id', id);
+      if (clearError) return NextResponse.json({ error: 'ביטול השיבוץ לא נשמר' }, { status: 500 });
+
+      if (current.group_id && current.student_name) {
+        await supabase.from('students').update({ is_active: false })
+          .eq('group_id', current.group_id).eq('name', current.student_name.trim());
+      }
+      return NextResponse.json({ success: true });
+    }
+    if (body.scheduleMode === 'individual') return await saveIndividualSchedule(supabase, body);
 
     // Block overlapping schedules for the same teacher on the same day
     if (teacher && assignedDay != null && assignedDay !== '' && assignedTime) {
@@ -47,13 +75,15 @@ export async function POST(request) {
 
         const { data: otherRegs, error: otherRegsErr } = await supabase
           .from('registrations')
-          .select('id, student_name, assigned_day, assigned_time, assigned_end_time, selected_course, status')
+          .select('id, group_id, student_name, assigned_day, assigned_time, assigned_end_time, selected_course, status, registration_status')
           .eq('teacher', teacher)
           .neq('id', id);
-        if (otherRegsErr) console.error('schedule conflict check: registrations fetch error:', otherRegsErr.message);
+        if (otherRegsErr) return NextResponse.json({ error: 'לא ניתן לבדוק חפיפות כרגע' }, { status: 503 });
 
         for (const reg of (otherRegs || [])) {
           if (excludedStatuses.includes(reg.status)) continue;
+          if (reg.registration_status === 'Cancelled') continue;
+          if (groupId && String(reg.group_id) === String(groupId)) continue;
           if (reg.assigned_day == null || reg.assigned_day === '' || !reg.assigned_time) continue;
           if (Number(reg.assigned_day) !== dayNum) continue;
           const regStart = toM(reg.assigned_time);
@@ -71,7 +101,7 @@ export async function POST(request) {
           .select('id')
           .eq('name', teacher)
           .maybeSingle();
-        if (teacherRowErr) console.error('schedule conflict check: teacher lookup error:', teacherRowErr.message);
+        if (teacherRowErr) return NextResponse.json({ error: 'לא ניתן לבדוק את המורה כרגע' }, { status: 503 });
 
         if (teacherRow?.id) {
           const { data: currentReg, error: currentRegErr } = await supabase
@@ -79,16 +109,17 @@ export async function POST(request) {
             .select('group_id')
             .eq('id', id)
             .maybeSingle();
-          if (currentRegErr) console.error('schedule conflict check: current registration fetch error:', currentRegErr.message);
+          if (currentRegErr) return NextResponse.json({ error: 'לא ניתן לבדוק את השיבוץ כרגע' }, { status: 503 });
           const currentGroupId = currentReg?.group_id;
 
           const { data: teacherGroups, error: teacherGroupsErr } = await supabase
             .from('groups')
             .select('id, name, group_schedules(day_of_week, start_time, end_time)')
             .eq('teacher_id', teacherRow.id);
-          if (teacherGroupsErr) console.error('schedule conflict check: teacher groups fetch error:', teacherGroupsErr.message);
+          if (teacherGroupsErr) return NextResponse.json({ error: 'לא ניתן לבדוק את מערכת השעות כרגע' }, { status: 503 });
 
           for (const g of (teacherGroups || [])) {
+            if (groupId && String(g.id) === String(groupId)) continue;
             if (currentGroupId && String(g.id) === String(currentGroupId)) continue;
             for (const sched of (g.group_schedules || [])) {
               if (Number(sched.day_of_week) !== dayNum || !sched.start_time) continue;
@@ -111,6 +142,7 @@ export async function POST(request) {
       updated_at: new Date().toISOString(),
     };
     if (teacher !== undefined) updateData.teacher = teacher;
+    if (body.selectedCourse !== undefined) updateData.selected_course = body.selectedCourse;
     if (assignedDay !== undefined) updateData.assigned_day = assignedDay;
     if (assignedTime !== undefined) updateData.assigned_time = assignedTime;
     if (assignedEndTime !== undefined) updateData.assigned_end_time = assignedEndTime;

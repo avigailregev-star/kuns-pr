@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { COURSE_GROUPS } from '../lib/paymentLinks';
 
-const DAYS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו'];
+const DAYS = ['א', 'ב', 'ג', 'ד', 'ה'];
 const RANGE_DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const INSTRUMENT_TYPES = [
   'כינור',
@@ -186,7 +186,7 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
           <span className="text-xs text-gray-400 font-normal mr-1">(גוברת על "ימים זמינים" בטופס הרשמה)</span>
         </label>
         <div className="space-y-2">
-          {[0,1,2,3,4,5,6].map((day) => {
+          {[0,1,2,3,4].map((day) => {
             const isOn = !!availabilityRanges[day];
             return (
               <div key={day} className="flex items-center gap-3">

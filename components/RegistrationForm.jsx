@@ -74,7 +74,7 @@ const FLOWS = {
   melodies: ['personal', 'course',     'agreement'],
 };
 
-const DAYS_HE = ['א', 'ב', 'ג', 'ד', 'ה', 'ו'];
+const DAYS_HE = ['א', 'ב', 'ג', 'ד', 'ה'];
 const DAY_NAMES_FULL = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
 export default function RegistrationForm() {
@@ -148,7 +148,8 @@ export default function RegistrationForm() {
     const teacher = teachersList.find(t => t.name === form.selectedTeacher);
     if (!teacher) return false;
     const dur = getLessonDuration(form.selectedCourse);
-    const ranges = filterRangesByCourse(teacher.teacher_availability_ranges || [], form.selectedCourse);
+    const ranges = filterRangesByCourse(teacher.teacher_availability_ranges || [], form.selectedCourse)
+      .filter(s => Number(s.day_of_week) >= 0 && Number(s.day_of_week) <= 4);
     if (ranges.length > 0) {
       return ranges.every(s => {
         if (s.closed_for_registration) return true;
@@ -159,7 +160,7 @@ export default function RegistrationForm() {
         return ((eh * 60 + em) - (sh * 60 + sm) - used) < dur;
       });
     }
-    const days = teacher.available_days || [];
+    const days = (teacher.available_days || []).filter(d => DAYS_HE.includes(d));
     const hours = teacher.available_hours || {};
     return days.length > 0 && days.every(d => freeMinutesOnDay(hours, d, teacher.used_minutes_per_day?.[d]) < dur);
   })();
@@ -620,6 +621,7 @@ export default function RegistrationForm() {
 
                 // New system: teacher_availability_ranges
                 const availRanges = filterRangesByCourse(teacher?.teacher_availability_ranges || [], form.selectedCourse)
+                  .filter(s => Number(s.day_of_week) >= 0 && Number(s.day_of_week) <= 4)
                   .slice().sort((a, b) => a.day_of_week - b.day_of_week);
 
                 if (availRanges.length > 0) {
@@ -705,7 +707,7 @@ export default function RegistrationForm() {
                 }
 
                 // Old system: available_days (Hebrew letters)
-                const days = teacher?.available_days || [];
+                const days = (teacher?.available_days || []).filter(d => DAYS_HE.includes(d));
                 const hours = teacher?.available_hours || {};
                 return days.length > 0 ? (
                   <div className="space-y-3 pt-2 border-t border-white/10">

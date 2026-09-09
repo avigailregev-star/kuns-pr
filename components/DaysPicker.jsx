@@ -1,6 +1,6 @@
 'use client';
 
-const DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'];
+const DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי'];
 
 export default function DaysPicker({ value, onChange }) {
   function toggle(day) {

@@ -1,5 +1,7 @@
 'use client';
 
+import { assignmentStatusLabel } from '../lib/registrationWorkflow';
+
 export const STATUS_OPTIONS = ['חדש', 'בבדיקה', 'שובץ', 'נדחה', 'רשימת המתנה', 'ממתין לשיחת היכרות'];
 
 export const STATUS_COLORS = {
@@ -14,15 +16,16 @@ export const STATUS_COLORS = {
 export default function StatusSelect({ value, onChange, disabled }) {
   return (
     <select
-      value={value}
+      value={value || 'חדש'}
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
       className={`text-xs font-medium px-2 py-1 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-primary ${
         STATUS_COLORS[value] || 'bg-gray-100 text-gray-600'
       }`}
     >
+      {value && !STATUS_OPTIONS.includes(value) && <option value={value}>{assignmentStatusLabel(value)}</option>}
       {STATUS_OPTIONS.map((s) => (
-        <option key={s} value={s}>{s}</option>
+        <option key={s} value={s}>{assignmentStatusLabel(s)}</option>
       ))}
     </select>
   );

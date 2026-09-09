@@ -79,8 +79,16 @@ export async function PATCH(request) {
   const PAYMENT_STATUS_MAP = { Pending: 'ממתין לתשלום', Confirmed: 'שולם', Cancelled: 'בוטל' };
 
   try {
-    const { id, admin_notes, registration_status, student_name, parent_name, parent_phone, parent_email, attended_open_day } = await request.json();
+    const { id, admin_notes, registration_status, student_name, parent_name, parent_phone, parent_email, attended_open_day, ensemble_not_required, theory_not_required } = await request.json();
+    if (!id) return NextResponse.json({ error: 'מזהה חסר' }, { status: 400 });
+    for (const value of [ensemble_not_required, theory_not_required]) {
+      if (value !== undefined && typeof value !== 'boolean') {
+        return NextResponse.json({ error: 'סימון לא נדרש חייב להיות כן או לא' }, { status: 400 });
+      }
+    }
     const updateData = { updated_at: new Date().toISOString() };
+    if (ensemble_not_required !== undefined) updateData.ensemble_not_required = ensemble_not_required;
+    if (theory_not_required !== undefined) updateData.theory_not_required = theory_not_required;
     if (admin_notes !== undefined) updateData.admin_notes = admin_notes;
     if (registration_status !== undefined) updateData.registration_status = registration_status;
     if (student_name !== undefined) updateData.student_name = student_name;

@@ -103,6 +103,30 @@ describe('DELETE /api/registrations', () => {
 });
 
 describe('PATCH /api/registrations', () => {
+  test.each([true, false])('saves optional lesson requirements (%s) without changing assignments or payment', async (value) => {
+    const mockSupabase = createMockSupabase({ registrations: [{ error: null }] });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+    const res = await PATCH(makeRequest({ id: 'r1', ensemble_not_required: value, theory_not_required: value }));
+    expect(res.status).toBe(200);
+    expect(mockSupabase.calls).toHaveLength(1);
+    expect(mockSupabase.calls[0].payload).toEqual({
+      ensemble_not_required: value, theory_not_required: value, updated_at: expect.any(String),
+    });
+    expect(mockSupabase.calls[0].eqCalls).toEqual([['id', 'r1']]);
+  });
+
+  test('rejects invalid requirement values before accessing the database', async () => {
+    getSupabaseClient.mockClear();
+    const res = await PATCH(makeRequest({ id: 'r1', theory_not_required: 'true' }));
+    expect(res.status).toBe(400);
+    expect(getSupabaseClient).not.toHaveBeenCalled();
+  });
+
+  test('rejects updates with a missing registration id', async () => {
+    const res = await PATCH(makeRequest({ ensemble_not_required: true }));
+    expect(res.status).toBe(400);
+  });
+
   test('writes attended_open_day to the update payload when provided', async () => {
     const mockSupabase = createMockSupabase({
       registrations: [

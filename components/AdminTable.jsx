@@ -1,14 +1,18 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { STATUS_OPTIONS, STATUS_COLORS } from './StatusSelect';
+import { STATUS_OPTIONS } from './StatusSelect';
 import { INSTRUMENTS } from './InstrumentPicker';
 import AssignmentPanel from './AssignmentPanel';
+import TeacherSchedulePicker from './TeacherSchedulePicker';
+import FixedLessonPicker from './FixedLessonPicker';
+import { categoryGroups } from '../lib/teacherSchedulePicker';
 import { getOrchestraForInstruments } from '../lib/autoAssign';
 import { getLessonDuration } from '../lib/lessonDuration';
 import { getLessonTypeValue, computeGroupName, matchesGroupLabel } from '../lib/groupNaming';
 import { assignRowColors, downloadExcelFile, paymentStatusLabel } from '../lib/excelExport';
 import { filterRegistrations } from '../lib/registrationFilters';
+import { assignmentStatusLabel, needsAttention, isStudentHandled, missingStatusLabels } from '../lib/registrationWorkflow';
 import { groupStudentRows } from '../lib/groupStudentRows';
 import { labelsForCategories, mergeFixedLessonTypes } from '../lib/fixedLessonTypes';
 
@@ -76,7 +80,7 @@ function buildExportRows(rows, groups) {
       Array.isArray(r.instruments)
         ? (r.instruments.length > 0 ? r.instruments.join('; ') : (r.selected_course || ''))
         : (r.instruments || r.selected_course || ''),
-      r.status || '',
+      assignmentStatusLabel(r.status),
       paymentStatusLabel(r.registration_status),
       r.teacher || '',
       day != null ? (DAY_NAMES[day] ?? day) : '',
@@ -132,7 +136,7 @@ function printTable(rows, groups) {
           <td>${escapeHtml(Array.isArray(r.instruments)
             ? (r.instruments.length > 0 ? r.instruments.join(', ') : (r.selected_course || ''))
             : (r.instruments || r.selected_course || ''))}</td>
-          <td>${escapeHtml(r.status)}</td>
+          <td>${escapeHtml(assignmentStatusLabel(r.status))}</td>
           <td>${escapeHtml(r.teacher)}</td>
           <td>${escapeHtml(day != null ? (DAY_NAMES[day] ?? day) : '')}</td>
           <td>${escapeHtml(time ? time.slice(0, 5) : '')}</td>
@@ -147,18 +151,7 @@ function printTable(rows, groups) {
   win.print();
 }
 
-const PAYMENT_STATUS_STYLES = {
-  Confirmed: 'bg-green-100 text-green-800',
-  Pending:   'bg-yellow-100 text-yellow-800',
-  Cancelled: 'bg-gray-100 text-gray-500',
-};
-
-function RegistrationStatusBadge({ status }) {
-  const cls = PAYMENT_STATUS_STYLES[status] || PAYMENT_STATUS_STYLES.Pending;
-  return <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cls}`}>{paymentStatusLabel(status)}</span>;
-}
-
-export default function AdminTable() {
+export default function AdminTable({ view = 'registrations' }) {
   const [rows, setRows] = useState([]);
   const [groups, setGroups] = useState([]);
   const [teachers, setTeachers] = useState([]);
@@ -174,6 +167,7 @@ export default function AdminTable() {
   const [savedGroupKeys, setSavedGroupKeys] = useState([]);
   const [sheetExporting, setSheetExporting] = useState(false);
   const [expandedRow, setExpandedRow] = useState(null);
+  const [scheduleRow, setScheduleRow] = useState(null);
   const [selectedGroups, setSelectedGroups] = useState({});
   const [creatingGroupFor, setCreatingGroupFor] = useState(null);
   const [newGroupStudents, setNewGroupStudents] = useState([]); // [{ id, name }]
@@ -270,13 +264,15 @@ export default function AdminTable() {
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         alert(json.error || 'שגיאה בעדכון הסטטוס — נסה שוב');
-        return;
+        return false;
       }
       setRows((prev) =>
         prev.map((r) => r.id === id ? { ...r, status: newStatus } : r)
       );
+      return true;
     } catch {
       alert('שגיאת רשת — בדוק חיבור ונסה שוב');
+      return false;
     } finally {
       setUpdatingIds(prev => prev.filter(x => x !== id));
     }
@@ -288,7 +284,7 @@ export default function AdminTable() {
     );
   }
 
-  async function saveAssignment(row) {
+  async function saveAssignment(row, options = {}) {
     const orchestraAuto = row.type === 'continue'
       ? (row.orchestra || getOrchestraForInstruments(row.instruments))
       : undefined;
@@ -301,7 +297,7 @@ export default function AdminTable() {
     // group_id (auto-created 1-student "group" for attendance sync), but that
     // group has no independent schedule of its own — checking group_id alone
     // would let a stale link from a previous save skip the time requirement.
-    const groupIdForCheck = selectedGroups[row.id] || row.group_id;
+    const groupIdForCheck = options.groupId || selectedGroups[row.id] || row.group_id;
     const linkedGroup = groupIdForCheck ? groups.find(g => String(g.id) === String(groupIdForCheck)) : null;
     const isSharedGroupSchedule = !!linkedGroup &&
       !INDIVIDUAL_LESSON_TYPES.has(linkedGroup.lesson_type) &&
@@ -332,7 +328,9 @@ export default function AdminTable() {
           assignedTime: row.assigned_time,
           assignedEndTime: row.assigned_end_time || (row.assigned_time ? minsToTime(timeToMins(row.assigned_time) + getLessonDuration(row.selected_course)) : undefined),
           adminNotes: row.admin_notes,
-          groupId: selectedGroups[row.id] || null,
+          selectedCourse: row.selected_course,
+          scheduleMode: options.individualSchedule ? 'individual' : undefined,
+          groupId: options.groupId || selectedGroups[row.id] || null,
           orchestra: orchestraAuto,
           theoryDay: row.theory_day,
         }),
@@ -342,10 +340,12 @@ export default function AdminTable() {
         alert(json.error || 'שגיאה בשמירה — נסה שוב');
         return false;
       }
+      const savedResult = await res.json();
+      if (savedResult.warning) alert(savedResult.warning);
       setSavedIds(prev => [...prev, row.id]);
       setTimeout(() => setSavedIds(prev => prev.filter(x => x !== row.id)), 3000);
-      setRows(prev => prev.map(r => r.id === row.id ? { ...r, status: newStatus } : r));
-      const selGroupId = selectedGroups[row.id];
+      setRows(prev => prev.map(r => r.id === row.id ? { ...r, ...row, status: newStatus } : r));
+      const selGroupId = options.groupId || selectedGroups[row.id];
       if (selGroupId) {
         const grp = groups.find(g => String(g.id) === String(selGroupId));
         setRows(prev => prev.map(r => r.id === row.id
@@ -353,7 +353,7 @@ export default function AdminTable() {
           : r
         ));
       }
-      await refreshTeachers();
+      await fetchData();
       return true;
     } catch {
       alert('שגיאת רשת — בדוק חיבור ונסה שוב');
@@ -369,7 +369,7 @@ export default function AdminTable() {
     const allLessons = [...group.categories.individual, ...group.categories.ensemble, ...group.categories.theory];
     try {
       for (const lesson of allLessons) {
-        const saved = await saveAssignment(lesson);
+        const saved = await saveAssignment(lesson, { individualSchedule: group.categories.individual.some(r => r.id === lesson.id) });
         if (!saved) return;
       }
 
@@ -438,10 +438,11 @@ export default function AdminTable() {
   async function handleAddAddon(row, groupId) {
     setAddonSaving(true);
     try {
+      const kind = addonPickerFor?.kind;
       const res = await fetch('/api/registrations/addon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sourceId: row.id, groupId }),
+        body: JSON.stringify({ sourceId: row.id, groupId, kind: addonPickerFor?.kind }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -449,8 +450,12 @@ export default function AdminTable() {
         return;
       }
       setAddonPickerFor(null);
+      if (kind && row[`${kind}_not_required`] === true) {
+        await updateRequirement(row, kind, false);
+      }
       await fetchData();
-      setExpandedRow(row.id);
+    } catch {
+      alert('שגיאה בהוספת השיבוץ. נסי שוב.');
     } finally {
       setAddonSaving(false);
     }
@@ -488,29 +493,6 @@ export default function AdminTable() {
     }
   }
 
-async function deleteRegistration(id, studentName) {
-    if (!confirm(`למחוק לחלוטין את הרישום של ${studentName}?\nפעולה זו אינה הפיכה.`)) return;
-    setUpdatingIds(prev => [...prev, id]);
-    try {
-      const res = await fetch('/api/registrations', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        alert(json.error || 'שגיאה במחיקה — נסה שוב');
-        return;
-      }
-      setRows(prev => prev.filter(r => r.id !== id));
-      setExpandedRow(null);
-    } catch {
-      alert('שגיאת רשת — בדוק חיבור ונסה שוב');
-    } finally {
-      setUpdatingIds(prev => prev.filter(x => x !== id));
-    }
-  }
-
   async function updatePaymentStatus(id, newPaymentStatus) {
     setUpdatingIds(prev => [...prev, id]);
     try {
@@ -522,11 +504,87 @@ async function deleteRegistration(id, studentName) {
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         alert(json.error || 'שגיאה בעדכון סטטוס התשלום — נסה שוב');
-        return;
+        return false;
       }
       setRows((prev) => prev.map((r) => r.id === id ? { ...r, registration_status: newPaymentStatus } : r));
+      return true;
     } catch {
       alert('שגיאת רשת — בדוק חיבור ונסה שוב');
+      return false;
+    } finally {
+      setUpdatingIds(prev => prev.filter(x => x !== id));
+    }
+  }
+
+  async function updateRequirement(row, kind, checked) {
+    const field = `${kind}_not_required`;
+    setUpdatingIds(prev => [...prev, row.id]);
+    try {
+      const res = await fetch('/api/registrations', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: row.id, [field]: checked }),
+      });
+      if (!res.ok) throw new Error('לא ניתן לשמור את הסימון. יש לוודא שעדכון מסד הנתונים הותקן ולנסות שוב.');
+      setRows(prev => prev.map(r => r.id === row.id ? { ...r, [field]: checked } : r));
+    } catch (err) {
+      alert(err.message || 'שגיאה בשמירת הסימון');
+    } finally {
+      setUpdatingIds(prev => prev.filter(id => id !== row.id));
+    }
+  }
+
+  async function handleAddIndividual(row) {
+    setAddonSaving(true);
+    try {
+      const res = await fetch('/api/registrations/addon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceId: row.id, kind: 'individual' }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error || 'שגיאה ביצירת שיבוץ פרטני');
+        return;
+      }
+      await fetchData();
+      setScheduleRow(json.data);
+    } catch {
+      alert('שגיאה ביצירת השיבוץ הפרטני. נסי שוב.');
+    } finally {
+      setAddonSaving(false);
+    }
+  }
+
+  async function clearAssignment(id, studentName) {
+    if (!confirm(`לבטל את השיבוץ של ${studentName}?\nשורת הרישום ופרטי התשלום יישמרו.`)) return false;
+    setUpdatingIds(prev => [...prev, id]);
+    try {
+      const res = await fetch('/api/update-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, newStatus: 'חדש', scheduleMode: 'clear' }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || 'ביטול השיבוץ לא הושלם — נסי שוב');
+        return false;
+      }
+      setRows(prev => prev.map(row => row.id === id ? {
+        ...row,
+        teacher: null,
+        assigned_day: null,
+        assigned_time: null,
+        assigned_end_time: null,
+        group_id: null,
+        status: 'חדש',
+      } : row));
+      setSavedIds(prev => [...prev, id]);
+      setTimeout(() => setSavedIds(prev => prev.filter(x => x !== id)), 3000);
+      return true;
+    } catch {
+      alert('שגיאת רשת — בדקי את החיבור ונסי שוב');
+      return false;
     } finally {
       setUpdatingIds(prev => prev.filter(x => x !== id));
     }
@@ -555,7 +613,8 @@ async function deleteRegistration(id, studentName) {
 
   const allGroups = useMemo(() => groupStudentRows(rows, groups), [rows, groups]);
   const activeFilters = { search, status: filterStatus, instrument: filterInstrument, teacher: filterTeacher, payment: filterPayment };
-  const filteredGroups = allGroups.filter(g => filterRegistrations(g.members, activeFilters).length > 0);
+  const viewGroups = allGroups.filter(g => isStudentHandled(g) === (view === 'handled'));
+  const filteredGroups = viewGroups.filter(g => filterRegistrations(g.members, activeFilters).length > 0);
   const filtered = filteredGroups.flatMap(g => filterRegistrations(g.members, activeFilters));
 
   if (loading) {
@@ -583,6 +642,14 @@ async function deleteRegistration(id, studentName) {
         ))}
       </div>
 
+      {/* Actions */}
+      <div className="flex flex-wrap gap-3">
+        <button onClick={fetchData} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">🔄 רענן</button>
+        <button onClick={() => exportToExcel(filtered, groups)} className="px-4 py-2 border border-green-300 text-green-700 rounded-lg hover:bg-green-50 text-sm">📊 ייצוא Excel</button>
+        <button onClick={handleExportToSheet} disabled={sheetExporting} className="px-4 py-2 border border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 text-sm disabled:opacity-50">{sheetExporting ? '⏳ מייצא...' : '📤 ייצוא לגיליון גוגל'}</button>
+        <button onClick={() => printTable(filtered, groups)} className="px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 text-sm">🖨️ הדפסה</button>
+      </div>
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <input
@@ -599,7 +666,7 @@ async function deleteRegistration(id, studentName) {
         >
           <option value="">כל הסטטוסים</option>
           {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>{s}</option>
+            <option key={s} value={s}>{assignmentStatusLabel(s)}</option>
           ))}
         </select>
         <select
@@ -632,31 +699,6 @@ async function deleteRegistration(id, studentName) {
           <option value="Pending">{paymentStatusLabel('Pending')}</option>
           <option value="Cancelled">{paymentStatusLabel('Cancelled')}</option>
         </select>
-        <button
-          onClick={fetchData}
-          className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
-        >
-          🔄 רענן
-        </button>
-        <button
-          onClick={() => exportToExcel(filtered, groups)}
-          className="px-4 py-2 border border-green-300 text-green-700 rounded-lg hover:bg-green-50 text-sm"
-        >
-          📊 ייצוא Excel
-        </button>
-        <button
-          onClick={handleExportToSheet}
-          disabled={sheetExporting}
-          className="px-4 py-2 border border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 text-sm disabled:opacity-50"
-        >
-          {sheetExporting ? '⏳ מייצא...' : '📤 ייצוא לגיליון גוגל'}
-        </button>
-        <button
-          onClick={() => printTable(filtered, groups)}
-          className="px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 text-sm"
-        >
-          🖨️ הדפסה
-        </button>
       </div>
 
       {/* Table */}
@@ -672,49 +714,72 @@ async function deleteRegistration(id, studentName) {
                 <th className="px-4 py-3 text-right font-semibold text-gray-600">🎻 פרטני</th>
                 <th className="px-4 py-3 text-right font-semibold text-gray-600">🎼 הרכב</th>
                 <th className="px-4 py-3 text-right font-semibold text-gray-600">📘 תיאוריה</th>
-                <th className="px-4 py-3 text-right font-semibold text-gray-600">פעולות</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y-2 divide-gray-300">
               {filteredGroups.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-8 text-gray-400">
+                  <td colSpan={7} className="text-center py-8 text-gray-400">
                     לא נמצאו רישומים
                   </td>
                 </tr>
               )}
               {filteredGroups.map((group) => {
                 const { contactRow } = group;
-                const renderCategoryCell = (categoryRows, emptyLabel) => (
+                const renderCategoryCell = (categoryRows, emptyLabel, kind) => {
+                  const notRequired = kind !== 'individual' && contactRow[`${kind}_not_required`] === true;
+                  return (
                   <td className="px-4 py-3">
-                    {categoryRows.length === 0 ? (
-                      <span className="text-gray-300">—</span>
+                    {notRequired ? (
+                      <span className="inline-block text-xs rounded-lg border px-2 py-1.5 bg-gray-50 border-gray-200 text-gray-600">✓ לא נדרש</span>
+                    ) : categoryRows.length === 0 ? (
+                      kind === 'individual' ? (
+                        <button
+                          type="button"
+                          onClick={() => handleAddIndividual(contactRow)}
+                          disabled={addonSaving}
+                          className="px-3 py-1 rounded-lg border border-purple-300 bg-white text-purple-700 text-xs font-semibold disabled:opacity-40"
+                        >
+                          הוסף שיבוץ
+                        </button>
+                      ) : <span className="inline-block text-xs rounded-lg border px-2 py-1.5 bg-red-50 border-red-200 text-red-800">לא שובץ</span>
                     ) : (
                       <div className="space-y-1.5">
                         {categoryRows.map(r => {
                           const { day: displayDay, time: displayTime } = resolveAssignment(r, groups);
+                          const hasAssignment = !!r.teacher && displayDay != null && !!displayTime;
+                          const missingLabels = missingStatusLabels(r, hasAssignment).filter(label => kind === 'individual' || label !== 'לא שולם');
+                          const categoryNeedsAttention = kind === 'individual'
+                            ? needsAttention(r, hasAssignment)
+                            : r.status !== 'שובץ' && r.status !== 'בוטל' && r.registration_status !== 'Cancelled';
                           return (
-                          <div key={r.id} className="text-xs bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5">
-                            <div className="font-medium text-gray-700">{r.selected_course || emptyLabel}</div>
+                          <button type="button" key={r.id} onClick={kind === 'individual' ? () => setScheduleRow(r) : undefined} className={`block w-full text-right text-xs border rounded-lg px-2 py-1.5 ${categoryNeedsAttention ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-100'} ${kind === 'individual' ? 'cursor-pointer hover:border-purple-400 hover:shadow-sm focus:ring-2 focus:ring-purple-300' : ''}`}>
+                            <div className="font-semibold text-gray-800">{r.teacher || 'לא נבחר מורה'}</div>
+                            <div className="font-medium text-gray-600">{r.selected_course || emptyLabel}</div>
                             {r.teacher && displayDay != null && (
                               <div className="text-green-700">
-                                {r.teacher} · יום {DAY_NAMES[displayDay]}
+                                יום {DAY_NAMES[displayDay]}
                                 {displayTime ? ` ${displayTime.slice(0, 5)}` : ''}
                               </div>
                             )}
-                            <div className="flex gap-1 mt-1">
-                              <span className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_COLORS[r.status] || 'bg-gray-100 text-gray-600'}`}>
-                                {r.status}
-                              </span>
-                              <RegistrationStatusBadge status={r.registration_status} />
-                            </div>
-                          </div>
+                            {missingLabels.length > 0 && (
+                              <div className="flex gap-1 mt-1">
+                                {missingLabels.map(label => (
+                                  <span key={label} className="text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-800">
+                                    {label}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </button>
                           );
                         })}
                       </div>
                     )}
+                    {kind !== 'individual' && <button type="button" onClick={() => setAddonPickerFor({ rowId: contactRow.id, kind, label: '' })} className="mt-2 px-3 py-1 rounded-lg border border-purple-300 bg-white text-purple-700 text-xs font-semibold">{contactRow[`${kind}_not_required`] ? 'שנה בחירה' : 'הוסף שיבוץ'}</button>}
                   </td>
-                );
+                  );
+                };
                 return (
                   <React.Fragment key={group.key}>
                     <tr className="hover:bg-gray-50 transition">
@@ -745,21 +810,13 @@ async function deleteRegistration(id, studentName) {
                         <div className="text-xs" dir="ltr">{contactRow.parent_phone}</div>
                       </td>
                       <td className="px-4 py-3 text-gray-500">{getTypeLabel(contactRow)}</td>
-                      {renderCategoryCell(group.categories.individual, 'פרטני')}
-                      {renderCategoryCell(group.categories.ensemble, 'הרכב')}
-                      {renderCategoryCell(group.categories.theory, 'תיאוריה')}
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => setExpandedRow(expandedRow === group.key ? null : group.key)}
-                          className="text-primary text-xs hover:underline"
-                        >
-                          {expandedRow === group.key ? '▲ סגור' : '▼ פרטים'}
-                        </button>
-                      </td>
+                      {renderCategoryCell(group.categories.individual, 'פרטני', 'individual')}
+                      {renderCategoryCell(group.categories.ensemble, 'הרכב', 'ensemble')}
+                      {renderCategoryCell(group.categories.theory, 'תיאוריה', 'theory')}
                     </tr>
                     {expandedRow === group.key && (
                       <tr className="bg-primary-50">
-                        <td colSpan={8} className="px-6 py-4">
+                        <td colSpan={7} className="px-6 py-4">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                             {/* Contact — shown once per group, from contactRow */}
                             <div>
@@ -891,12 +948,25 @@ async function deleteRegistration(id, studentName) {
                             ].map(section => (
                               <div key={section.kind}>
                                 <h4 className="font-semibold text-gray-700 mb-2">{section.label}</h4>
+                                {section.addonKind && section.lessons.length === 0 && (
+                                  <label className="flex items-center gap-2 text-sm text-gray-700 mb-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={contactRow[`${section.kind}_not_required`] === true}
+                                      disabled={updatingIds.includes(contactRow.id)}
+                                      onChange={e => updateRequirement(contactRow, section.kind, e.target.checked)}
+                                    />
+                                    לא נדרש להירשם ל{section.kind === 'ensemble' ? 'הרכב' : 'תיאוריה'}
+                                  </label>
+                                )}
                                 {section.lessons.length > 0 ? (
                                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                     {section.lessons.map(lesson => (
                                       <AssignmentPanel
                                         key={lesson.id}
                                         row={lesson}
+                                        kind={section.kind}
+                                        onShowSchedule={setScheduleRow}
                                         rows={rows}
                                         teachers={teachers}
                                         groups={groups}
@@ -915,34 +985,41 @@ async function deleteRegistration(id, studentName) {
                                         handleCreateGroup={handleCreateGroup}
                                         updateStatus={updateStatus}
                                         updatePaymentStatus={updatePaymentStatus}
-                                        deleteRegistration={deleteRegistration}
+                                        clearAssignment={clearAssignment}
                                         updatingIds={updatingIds}
                                         savedIds={savedIds}
-                                        onSave={() => saveAssignment(lesson)}
+                                        onSave={(draft, options) => saveAssignment(draft || lesson, options)}
                                       />
                                     ))}
                                   </div>
-                                ) : section.addonKind ? (
+                                ) : section.addonKind && !contactRow[`${section.kind}_not_required`] ? (
                                   <button
                                     type="button"
                                     onClick={() => setAddonPickerFor({ rowId: contactRow.id, kind: section.addonKind === 'ensemble' ? 'ensemble' : 'theory', label: '' })}
-                                    className="text-xs px-3 py-1.5 rounded-lg border border-dashed border-indigo-300 text-indigo-700 hover:bg-indigo-50 w-full"
+                                    className="text-xs px-3 py-1.5 rounded-lg border border-dashed border-red-300 bg-red-50 text-red-800 hover:bg-red-100 w-full"
                                   >
-                                    + הוסף {section.addonKind === 'ensemble' ? 'הרכב' : 'תיאוריה'}
+                                    + הוסף שיבוץ
+                                  </button>
+                                ) : section.kind === 'individual' ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAddIndividual(contactRow)}
+                                    disabled={addonSaving}
+                                    className="text-xs px-3 py-1.5 rounded-lg border border-dashed border-purple-300 bg-white text-purple-700 hover:bg-purple-50 disabled:opacity-40 w-full"
+                                  >
+                                    + הוסף שיבוץ פרטני
                                   </button>
                                 ) : (
-                                  <p className="text-xs text-gray-400">אין שיעור פרטני</p>
+                                  <p className="text-xs text-gray-400">לא נדרש</p>
                                 )}
 
-                                {addonPickerFor?.rowId === contactRow.id && addonPickerFor.kind === section.addonKind && (() => {
+                                {!contactRow[`${section.kind}_not_required`] && addonPickerFor?.rowId === contactRow.id && addonPickerFor.kind === section.addonKind && (() => {
                                   const wantedTypes = addonPickerFor.kind === 'theory' ? ['theory'] : ['orchestra', 'choir'];
                                   const labelOptions = addonPickerFor.kind === 'theory'
                                     ? labelsForCategories(fixedLessonTypes, ['theory'])
                                     : labelsForCategories(fixedLessonTypes, ['orchestra', 'choir']);
                                   const label = addonPickerFor.label || '';
-                                  const matching = label
-                                    ? groups.filter(g => wantedTypes.includes(g.lesson_type) && matchesGroupLabel(g.name, label))
-                                    : [];
+                                  const matching = categoryGroups(groups, addonPickerFor.kind).filter(g => !label || matchesGroupLabel(g.name, label));
                                   return (
                                     <div className="border border-gray-200 rounded-lg p-2 space-y-1 max-h-56 overflow-y-auto mt-2">
                                       <select
@@ -950,12 +1027,12 @@ async function deleteRegistration(id, studentName) {
                                         value={label}
                                         onChange={e => setAddonPickerFor(prev => ({ ...prev, label: e.target.value }))}
                                       >
-                                        <option value="">— בחר/י סוג —</option>
+                                        <option value="">{addonPickerFor.kind === 'theory' ? 'כל אפשרויות התיאוריה' : 'כל אפשרויות האנסמבל'}</option>
                                         {labelOptions.map(l => (
                                           <option key={l} value={l}>{l}</option>
                                         ))}
                                       </select>
-                                      {label && matching.map(g => {
+                                      {matching.map(g => {
                                         const teacherName = teachers.find(t => t.id === g.teacher_id)?.name || '—';
                                         const sched = (g.group_schedules || [])
                                           .filter(s => s.start_time)
@@ -973,7 +1050,7 @@ async function deleteRegistration(id, studentName) {
                                           </button>
                                         );
                                       })}
-                                      {label && matching.length === 0 && (
+                                      {matching.length === 0 && (
                                         <p className="text-xs text-gray-400 px-2 py-1">אין שיעורים קבועים מסוג זה — יש להוסיף שיעור בכרטיס המורה</p>
                                       )}
                                       <button
@@ -1033,8 +1110,26 @@ async function deleteRegistration(id, studentName) {
         </div>
       </div>
 
+      {scheduleRow && <TeacherSchedulePicker key={scheduleRow.id} row={scheduleRow} rows={rows} teachers={teachers} groups={groups} onClose={() => setScheduleRow(null)} onSave={draft => saveAssignment(draft, { individualSchedule: true })} onDelete={lesson => clearAssignment(lesson.id, lesson.student_name)} onUpdateStatus={updateStatus} onUpdatePaymentStatus={updatePaymentStatus} />}
+      {addonPickerFor && (() => {
+        const pickerRow = rows.find(row => row.id === addonPickerFor.rowId);
+        if (!pickerRow) return null;
+        return <FixedLessonPicker
+          picker={addonPickerFor}
+          row={pickerRow}
+          groups={groups}
+          teachers={teachers}
+          fixedLessonTypes={fixedLessonTypes}
+          saving={addonSaving || updatingIds.includes(pickerRow.id)}
+          notRequired={pickerRow[`${addonPickerFor.kind}_not_required`] === true}
+          onChange={label => setAddonPickerFor(prev => ({ ...prev, label }))}
+          onChoose={groupId => handleAddAddon(pickerRow, groupId)}
+          onNotRequired={async () => { await updateRequirement(pickerRow, addonPickerFor.kind, pickerRow[`${addonPickerFor.kind}_not_required`] !== true); setAddonPickerFor(null); }}
+          onClose={() => setAddonPickerFor(null)}
+        />;
+      })()}
       <p className="text-xs text-gray-400 text-left">
-        מציג {filtered.length} מתוך {rows.length} רישומים
+        מציג {filtered.length} מתוך {viewGroups.reduce((count, group) => count + group.members.length, 0)} רישומים בלשונית
       </p>
     </div>
   );

@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS registrations (
   has_accommodations boolean NOT NULL DEFAULT false,
   orchestra_confirmed boolean,
   attended_open_day boolean,
+  ensemble_not_required boolean NOT NULL DEFAULT false,
+  theory_not_required boolean NOT NULL DEFAULT false,
   instruments text[] DEFAULT '{}',
   unavailable_days text[] DEFAULT '{}',
   preferred_slot text,
@@ -56,6 +58,8 @@ ALTER TABLE registrations ADD COLUMN IF NOT EXISTS school_name text;
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS has_accommodations boolean NOT NULL DEFAULT false;
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS orchestra_confirmed boolean;
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS attended_open_day boolean;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS ensemble_not_required boolean NOT NULL DEFAULT false;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS theory_not_required boolean NOT NULL DEFAULT false;
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS max_students integer;
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS weekly_hours_quota numeric;
 ALTER TABLE teacher_availability_ranges ADD COLUMN IF NOT EXISTS closed_for_registration boolean NOT NULL DEFAULT false;
