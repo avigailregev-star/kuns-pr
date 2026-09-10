@@ -26,7 +26,16 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
   const [name, setName] = useState(initial.name || '');
   const [instrumentTypes, setInstrumentTypes] = useState(() => {
     const v = initial.instrument_type || '';
-    return v ? v.split(',').map(s => s.trim()).filter(Boolean) : [];
+    const values = v ? v.split(',').map(s => s.trim()).filter(Boolean) : [];
+    const knownValues = values.filter((value) => INSTRUMENT_TYPES.includes(value));
+    const hasCustomValue = values.some((value) => !INSTRUMENT_TYPES.includes(value));
+    return hasCustomValue && !knownValues.includes('אחר')
+      ? [...knownValues, 'אחר']
+      : knownValues;
+  });
+  const [customInstrument, setCustomInstrument] = useState(() => {
+    const values = (initial.instrument_type || '').split(',').map(s => s.trim()).filter(Boolean);
+    return values.filter((value) => !INSTRUMENT_TYPES.includes(value)).join(', ');
   });
   const [availableDays, setAvailableDays] = useState(initial.available_days || []);
   const [availableHours, setAvailableHours] = useState(initial.available_hours || {});
@@ -98,7 +107,10 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!name.trim() || instrumentTypes.length === 0) {
+    const savedInstrumentTypes = instrumentTypes
+      .filter((instrument) => instrument !== 'אחר')
+      .concat(instrumentTypes.includes('אחר') && customInstrument.trim() ? [customInstrument.trim()] : []);
+    if (!name.trim() || savedInstrumentTypes.length === 0) {
       setError('שם וסוג כלי הם שדות חובה');
       return;
     }
@@ -107,7 +119,7 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
     try {
       await onSave({
         name,
-        instrument_type: instrumentTypes.join(', '),
+        instrument_type: savedInstrumentTypes.join(', '),
         available_days: availableDays,
         available_hours: availableHours,
         max_students: maxStudents !== '' ? parseInt(maxStudents, 10) : null,
@@ -162,7 +174,21 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
           })}
         </div>
         {instrumentTypes.length > 0 && (
-          <p className="text-xs text-purple-600 mt-1">נבחרו: {instrumentTypes.join(', ')}</p>
+          <p className="text-xs text-purple-600 mt-1">
+            נבחרו: {instrumentTypes.map((instrument) =>
+              instrument === 'אחר' && customInstrument.trim() ? customInstrument.trim() : instrument
+            ).join(', ')}
+          </p>
+        )}
+        {instrumentTypes.includes('אחר') && (
+          <input
+            type="text"
+            className="admin-input mt-2"
+            value={customInstrument}
+            onChange={(e) => setCustomInstrument(e.target.value)}
+            placeholder="נא להקליד את שם הכלי"
+            aria-label="שם כלי אחר"
+          />
         )}
       </div>
 
