@@ -1,4 +1,4 @@
-import { POST } from './route';
+import { PATCH, POST } from './route';
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
@@ -34,10 +34,12 @@ function createMockSupabase(responses) {
     const self = {
       select: () => self,
       eq: () => self,
+      neq: () => self,
       in: () => self,
       insert: () => self,
       update: () => self,
       order: () => self,
+      limit: () => self,
       single: () => Promise.resolve(nextResponse(table)),
       maybeSingle: () => Promise.resolve(nextResponse(table)),
       then: (resolve, reject) => Promise.resolve(nextResponse(table)).then(resolve, reject),
@@ -145,5 +147,49 @@ describe('POST /api/groups', () => {
 
     // Only the overlap check ran — no group insert, no further tables touched.
     expect(mockSupabase.from.mock.calls.map(c => c[0])).toEqual(['groups']);
+  });
+});
+
+describe('PATCH /api/groups', () => {
+  test('allows a group lesson at 16:00 after a 45-minute individual lesson starting at 15:15', async () => {
+    const mockSupabase = createMockSupabase({
+      groups: [
+        { data: { id: 'theory-1', teacher_id: 5, lesson_type: 'theory' }, error: null },
+        {
+          data: [{
+            id: 'individual-1',
+            lesson_type: 'individual_45',
+            group_schedules: [{ day_of_week: 1, start_time: '15:15', end_time: null }],
+          }],
+          error: null,
+        },
+        { error: null },
+      ],
+      group_schedules: [
+        { data: [{ id: 'schedule-1' }], error: null },
+        { error: null },
+      ],
+      registrations: [{ error: null }],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+
+    const res = await PATCH(makeRequest({
+      id: 'theory-1',
+      name: "תורת המקאם ב' (תלמידי שנה ג')",
+      assigned_day: 1,
+      assigned_time: '16:00',
+      assigned_end_time: '16:45',
+    }));
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ success: true });
+    expect(mockSupabase.from.mock.calls.map(call => call[0])).toEqual([
+      'groups',
+      'groups',
+      'groups',
+      'group_schedules',
+      'group_schedules',
+      'registrations',
+    ]);
   });
 });

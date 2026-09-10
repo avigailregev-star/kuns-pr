@@ -194,14 +194,15 @@ export async function PATCH(request) {
 
     const { data: otherGroups } = await supabase
       .from('groups')
-      .select('id, group_schedules(day_of_week, start_time, end_time)')
+      .select('id, lesson_type, group_schedules(day_of_week, start_time, end_time)')
       .eq('teacher_id', group.teacher_id)
       .neq('id', id);
     for (const other of (otherGroups || [])) {
       for (const schedule of (other.group_schedules || [])) {
         if (Number(schedule.day_of_week) !== Number(assigned_day) || !schedule.start_time) continue;
         const otherStart = toMins(schedule.start_time);
-        const otherEnd = schedule.end_time ? toMins(schedule.end_time) : otherStart + 60;
+        const otherDuration = ['individual_45', 'melodies_individual'].includes(other.lesson_type) ? 45 : 60;
+        const otherEnd = schedule.end_time ? toMins(schedule.end_time) : otherStart + otherDuration;
         if (start < otherEnd && otherStart < end) {
           return NextResponse.json({ error: `חפיפה עם שיעור קיים בשעה ${schedule.start_time.slice(0, 5)}` }, { status: 409 });
         }
