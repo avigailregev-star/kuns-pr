@@ -22,6 +22,7 @@ const INSTRUMENT_TYPES = [
 ];
 
 export default function TeacherForm({ initial = {}, onSave, onCancel }) {
+  const isEditing = initial.id != null;
   const [name, setName] = useState(initial.name || '');
   const [instrumentTypes, setInstrumentTypes] = useState(() => {
     const v = initial.instrument_type || '';
@@ -165,19 +166,21 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
         )}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          מכסת תלמידים מקסימאלית
-        </label>
-        <input
-          type="number"
-          min="0"
-          className="admin-input"
-          value={maxStudents}
-          onChange={(e) => setMaxStudents(e.target.value)}
-          placeholder="ריק = ללא מכסה"
-        />
-      </div>
+      {!isEditing && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            מכסת תלמידים מקסימאלית
+          </label>
+          <input
+            type="number"
+            min="0"
+            className="admin-input"
+            value={maxStudents}
+            onChange={(e) => setMaxStudents(e.target.value)}
+            placeholder="ריק = ללא מכסה"
+          />
+        </div>
+      )}
 
 
       <div>
@@ -225,7 +228,7 @@ export default function TeacherForm({ initial = {}, onSave, onCancel }) {
         </div>
       </div>
 
-      {assignableCourses.length > 0 && (
+      {!isEditing && assignableCourses.length > 0 && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             קורסים משויכים
