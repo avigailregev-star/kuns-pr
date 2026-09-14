@@ -615,6 +615,33 @@ export default function AdminTable({ view = 'registrations' }) {
     }
   }
 
+  async function deleteStudentRecord(group) {
+    const name = group.contactRow.student_name || 'התלמיד/ה';
+    if (!confirm(`למחוק את ${name} לגמרי מהמערכת?\nכל הרישומים, השיעורים והשיבוצים של תלמיד/ה זה יימחקו. לא ניתן לבטל פעולה זו.`)) return false;
+    const ids = group.members.map(member => member.id);
+    setUpdatingIds(prev => [...prev, ...ids]);
+    try {
+      const res = await fetch('/api/registrations', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || 'מחיקת הרשומה לא הושלמה — נסי שוב');
+        return false;
+      }
+      setRows(prev => prev.filter(row => !ids.includes(row.id)));
+      await fetchData();
+      return true;
+    } catch {
+      alert('שגיאת רשת — בדקי את החיבור ונסי שוב');
+      return false;
+    } finally {
+      setUpdatingIds(prev => prev.filter(id => !ids.includes(id)));
+    }
+  }
+
   async function markAttendedOpenDay(id) {
     setUpdatingIds(prev => [...prev, id]);
     try {
@@ -1141,7 +1168,11 @@ export default function AdminTable({ view = 'registrations' }) {
         </div>
       </div>
 
-      {scheduleRow && <TeacherSchedulePicker key={scheduleRow.id} row={scheduleRow} rows={rows} teachers={teachers} groups={groups} onClose={() => setScheduleRow(null)} onSave={draft => saveAssignment(draft, { individualSchedule: true })} onDelete={lesson => clearAssignment(lesson.id, lesson.student_name)} onUpdateStatus={updateStatus} onUpdatePaymentStatus={updatePaymentStatus} />}
+      {scheduleRow && <TeacherSchedulePicker key={scheduleRow.id} row={scheduleRow} rows={rows} teachers={teachers} groups={groups} onClose={() => setScheduleRow(null)} onSave={draft => saveAssignment(draft, { individualSchedule: true })} onDelete={lesson => clearAssignment(lesson.id, lesson.student_name)} onDeleteStudent={async lesson => {
+        const studentGroup = allGroups.find(group => group.members.some(member => member.id === lesson.id));
+        if (!studentGroup) return false;
+        return deleteStudentRecord(studentGroup);
+      }} onUpdateStatus={updateStatus} onUpdatePaymentStatus={updatePaymentStatus} />}
       {addonPickerFor && (() => {
         const pickerRow = rows.find(row => row.id === addonPickerFor.rowId);
         if (!pickerRow) return null;

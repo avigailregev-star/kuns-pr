@@ -33,22 +33,25 @@ export async function DELETE(request) {
   if (!session) return NextResponse.json({ error: 'אינך מורשה' }, { status: 401 });
 
   try {
-    const { id } = await request.json();
-    if (!id) return NextResponse.json({ error: 'מזהה חסר' }, { status: 400 });
+    const { id, ids } = await request.json();
+    const registrationIds = Array.isArray(ids) ? [...new Set(ids.filter(Boolean))] : (id ? [id] : []);
+    if (registrationIds.length === 0) return NextResponse.json({ error: 'מזהה חסר' }, { status: 400 });
 
     const supabase = getSupabaseClient();
 
-    // מצא שם תלמיד לפני המחיקה
-    const { data: reg } = await supabase
-      .from('registrations').select('student_name, group_id').eq('id', id).single();
+    // Keep the attendance references before deleting the registrations.
+    const { data: registrations, error: lookupError } = await supabase
+      .from('registrations').select('student_name, group_id').in('id', registrationIds);
+    if (lookupError) return NextResponse.json({ error: 'שגיאה באיתור הרשומה' }, { status: 500 });
 
     // message_log.registration_id has ON DELETE CASCADE — deleting the
     // registration removes its message_log rows automatically, atomically.
-    const { error } = await supabase.from('registrations').delete().eq('id', id);
+    const { error } = await supabase.from('registrations').delete().in('id', registrationIds);
     if (error) return NextResponse.json({ error: 'שגיאה במחיקה' }, { status: 500 });
 
     // הסר תלמיד מאפליקציית הנוכחות
-    if (reg?.student_name) {
+    for (const reg of registrations || []) {
+      if (!reg?.student_name) continue;
       // מחיקה לפי שם + group_id ביחד, כדי לא להשבית את התלמיד/ה בקבוצות אחרות
       // (למשל תוספת אנסמבל/תיאוריה) כשמוחקים רק רישום אחד שלהם
       let query = supabase
