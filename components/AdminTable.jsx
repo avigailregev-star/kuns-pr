@@ -590,6 +590,31 @@ export default function AdminTable({ view = 'registrations' }) {
     }
   }
 
+  async function deleteRegistration(row) {
+    if (!confirm(`למחוק את השיעור "${row.selected_course || 'ללא שם'}" של ${row.student_name}?\nהשיעורים האחרים ופרטי התלמיד/ה יישמרו.`)) return false;
+    setUpdatingIds(prev => [...prev, row.id]);
+    try {
+      const res = await fetch('/api/registrations', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: row.id }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || 'מחיקת השיעור לא הושלמה — נסי שוב');
+        return false;
+      }
+      setRows(prev => prev.filter(item => item.id !== row.id));
+      await fetchData();
+      return true;
+    } catch {
+      alert('שגיאת רשת — בדקי את החיבור ונסי שוב');
+      return false;
+    } finally {
+      setUpdatingIds(prev => prev.filter(id => id !== row.id));
+    }
+  }
+
   async function markAttendedOpenDay(id) {
     setUpdatingIds(prev => [...prev, id]);
     try {
@@ -753,7 +778,8 @@ export default function AdminTable({ view = 'registrations' }) {
                             ? needsAttention(r, hasAssignment)
                             : r.status !== 'שובץ' && r.status !== 'בוטל' && r.registration_status !== 'Cancelled';
                           return (
-                          <button type="button" key={r.id} onClick={kind === 'individual' ? () => setScheduleRow(r) : undefined} className={`block w-full text-right text-xs border rounded-lg px-2 py-1.5 ${categoryNeedsAttention ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-100'} ${kind === 'individual' ? 'cursor-pointer hover:border-purple-400 hover:shadow-sm focus:ring-2 focus:ring-purple-300' : ''}`}>
+                          <div key={r.id} className="relative">
+                          <button type="button" onClick={kind === 'individual' ? () => setScheduleRow(r) : undefined} className={`block w-full text-right text-xs border rounded-lg px-2 py-1.5 ${kind !== 'individual' ? 'pl-14' : ''} ${categoryNeedsAttention ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-100'} ${kind === 'individual' ? 'cursor-pointer hover:border-purple-400 hover:shadow-sm focus:ring-2 focus:ring-purple-300' : ''}`}>
                             <div className="font-semibold text-gray-800">{r.teacher || 'לא נבחר מורה'}</div>
                             <div className="font-medium text-gray-600">{r.selected_course || emptyLabel}</div>
                             {r.teacher && displayDay != null && (
@@ -772,6 +798,10 @@ export default function AdminTable({ view = 'registrations' }) {
                               </div>
                             )}
                           </button>
+                          {kind !== 'individual' && (
+                            <button type="button" onClick={() => deleteRegistration(r)} disabled={updatingIds.includes(r.id)} className="absolute left-2 top-2 text-red-600 hover:text-red-800 disabled:opacity-40" aria-label={`מחק ${r.selected_course || emptyLabel}`}>מחק</button>
+                          )}
+                          </div>
                           );
                         })}
                       </div>
@@ -986,6 +1016,7 @@ export default function AdminTable({ view = 'registrations' }) {
                                         updateStatus={updateStatus}
                                         updatePaymentStatus={updatePaymentStatus}
                                         clearAssignment={clearAssignment}
+                                        deleteRegistration={deleteRegistration}
                                         updatingIds={updatingIds}
                                         savedIds={savedIds}
                                         onSave={(draft, options) => saveAssignment(draft || lesson, options)}
