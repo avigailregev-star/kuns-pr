@@ -142,7 +142,7 @@ export default function TeacherSchedulePicker({ row, rows, teachers, groups, onC
       <div className="p-4 flex flex-wrap items-center justify-between gap-4">
         <div aria-live="polite" className={`text-sm ${problem || error ? 'text-red-700' : 'text-gray-700'}`}>{error || problem || `זמין — יום ${WEEK_DAYS[draft.assigned_day]} ${clockTime(start)}–${clockTime(end)}`}</div>
         <div className="flex items-center gap-2">
-          {onDelete && <button type="button" onClick={removeLesson} disabled={saving || deleting} className="px-4 py-2 rounded-lg border border-red-300 bg-white text-red-700 font-semibold disabled:opacity-40">{deleting ? 'מנקה…' : '🗑 נקה שיבוץ'}</button>}
+          {onDelete && <button type="button" onClick={removeLesson} disabled={saving || deleting} className="px-4 py-2 rounded-lg border border-red-300 bg-white text-red-700 font-semibold disabled:opacity-40">{deleting ? 'מוחק…' : '🗑 מחק שיעור'}</button>}
           {onDeleteStudent && <button type="button" onClick={removeStudent} disabled={saving || deleting || deletingStudent} className="px-4 py-2 rounded-lg border border-red-700 bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-40">{deletingStudent ? 'מוחק…' : '🗑 מחק תלמיד מהמערכת'}</button>}
           <button type="button" onClick={save} disabled={!!problem || saving || deleting} className="btn-primary px-8 disabled:opacity-40 shrink-0">{saving ? 'שומר…' : 'שמור'}</button>
         </div>

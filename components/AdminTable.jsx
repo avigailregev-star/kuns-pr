@@ -1168,7 +1168,7 @@ export default function AdminTable({ view = 'registrations' }) {
         </div>
       </div>
 
-      {scheduleRow && <TeacherSchedulePicker key={scheduleRow.id} row={scheduleRow} rows={rows} teachers={teachers} groups={groups} onClose={() => setScheduleRow(null)} onSave={draft => saveAssignment(draft, { individualSchedule: true })} onDelete={lesson => clearAssignment(lesson.id, lesson.student_name)} onDeleteStudent={async lesson => {
+      {scheduleRow && <TeacherSchedulePicker key={scheduleRow.id} row={scheduleRow} rows={rows} teachers={teachers} groups={groups} onClose={() => setScheduleRow(null)} onSave={draft => saveAssignment(draft, { individualSchedule: true })} onDelete={deleteRegistration} onDeleteStudent={async lesson => {
         const studentGroup = allGroups.find(group => group.members.some(member => member.id === lesson.id));
         if (!studentGroup) return false;
         return deleteStudentRecord(studentGroup);
