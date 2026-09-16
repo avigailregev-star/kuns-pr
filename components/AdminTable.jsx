@@ -453,8 +453,9 @@ export default function AdminTable({ view = 'registrations' }) {
         return;
       }
       setAddonPickerFor(null);
-      if (kind && row[`${kind}_not_required`] === true) {
-        await updateRequirement(row, kind, false);
+      const contactRow = rows.find(candidate => candidate.id === addonPickerFor?.rowId);
+      if (kind && contactRow?.[`${kind}_not_required`] === true) {
+        await updateRequirement(contactRow, kind, false);
       }
       await fetchData();
     } catch {
@@ -762,7 +763,7 @@ export default function AdminTable({ view = 'registrations' }) {
                 </tr>
               )}
               {filteredGroups.map((group) => {
-                const { contactRow } = group;
+                const { contactRow, addonSourceRow } = group;
                 const renderCategoryCell = (categoryRows, emptyLabel, kind) => {
                   const notRequired = kind !== 'individual' && contactRow[`${kind}_not_required`] === true;
                   return (
@@ -1101,7 +1102,7 @@ export default function AdminTable({ view = 'registrations' }) {
                                             key={g.id}
                                             type="button"
                                             disabled={addonSaving}
-                                            onClick={() => handleAddAddon(contactRow, g.id)}
+                                            onClick={() => handleAddAddon(addonSourceRow, g.id)}
                                             className="block w-full text-right px-2 py-1.5 text-sm rounded-lg hover:bg-indigo-50 disabled:opacity-40"
                                           >
                                             {g.name} · {teacherName}
@@ -1182,7 +1183,10 @@ export default function AdminTable({ view = 'registrations' }) {
           saving={addonSaving || updatingIds.includes(pickerRow.id)}
           notRequired={pickerRow[`${addonPickerFor.kind}_not_required`] === true}
           onChange={label => setAddonPickerFor(prev => ({ ...prev, label }))}
-          onChoose={groupId => handleAddAddon(pickerRow, groupId)}
+          onChoose={groupId => {
+            const studentGroup = allGroups.find(group => group.contactRow.id === pickerRow.id);
+            return handleAddAddon(studentGroup?.addonSourceRow || pickerRow, groupId);
+          }}
           onNotRequired={async () => { await updateRequirement(pickerRow, addonPickerFor.kind, pickerRow[`${addonPickerFor.kind}_not_required`] !== true); setAddonPickerFor(null); }}
           onClose={() => setAddonPickerFor(null)}
         />;
