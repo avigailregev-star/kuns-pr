@@ -19,6 +19,7 @@ function makeRequest(body) {
 function createMockSupabase(responses) {
   const queues = {};
   const inserts = [];
+  const updates = [];
   for (const [table, list] of Object.entries(responses)) {
     queues[table] = [...list];
   }
@@ -32,7 +33,7 @@ function createMockSupabase(responses) {
       select: () => self,
       eq: () => self,
       insert: data => { inserts.push({ table, data }); return self; },
-      update: () => self,
+      update: data => { updates.push({ table, data }); return self; },
       single: () => Promise.resolve(nextResponse(table)),
       maybeSingle: () => Promise.resolve(nextResponse(table)),
       then: (resolve, reject) => Promise.resolve(nextResponse(table)).then(resolve, reject),
@@ -40,7 +41,7 @@ function createMockSupabase(responses) {
     return self;
   }
   const from = jest.fn(table => builder(table));
-  return { from, inserts };
+  return { from, inserts, updates };
 }
 
 beforeEach(() => {
@@ -102,6 +103,31 @@ test('a second individual lesson starts without the source lesson group', async 
 });
 
 describe('POST /api/registrations/addon — attach to an existing group', () => {
+  test('reactivates an existing inactive attendance member when assigning the group again', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [
+        { data: sourceReg, error: null },
+        { data: { id: 'new2', ...sourceReg, selected_course: 'תזמורת כלי קשת', status: 'שובץ', group_id: 'g1' }, error: null },
+      ],
+      groups: [
+        { data: { id: 'g1', name: 'תזמורת כלי קשת', teacher_id: 't1', lesson_type: 'orchestra', group_schedules: [{ day_of_week: 2, start_time: '17:00', end_time: '18:00' }] }, error: null },
+      ],
+      teachers: [{ data: { name: 'רותם לוי' }, error: null }],
+      students: [
+        { data: { id: 'student1', is_active: false }, error: null },
+        { error: null },
+      ],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+
+    const res = await POST(makeRequest({ sourceId: 'r1', groupId: 'g1' }));
+
+    expect(res.status).toBe(200);
+    expect(mockSupabase.inserts.filter(call => call.table === 'students')).toHaveLength(0);
+    expect(mockSupabase.updates).toContainEqual({ table: 'students', data: { is_active: true } });
+    expect(mockSupabase.from.mock.calls.filter(call => call[0] === 'students')).toHaveLength(2);
+  });
+
   test('copies teacher/day/time from the group schedule and adds the student to it', async () => {
     const mockSupabase = createMockSupabase({
       registrations: [

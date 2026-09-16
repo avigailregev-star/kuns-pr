@@ -140,12 +140,17 @@ export async function POST(request) {
 
     const { data: existingStudent, error: existingStudentErr } = await supabase
       .from('students')
-      .select('id')
+      .select('id, is_active')
       .eq('group_id', group.id)
       .eq('name', source.student_name)
       .maybeSingle();
     if (existingStudentErr) console.error('addon: existing student check error', existingStudentErr.message);
-    if (!existingStudentErr && !existingStudent) {
+    if (!existingStudentErr && existingStudent && !existingStudent.is_active) {
+      const { error: reactivateErr } = await supabase.from('students')
+        .update({ is_active: true })
+        .eq('id', existingStudent.id);
+      if (reactivateErr) console.error('addon: student reactivation error', reactivateErr.message);
+    } else if (!existingStudentErr && !existingStudent) {
       const { error: studentErr } = await supabase.from('students').insert({
         group_id: group.id,
         name: source.student_name,
