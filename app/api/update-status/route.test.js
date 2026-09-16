@@ -63,6 +63,21 @@ beforeEach(() => {
   getServerSession.mockResolvedValue({ user: { name: 'admin' } });
 });
 
+describe('POST /api/update-status — lesson identity', () => {
+  test('refuses to replace a private lesson with a theory assignment', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [{ data: { id: 'private', selected_course: 'פרטני 45 דקות', group_id: null }, error: null }],
+      groups: [{ data: { id: 'theory', lesson_type: 'theory' }, error: null }],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+
+    const res = await POST(makeRequest({ id: 'private', newStatus: 'שובץ', groupId: 'theory' }));
+
+    expect(res.status).toBe(409);
+    expect(mockSupabase.calls.some(c => c.table === 'registrations' && c.method === 'update')).toBe(false);
+  });
+});
+
 describe('POST /api/update-status — clear one assignment', () => {
   test('keeps another registration in the same group active', async () => {
     const mockSupabase = createMockSupabase({ registrations: [
@@ -110,7 +125,7 @@ describe('POST /api/update-status — cancellation attendance scope', () => {
     expect(mockSupabase.calls.some(c => c.table === 'students' && c.method === 'update')).toBe(false);
   });
 
-  test('deactivates only the cancelled registration group', async () => {
+  test('does not run a second direct deactivation after attendance sync', async () => {
     const mockSupabase = createMockSupabase({
       registrations: [
         { error: null },
@@ -123,8 +138,7 @@ describe('POST /api/update-status — cancellation attendance scope', () => {
     getSupabaseClient.mockReturnValue(mockSupabase);
     const res = await POST(makeRequest({ id: 'r1', newStatus: 'בוטל' }));
     expect(res.status).toBe(200);
-    const update = mockSupabase.calls.find(c => c.table === 'students' && c.method === 'update');
-    expect(update.eqCalls).toContainEqual(['group_id', 'g1']);
+    expect(mockSupabase.calls.some(c => c.table === 'students' && c.method === 'update')).toBe(false);
   });
 });
 

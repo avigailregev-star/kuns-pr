@@ -68,7 +68,7 @@ describe('DELETE /api/groups', () => {
 });
 
 describe('POST /api/groups', () => {
-  test('creates a group and attaches multiple students, deactivating a prior group membership', async () => {
+  test('refuses to turn existing registrations into a new group lesson', async () => {
     const mockSupabase = createMockSupabase({
       groups: [
         { data: [] }, // overlap check: no existing groups for this teacher
@@ -111,27 +111,9 @@ describe('POST /api/groups', () => {
       student_registration_ids: ['r1', 'r2', 'r3'],
     }));
 
-    const json = await res.json();
-    expect(res.status).toBe(200);
-    expect(json.data).toEqual({ id: 'g1', name: 'מקהלה ב-ו', lesson_type: 'choir', is_mangan_school: false, school_name: null });
+    expect(res.status).toBe(409);
+    expect(mockSupabase.from).not.toHaveBeenCalled();
 
-    // Exact call sequence: overlap check, insert, schedule, teacher lookup,
-    // registrations fetch, then per-student (update, insert), with an extra
-    // deactivate for r2 (which had a different prior group).
-    expect(mockSupabase.from.mock.calls.map(c => c[0])).toEqual([
-      'groups',          // overlap check
-      'groups',          // insert
-      'group_schedules', // schedule insert
-      'teachers',        // teacher name lookup
-      'registrations',   // fetch students to attach
-      'registrations',   // r1 update
-      'students',        // r1 insert
-      'students',        // r2 deactivate old group
-      'registrations',   // r2 update
-      'students',        // r2 insert
-      'registrations',   // r3 update
-      'students',        // r3 insert
-    ]);
   });
 
   test('rejects an overlapping schedule with 409 and never creates the group', async () => {

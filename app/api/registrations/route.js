@@ -117,7 +117,18 @@ export async function PATCH(request) {
           .from('registrations').select('student_name, group_id').eq('id', id).single();
         if (reg?.student_name && reg.group_id) {
           const studentUpdate = { registration_status: hebrewStatus };
-          if (registration_status === 'Cancelled') studentUpdate.is_active = false;
+          if (registration_status === 'Cancelled') {
+            const { data: others, error: othersError } = await supabase.from('registrations')
+              .select('id, status, registration_status')
+              .eq('student_name', reg.student_name).eq('group_id', reg.group_id);
+            if (othersError) console.error('Payment cancellation attendance check:', othersError.message);
+            else if (!(others || []).some(other => other.id !== id && other.status === 'שובץ' && other.registration_status !== 'Cancelled')) {
+              studentUpdate.is_active = false;
+            } else {
+              return NextResponse.json({ success: true });
+            }
+            if (othersError) return NextResponse.json({ success: true });
+          }
           await supabase.from('students').update(studentUpdate)
             .eq('name', reg.student_name).eq('group_id', reg.group_id);
         }

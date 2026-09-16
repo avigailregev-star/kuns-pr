@@ -8,6 +8,19 @@ import { syncRegistrationToAttendance } from '../../../lib/syncToAttendance';
 import { getLessonDuration } from '../../../lib/lessonDuration';
 import { saveIndividualSchedule } from '../../../lib/saveIndividualSchedule';
 
+const lessonCategory = type => type === 'theory' ? 'theory'
+  : ['orchestra', 'choir', 'melodies_group', 'group'].includes(type) ? 'group'
+  : ['individual_45', 'individual_60', 'melodies_individual', 'elite_duet'].includes(type) ? 'individual'
+  : null;
+
+function courseCategory(course) {
+  if (!course) return null;
+  if (/פרטני|45 דקות|60 דקות|45 דק|60 דק/.test(course)) return 'individual';
+  if (/ת[יא]אוריה|פיתוח קשב|קומפוזיציה|פיתוח שמיעה|קצב לכולם/.test(course)) return 'theory';
+  if (/אנסמבל|הרכב|תזמורת|מקהלה|מנגינות/.test(course)) return 'group';
+  return null;
+}
+
 export async function POST(request) {
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -23,6 +36,25 @@ export async function POST(request) {
     }
 
     const supabase = getSupabaseClient();
+    if (groupId && body.scheduleMode !== 'clear' && body.scheduleMode !== 'individual') {
+      const [{ data: current, error: currentError }, { data: target, error: targetError }] = await Promise.all([
+        supabase.from('registrations').select('id, selected_course, group_id').eq('id', id).maybeSingle(),
+        supabase.from('groups').select('id, lesson_type').eq('id', groupId).maybeSingle(),
+      ]);
+      if (currentError || targetError) return NextResponse.json({ error: 'לא ניתן לאמת את סוגי השיעורים' }, { status: 503 });
+      if (!current || !target) return NextResponse.json({ error: 'השיעור לא נמצא' }, { status: 404 });
+      let sourceCategory = courseCategory(current.selected_course);
+      if (current.group_id) {
+        const { data: currentGroup, error: currentGroupError } = await supabase.from('groups')
+          .select('lesson_type').eq('id', current.group_id).maybeSingle();
+        if (currentGroupError) return NextResponse.json({ error: 'לא ניתן לאמת את השיעור הקיים' }, { status: 503 });
+        if (sourceCategory !== 'individual') sourceCategory = lessonCategory(currentGroup?.lesson_type) || sourceCategory;
+      }
+      const targetCategory = lessonCategory(target.lesson_type);
+      if (!sourceCategory || !targetCategory || sourceCategory !== targetCategory) {
+        return NextResponse.json({ error: 'לא ניתן להחליף שיעור מסוג אחד בשיעור מסוג אחר. יש להשתמש בהוסף שיבוץ.' }, { status: 409 });
+      }
+    }
     if (body.scheduleMode === 'clear') {
       const { data: current, error: currentError } = await supabase
         .from('registrations')
@@ -188,23 +220,6 @@ export async function POST(request) {
         status: 'pending',
       },
     ]);
-
-    // ✅ תיקון 3: ביטול לפי שם + group_id ביחד
-    if (newStatus === 'בוטל') {
-      const { data: cancelledReg } = await supabase
-        .from('registrations')
-        .select('student_name, group_id')
-        .eq('id', id)
-        .single();
-
-      if (cancelledReg?.student_name && cancelledReg.group_id) {
-        await supabase
-          .from('students')
-          .update({ is_active: false, registration_status: 'בוטל' })
-          .eq('name', cancelledReg.student_name)
-          .eq('group_id', cancelledReg.group_id);
-      }
-    }
 
     if (groupId) {
       const { data: reg } = await supabase

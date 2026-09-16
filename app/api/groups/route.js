@@ -19,6 +19,9 @@ export async function POST(request) {
     if (!assigned_time) {
       return NextResponse.json({ error: 'יש לבחור שעה כדי ליצור שיעור' }, { status: 400 });
     }
+    if (Array.isArray(student_registration_ids) && student_registration_ids.length > 0) {
+      return NextResponse.json({ error: 'יש ליצור את הקבוצה תחילה ולהוסיף כל תלמיד/ה דרך הוסף שיבוץ. רישום קיים לא יוחלף בשיעור קבוצתי.' }, { status: 409 });
+    }
 
     const supabase = getSupabaseClient();
 
@@ -76,52 +79,6 @@ export async function POST(request) {
         ...(assigned_end_time ? { end_time: assigned_end_time } : {}),
       });
       if (schedErr) console.error('group_schedules insert error:', schedErr.message);
-    }
-
-    // Attach selected students to the new group
-    if (Array.isArray(student_registration_ids) && student_registration_ids.length > 0) {
-      let teacherName = null;
-      if (teacher_id != null) {
-        const { data: teacherRow, error: teacherErr } = await supabase
-          .from('teachers')
-          .select('name')
-          .eq('id', teacher_id)
-          .maybeSingle();
-        if (teacherErr) console.error('teachers lookup error:', teacherErr.message);
-        teacherName = teacherRow?.name || null;
-      }
-
-      const { data: regsToAttach, error: regsErr } = await supabase
-        .from('registrations')
-        .select('id, student_name, instruments, parent_phone, group_id')
-        .in('id', student_registration_ids);
-      if (regsErr) console.error('registrations fetch error:', regsErr.message);
-
-      for (const reg of (regsToAttach || [])) {
-        if (reg.group_id && reg.group_id !== data.id) {
-          const { error: deactivateErr } = await supabase
-            .from('students')
-            .update({ is_active: false })
-            .eq('group_id', reg.group_id)
-            .eq('name', reg.student_name);
-          if (deactivateErr) console.error('students deactivate error:', deactivateErr.message);
-        }
-
-        const { error: updateRegErr } = await supabase
-          .from('registrations')
-          .update({ group_id: data.id, teacher: teacherName, selected_course: data.name })
-          .eq('id', reg.id);
-        if (updateRegErr) console.error('registrations update error:', updateRegErr.message);
-
-        const { error: insertStudentErr } = await supabase.from('students').insert({
-          group_id: data.id,
-          name: reg.student_name,
-          instrument: Array.isArray(reg.instruments) ? reg.instruments[0] : reg.instruments || null,
-          parent_phone: reg.parent_phone || null,
-          is_active: true,
-        });
-        if (insertStudentErr) console.error('students insert error:', insertStudentErr.message);
-      }
     }
 
     return NextResponse.json({ data });

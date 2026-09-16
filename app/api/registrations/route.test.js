@@ -121,6 +121,7 @@ describe('PATCH /api/registrations', () => {
       registrations: [
         { error: null },
         { data: { student_name: 'דני כהן', group_id: 'g1' }, error: null },
+        { data: [], error: null },
       ],
       students: [{ error: null }],
     });
@@ -130,6 +131,20 @@ describe('PATCH /api/registrations', () => {
     const update = mockSupabase.calls.find(c => c.table === 'students');
     expect(update.eqCalls).toContainEqual(['group_id', 'g1']);
     expect(update.payload.is_active).toBe(false);
+  });
+
+  test('cancelled payment keeps attendance active when another registration uses the same group', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [
+        { error: null },
+        { data: { student_name: 'דני כהן', group_id: 'g1' }, error: null },
+        { data: [{ id: 'r2', status: 'שובץ', registration_status: 'Pending' }], error: null },
+      ],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+    const res = await PATCH(makeRequest({ id: 'r1', registration_status: 'Cancelled' }));
+    expect(res.status).toBe(200);
+    expect(mockSupabase.calls.some(c => c.table === 'students')).toBe(false);
   });
 
   test.each([true, false])('saves optional lesson requirements (%s) without changing assignments or payment', async (value) => {
