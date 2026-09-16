@@ -12,7 +12,7 @@ import { getLessonDuration } from '../lib/lessonDuration';
 import { getLessonTypeValue, computeGroupName, matchesGroupLabel } from '../lib/groupNaming';
 import { assignRowColors, downloadExcelFile, paymentStatusLabel } from '../lib/excelExport';
 import { filterRegistrations } from '../lib/registrationFilters';
-import { assignmentStatusLabel, needsAttention, isStudentHandled, missingStatusLabels } from '../lib/registrationWorkflow';
+import { assignmentStatusLabel, needsAttention, isStudentHandled, missingStatusLabels, registrationStudentStats } from '../lib/registrationWorkflow';
 import { groupStudentRows } from '../lib/groupStudentRows';
 import { labelsForCategories, mergeFixedLessonTypes } from '../lib/fixedLessonTypes';
 
@@ -67,7 +67,7 @@ function resolveAssignment(r, groups) {
 }
 
 function buildExportRows(rows, groups) {
-  const headers = ['תאריך', 'תלמיד/ה', 'הורה', 'טלפון', 'אימייל', 'סוג', 'כלים', 'סטטוס', 'תשלום', 'מורה', 'יום', 'שעה', 'הערות'];
+  const headers = ['תאריך', 'תלמיד/ה', 'הורה', 'טלפון', 'אימייל', 'סוג', 'שיעור', 'כלים', 'סטטוס', 'תשלום', 'מורה', 'יום', 'שעה', 'הערות'];
   const dataRows = rows.map(r => {
     const { day, time } = resolveAssignment(r, groups);
     return [
@@ -77,6 +77,7 @@ function buildExportRows(rows, groups) {
       r.parent_phone || '',
       r.parent_email || '',
       getTypeLabel(r),
+      r.selected_course || '',
       Array.isArray(r.instruments)
         ? (r.instruments.length > 0 ? r.instruments.join('; ') : (r.selected_course || ''))
         : (r.instruments || r.selected_course || ''),
@@ -664,10 +665,11 @@ export default function AdminTable({ view = 'registrations' }) {
   }
 
   const allGroups = useMemo(() => groupStudentRows(rows, groups), [rows, groups]);
+  const studentStats = useMemo(() => registrationStudentStats(allGroups), [allGroups]);
   const activeFilters = { search, status: filterStatus, instrument: filterInstrument, teacher: filterTeacher, payment: filterPayment };
   const viewGroups = allGroups.filter(g => isStudentHandled(g) === (view === 'handled'));
   const filteredGroups = viewGroups.filter(g => filterRegistrations(g.members, activeFilters).length > 0);
-  const filtered = filteredGroups.flatMap(g => filterRegistrations(g.members, activeFilters));
+  const filtered = filteredGroups.flatMap(g => g.members);
 
   if (loading) {
     return (
@@ -682,10 +684,10 @@ export default function AdminTable({ view = 'registrations' }) {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'סה"כ', value: rows.length, color: 'text-gray-800' },
-          { label: 'חדשים', value: rows.filter(r => r.status === 'חדש').length, color: 'text-blue-600' },
-          { label: 'בבדיקה', value: rows.filter(r => r.status === 'בבדיקה').length, color: 'text-yellow-600' },
-          { label: 'שובצו', value: rows.filter(r => r.status === 'שובץ').length, color: 'text-green-600' },
+          { label: 'תלמידים שנרשמו', value: studentStats.total, color: 'text-gray-800' },
+          { label: 'חדשים', value: studentStats.new, color: 'text-blue-600' },
+          { label: 'בבדיקה', value: studentStats.reviewing, color: 'text-yellow-600' },
+          { label: 'תלמידים ששובצו', value: studentStats.assigned, color: 'text-green-600' },
         ].map((stat) => (
           <div key={stat.label} className="card text-center py-3">
             <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
@@ -751,6 +753,9 @@ export default function AdminTable({ view = 'registrations' }) {
           <option value="Pending">{paymentStatusLabel('Pending')}</option>
           <option value="Cancelled">{paymentStatusLabel('Cancelled')}</option>
         </select>
+        <div className="flex min-h-12 shrink-0 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-4 text-sm font-bold text-blue-700" aria-live="polite">
+          {filteredGroups.length === 1 ? 'תוצאה אחת' : `${filteredGroups.length} תוצאות`}
+        </div>
       </div>
 
       {/* Table */}
@@ -832,6 +837,11 @@ export default function AdminTable({ view = 'registrations' }) {
                           );
                         })}
                       </div>
+                    )}
+                    {kind === 'individual' && categoryRows.length > 0 && (
+                      <button type="button" onClick={() => handleAddIndividual(contactRow)} disabled={addonSaving} className="mt-2 px-3 py-1 rounded-lg border border-purple-300 bg-white text-purple-700 text-xs font-semibold disabled:opacity-40">
+                        + הוסף שיעור פרטני נוסף
+                      </button>
                     )}
                     {kind !== 'individual' && <button type="button" onClick={() => setAddonPickerFor({ rowId: contactRow.id, kind, label: '' })} className="mt-2 px-3 py-1 rounded-lg border border-purple-300 bg-white text-purple-700 text-xs font-semibold">{contactRow[`${kind}_not_required`] ? 'שנה בחירה' : 'הוסף שיבוץ'}</button>}
                   </td>
@@ -1071,6 +1081,17 @@ export default function AdminTable({ view = 'registrations' }) {
                                   <p className="text-xs text-gray-400">לא נדרש</p>
                                 )}
 
+                                {section.kind === 'individual' && section.lessons.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAddIndividual(contactRow)}
+                                    disabled={addonSaving}
+                                    className="mt-2 text-xs px-3 py-1.5 rounded-lg border border-dashed border-purple-300 bg-white text-purple-700 hover:bg-purple-50 disabled:opacity-40 w-full"
+                                  >
+                                    + הוסף שיעור פרטני נוסף
+                                  </button>
+                                )}
+
                                 {!contactRow[`${section.kind}_not_required`] && addonPickerFor?.rowId === contactRow.id && addonPickerFor.kind === section.addonKind && (() => {
                                   const wantedTypes = addonPickerFor.kind === 'theory' ? ['theory'] : ['orchestra', 'choir'];
                                   const labelOptions = addonPickerFor.kind === 'theory'
@@ -1190,9 +1211,6 @@ export default function AdminTable({ view = 'registrations' }) {
           onClose={() => setAddonPickerFor(null)}
         />;
       })()}
-      <p className="text-xs text-gray-400 text-left">
-        מציג {filtered.length} מתוך {viewGroups.reduce((count, group) => count + group.members.length, 0)} רישומים בלשונית
-      </p>
     </div>
   );
 }

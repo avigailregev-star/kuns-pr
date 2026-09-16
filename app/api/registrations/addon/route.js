@@ -40,6 +40,7 @@ export async function POST(request) {
           ...source,
           selected_course: null,
           linked_registration_id: sourceId,
+          group_id: null,
           status: 'חדש',
         })
         .select('*')

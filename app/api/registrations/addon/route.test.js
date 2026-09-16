@@ -18,6 +18,7 @@ function makeRequest(body) {
 // Same queue-per-table mock pattern as app/api/groups/route.test.js.
 function createMockSupabase(responses) {
   const queues = {};
+  const inserts = [];
   for (const [table, list] of Object.entries(responses)) {
     queues[table] = [...list];
   }
@@ -30,7 +31,7 @@ function createMockSupabase(responses) {
     const self = {
       select: () => self,
       eq: () => self,
-      insert: () => self,
+      insert: data => { inserts.push({ table, data }); return self; },
       update: () => self,
       single: () => Promise.resolve(nextResponse(table)),
       maybeSingle: () => Promise.resolve(nextResponse(table)),
@@ -39,7 +40,7 @@ function createMockSupabase(responses) {
     return self;
   }
   const from = jest.fn(table => builder(table));
-  return { from };
+  return { from, inserts };
 }
 
 beforeEach(() => {
@@ -79,6 +80,24 @@ describe('POST /api/registrations/addon — validation', () => {
 
     const res = await POST(makeRequest({ sourceId: 'missing', groupId: 'g1' }));
     expect(res.status).toBe(404);
+  });
+});
+
+test('a second individual lesson starts without the source lesson group', async () => {
+  const mockSupabase = createMockSupabase({
+    registrations: [
+      { data: { ...sourceReg, group_id: 'existing-group', status: 'שובץ' }, error: null },
+      { data: { id: 'second-lesson' }, error: null },
+    ],
+  });
+  getSupabaseClient.mockReturnValue(mockSupabase);
+
+  const res = await POST(makeRequest({ sourceId: 'r1', kind: 'individual' }));
+
+  expect(res.status).toBe(200);
+  expect(mockSupabase.inserts[0]).toMatchObject({
+    table: 'registrations',
+    data: { linked_registration_id: 'r1', group_id: null, selected_course: null, status: 'חדש' },
   });
 });
 
