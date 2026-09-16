@@ -659,30 +659,38 @@ export default function TeachersTab() {
   const [groups, setGroups] = useState([]);
   const [fixedLessonTypes, setFixedLessonTypes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [showImport, setShowImport] = useState(false);
 
   useEffect(() => {
     fetchAll();
-    fetch('/api/sync-all', { method: 'POST' }).catch(() => {});
   }, []);
 
   async function fetchAll() {
     setLoading(true);
-    const [tRes, rRes, gRes, ftRes] = await Promise.all([
-      fetch('/api/teachers'),
-      fetch('/api/registrations'),
-      fetch('/api/groups'),
-      fetch('/api/fixed-lesson-types'),
-    ]);
-    const [tJson, rJson, gJson, ftJson] = await Promise.all([tRes.json(), rRes.json(), gRes.json(), ftRes.json()]);
-    setTeachers(tJson.data || []);
-    setRegistrations((rJson.data || []).filter(r => r.teacher));
-    setGroupsById(Object.fromEntries((gJson.data || []).map(g => [g.id, g])));
-    setGroups(gJson.data || []);
-    setFixedLessonTypes(mergeFixedLessonTypes(ftJson.data || []));
-    setLoading(false);
+    setLoadError('');
+    try {
+      const [tRes, rRes, gRes, ftRes] = await Promise.all([
+        fetch('/api/teachers'), fetch('/api/registrations'), fetch('/api/groups'), fetch('/api/fixed-lesson-types'),
+      ]);
+      const [tJson, rJson, gJson, ftJson] = await Promise.all([tRes.json(), rRes.json(), gRes.json(), ftRes.json()]);
+      if (![tRes, rRes, gRes, ftRes].every(res => res.ok) ||
+          !Array.isArray(tJson.data) || !Array.isArray(rJson.data) || !Array.isArray(gJson.data)) {
+        throw new Error('One or more teacher data requests failed');
+      }
+      setTeachers(tJson.data);
+      setRegistrations(rJson.data.filter(r => r.teacher));
+      setGroupsById(Object.fromEntries(gJson.data.map(g => [g.id, g])));
+      setGroups(gJson.data);
+      setFixedLessonTypes(mergeFixedLessonTypes(ftJson.data || []));
+    } catch (error) {
+      console.error(error);
+      setLoadError('לא ניתן לטעון את נתוני המורים כרגע. נסי לרענן את הדף.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function fetchTeachers() {
@@ -721,6 +729,7 @@ export default function TeachersTab() {
   }
 
   if (loading) return <p className="text-gray-500 text-sm">טוען מורים...</p>;
+  if (loadError && teachers.length === 0) return <div role="alert" className="text-red-800 bg-red-50 border border-red-200 rounded-xl p-4">{loadError} <button type="button" onClick={fetchAll} className="underline">נסה שוב</button></div>;
 
   const groupStudentCounts = {};
   for (const r of registrations) {
@@ -729,6 +738,7 @@ export default function TeachersTab() {
 
   return (
     <div className="space-y-4">
+      {loadError && <div role="alert" className="text-red-800 bg-red-50 border border-red-200 rounded-xl p-4">{loadError} <button type="button" onClick={fetchAll} className="underline">נסה שוב</button></div>}
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-bold text-gray-800">מורים</h2>
         <div className="flex gap-2">

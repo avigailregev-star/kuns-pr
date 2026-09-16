@@ -1,4 +1,4 @@
-import { PATCH, POST } from './route';
+import { DELETE, PATCH, POST } from './route';
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
@@ -37,6 +37,7 @@ function createMockSupabase(responses) {
       neq: () => self,
       in: () => self,
       insert: () => self,
+      delete: () => self,
       update: () => self,
       order: () => self,
       limit: () => self,
@@ -52,6 +53,18 @@ function createMockSupabase(responses) {
 
 beforeEach(() => {
   getServerSession.mockResolvedValue({ user: { name: 'admin' } });
+});
+
+describe('DELETE /api/groups', () => {
+  test('does not remove a group while a registration still points to it', async () => {
+    const mockSupabase = createMockSupabase({ registrations: [{ data: [{ id: 'r1' }], error: null }] });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+    const res = await DELETE(makeRequest({ id: 'g1' }));
+    expect(res.status).toBe(409);
+    expect(mockSupabase.from).toHaveBeenCalledWith('registrations');
+    expect(mockSupabase.from).not.toHaveBeenCalledWith('students');
+    expect(mockSupabase.from).not.toHaveBeenCalledWith('groups');
+  });
 });
 
 describe('POST /api/groups', () => {

@@ -143,17 +143,26 @@ export async function DELETE(request) {
 
     const supabase = getSupabaseClient();
 
-    // Clear group_id from registrations (FK constraint)
-    await supabase.from('registrations').update({ group_id: null }).eq('group_id', id);
+    // Never leave assigned registrations pointing at a removed group or silently
+    // strip their group link. Members must be unassigned one lesson at a time.
+    const { data: linked, error: linkedError } = await supabase
+      .from('registrations').select('id').eq('group_id', id).limit(1);
+    if (linkedError) return NextResponse.json({ error: 'לא ניתן לבדוק את תלמידי הקבוצה כרגע' }, { status: 503 });
+    if (linked?.length) return NextResponse.json({ error: 'יש להסיר תחילה את שיבוצי התלמידים מהקבוצה' }, { status: 409 });
 
-    // Delete students in this group
-    await supabase.from('students').delete().eq('group_id', id);
+    const { data: activeStudents, error: studentsError } = await supabase
+      .from('students').select('id').eq('group_id', id).eq('is_active', true).limit(1);
+    if (studentsError) return NextResponse.json({ error: 'לא ניתן לבדוק את חברי הקבוצה כרגע' }, { status: 503 });
+    if (activeStudents?.length) return NextResponse.json({ error: 'יש להסיר תחילה את התלמידים הפעילים מהקבוצה' }, { status: 409 });
 
-    // Delete lessons in this group (lessons_group_id_fkey)
-    await supabase.from('lessons').delete().eq('group_id', id);
+    const { error: studentDeleteError } = await supabase.from('students').delete().eq('group_id', id);
+    if (studentDeleteError) return NextResponse.json({ error: 'שגיאה במחיקת תלמידי הקבוצה הלא פעילים' }, { status: 500 });
 
-    // Delete group schedules
-    await supabase.from('group_schedules').delete().eq('group_id', id);
+    const { error: lessonsError } = await supabase.from('lessons').delete().eq('group_id', id);
+    if (lessonsError) return NextResponse.json({ error: 'שגיאה במחיקת שיעורי הקבוצה' }, { status: 500 });
+
+    const { error: schedulesError } = await supabase.from('group_schedules').delete().eq('group_id', id);
+    if (schedulesError) return NextResponse.json({ error: 'שגיאה במחיקת שעות הקבוצה' }, { status: 500 });
 
     // Delete the group
     const { error } = await supabase.from('groups').delete().eq('id', id);

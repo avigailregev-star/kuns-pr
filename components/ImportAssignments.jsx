@@ -2,10 +2,9 @@
 
 import { useState } from 'react';
 
-const EXAMPLE = `שם תלמיד,מורה,יום,שעה
-יוסי לוי,דנה כהן,ב,15:00
-שרה ישראלי,דנה כהן,ד,16:00
-מיכל אברהם,אבי לוי,ג,14:30`;
+const EXAMPLE = `שם תלמיד,מורה,יום,שעה,שם שיעור
+יוסי לוי,דנה כהן,ב,15:00,פרטני 45 דקות - יוסי לוי
+שרה ישראלי,דנה כהן,ד,16:00,פרטני 60 דקות - שרה ישראלי`;
 
 export default function ImportAssignments({ onDone }) {
   const [text, setText] = useState('');
@@ -24,14 +23,14 @@ export default function ImportAssignments({ onDone }) {
 
     for (const line of dataLines) {
       const parts = line.split(',').map(s => s.trim());
-      const [studentName, teacher, day, time] = parts;
+      const [studentName, teacher, day, time, selectedCourse] = parts;
       if (!studentName || !teacher) { failed.push(line); continue; }
 
       try {
         const res = await fetch('/api/registrations/import', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ studentName, teacher, assignedDay: day || '', assignedTime: time || '' }),
+          body: JSON.stringify({ studentName, teacher, assignedDay: day || '', assignedTime: time || '', selectedCourse: selectedCourse || '' }),
         });
         if (res.ok) success.push(studentName);
         else failed.push(studentName);
@@ -48,7 +47,7 @@ export default function ImportAssignments({ onDone }) {
     <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
       <div>
         <h3 className="font-semibold text-gray-800 mb-1">ייבוא שיבוצים מהשנה הקודמת</h3>
-        <p className="text-xs text-gray-500">הדבק/י שורות בפורמט: שם תלמיד, מורה, יום, שעה</p>
+        <p className="text-xs text-gray-500">הדבק/י שורות בפורמט: שם תלמיד, מורה, יום, שעה, שם שיעור. אם לתלמיד יש כמה שיעורים, שם השיעור חובה.</p>
       </div>
 
       <textarea
@@ -61,8 +60,8 @@ export default function ImportAssignments({ onDone }) {
 
       <div className="text-xs text-gray-400 bg-gray-50 p-2 rounded-lg" dir="rtl">
         <strong>דוגמה:</strong><br />
-        יוסי לוי,דנה כהן,ב,15:00<br />
-        שרה ישראלי,דנה כהן,ד,16:00
+        יוסי לוי,דנה כהן,ב,15:00,פרטני 45 דקות - יוסי לוי<br />
+        שרה ישראלי,דנה כהן,ד,16:00,פרטני 60 דקות - שרה ישראלי
       </div>
 
       {results && (

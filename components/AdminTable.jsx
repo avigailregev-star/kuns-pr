@@ -157,6 +157,7 @@ export default function AdminTable({ view = 'registrations' }) {
   const [groups, setGroups] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterInstrument, setFilterInstrument] = useState('');
@@ -181,6 +182,7 @@ export default function AdminTable({ view = 'registrations' }) {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const [regRes, groupsRes, teachersRes, fixedTypesRes] = await Promise.all([
         fetch('/api/registrations'),
@@ -194,21 +196,20 @@ export default function AdminTable({ view = 'registrations' }) {
         teachersRes.json(),
         fixedTypesRes.json(),
       ]);
+      if (![regRes, groupsRes, teachersRes, fixedTypesRes].every(res => res.ok) ||
+          !Array.isArray(regJson.data) || !Array.isArray(groupsJson.data) || !Array.isArray(teachersJson.data)) {
+        throw new Error('One or more administration data requests failed');
+      }
       const teachersList = teachersJson.data || [];
+      const groupsList = groupsJson.data || [];
       const regs = (regJson.data || []).map(row => {
         if (row.teacher) return row;
-        const byCourse = teachersList.find(t =>
-          Array.isArray(t.courses) && t.courses.includes(row.selected_course)
-        );
-        if (byCourse) return { ...row, teacher: byCourse.name };
-        const scored = teachersList
-          .map(t => {
-            const parts = (t.name?.split(' ') ?? []).filter(p => p && (row.selected_course || '').includes(p));
-            return { t, score: parts.length };
-          })
-          .filter(x => x.score > 0)
-          .sort((a, b) => b.score - a.score);
-        return scored[0]?.t ? { ...row, teacher: scored[0].t.name } : row;
+        const linkedGroup = groupsList.find(g => String(g.id) === String(row.group_id));
+        if (linkedGroup) {
+          const groupTeacher = teachersList.find(t => String(t.id) === String(linkedGroup.teacher_id));
+          return groupTeacher ? { ...row, teacher: groupTeacher.name } : row;
+        }
+        return row;
       });
       setRows(regs);
       setGroups(groupsJson.data || []);
@@ -234,6 +235,7 @@ export default function AdminTable({ view = 'registrations' }) {
       });
     } catch (e) {
       console.error(e);
+      setLoadError('לא ניתן לטעון את נתוני התלמידים כרגע. הרשימה אינה מעודכנת; נסי לרענן את הדף.');
     } finally {
       setLoading(false);
     }
@@ -652,8 +654,13 @@ export default function AdminTable({ view = 'registrations' }) {
     );
   }
 
+  if (loadError && rows.length === 0) {
+    return <div role="alert" className="rounded-xl bg-red-50 border border-red-200 p-4 text-red-800">{loadError} <button type="button" onClick={fetchData} className="underline font-semibold">נסה שוב</button></div>;
+  }
+
   return (
     <div className="space-y-4">
+      {loadError && <div role="alert" className="rounded-xl bg-red-50 border border-red-200 p-4 text-red-800">{loadError} <button type="button" onClick={fetchData} className="underline font-semibold">נסה שוב</button></div>}
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {[
