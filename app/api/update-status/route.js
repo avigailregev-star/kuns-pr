@@ -189,17 +189,12 @@ export async function POST(request) {
         .eq('id', id)
         .single();
 
-      if (cancelledReg?.student_name) {
-        let query = supabase
+      if (cancelledReg?.student_name && cancelledReg.group_id) {
+        await supabase
           .from('students')
           .update({ is_active: false, registration_status: 'בוטל' })
-          .eq('name', cancelledReg.student_name);
-
-        if (cancelledReg.group_id) {
-          query = query.eq('group_id', cancelledReg.group_id);
-        }
-
-        await query;
+          .eq('name', cancelledReg.student_name)
+          .eq('group_id', cancelledReg.group_id);
       }
     }
 

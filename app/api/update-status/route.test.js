@@ -38,27 +38,63 @@ function createMockSupabase(responses) {
     if (!q || q.length === 0) throw new Error(`No mock response queued for table "${table}"`);
     return q.shift();
   }
+  const calls = [];
   function builder(table) {
+    const record = { table, eqCalls: [] };
     const self = {
       select: () => self,
-      eq: () => self,
+      eq: (...args) => { record.eqCalls.push(args); return self; },
       neq: () => self,
       in: () => self,
       insert: () => self,
-      update: () => self,
+      update: payload => { record.method = 'update'; record.payload = payload; return self; },
       order: () => self,
-      single: () => Promise.resolve(nextResponse(table)),
-      maybeSingle: () => Promise.resolve(nextResponse(table)),
-      then: (resolve, reject) => Promise.resolve(nextResponse(table)).then(resolve, reject),
+      single: () => { calls.push(record); return Promise.resolve(nextResponse(table)); },
+      maybeSingle: () => { calls.push(record); return Promise.resolve(nextResponse(table)); },
+      then: (resolve, reject) => { calls.push(record); return Promise.resolve(nextResponse(table)).then(resolve, reject); },
     };
     return self;
   }
   const from = jest.fn(table => builder(table));
-  return { from };
+  return { from, calls };
 }
 
 beforeEach(() => {
   getServerSession.mockResolvedValue({ user: { name: 'admin' } });
+});
+
+describe('POST /api/update-status — cancellation attendance scope', () => {
+  test('does not deactivate another lesson when the cancelled registration has no group', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [
+        { error: null },
+        { data: { id: 'r1', student_name: 'דני כהן', group_id: null }, error: null },
+        { data: { student_name: 'דני כהן', group_id: null }, error: null },
+      ],
+      message_log: [{ error: null }],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+    const res = await POST(makeRequest({ id: 'r1', newStatus: 'בוטל' }));
+    expect(res.status).toBe(200);
+    expect(mockSupabase.calls.some(c => c.table === 'students' && c.method === 'update')).toBe(false);
+  });
+
+  test('deactivates only the cancelled registration group', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [
+        { error: null },
+        { data: { id: 'r1', student_name: 'דני כהן', group_id: 'g1' }, error: null },
+        { data: { student_name: 'דני כהן', group_id: 'g1' }, error: null },
+      ],
+      message_log: [{ error: null }],
+      students: [{ error: null }],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+    const res = await POST(makeRequest({ id: 'r1', newStatus: 'בוטל' }));
+    expect(res.status).toBe(200);
+    const update = mockSupabase.calls.find(c => c.table === 'students' && c.method === 'update');
+    expect(update.eqCalls).toContainEqual(['group_id', 'g1']);
+  });
 });
 
 describe('POST /api/update-status — schedule conflict check', () => {

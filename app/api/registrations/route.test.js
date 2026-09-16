@@ -114,6 +114,33 @@ describe('DELETE /api/registrations', () => {
 });
 
 describe('PATCH /api/registrations', () => {
+  test('cancelled payment with no group leaves other attendance lessons active', async () => {
+    const mockSupabase = createMockSupabase({ registrations: [
+      { error: null },
+      { data: { student_name: 'דני כהן', group_id: null }, error: null },
+    ] });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+    const res = await PATCH(makeRequest({ id: 'r1', registration_status: 'Cancelled' }));
+    expect(res.status).toBe(200);
+    expect(mockSupabase.calls.some(c => c.table === 'students')).toBe(false);
+  });
+
+  test('cancelled payment only deactivates its linked attendance group', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [
+        { error: null },
+        { data: { student_name: 'דני כהן', group_id: 'g1' }, error: null },
+      ],
+      students: [{ error: null }],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+    const res = await PATCH(makeRequest({ id: 'r1', registration_status: 'Cancelled' }));
+    expect(res.status).toBe(200);
+    const update = mockSupabase.calls.find(c => c.table === 'students');
+    expect(update.eqCalls).toContainEqual(['group_id', 'g1']);
+    expect(update.payload.is_active).toBe(false);
+  });
+
   test.each([true, false])('saves optional lesson requirements (%s) without changing assignments or payment', async (value) => {
     const mockSupabase = createMockSupabase({ registrations: [{ error: null }] });
     getSupabaseClient.mockReturnValue(mockSupabase);

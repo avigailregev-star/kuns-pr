@@ -119,11 +119,12 @@ export async function PATCH(request) {
       const hebrewStatus = PAYMENT_STATUS_MAP[registration_status];
       if (hebrewStatus) {
         const { data: reg } = await supabase
-          .from('registrations').select('student_name').eq('id', id).single();
-        if (reg?.student_name) {
+          .from('registrations').select('student_name, group_id').eq('id', id).single();
+        if (reg?.student_name && reg.group_id) {
           const studentUpdate = { registration_status: hebrewStatus };
           if (registration_status === 'Cancelled') studentUpdate.is_active = false;
-          await supabase.from('students').update(studentUpdate).eq('name', reg.student_name);
+          await supabase.from('students').update(studentUpdate)
+            .eq('name', reg.student_name).eq('group_id', reg.group_id);
         }
       }
     }
