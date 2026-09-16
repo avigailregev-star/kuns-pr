@@ -32,6 +32,12 @@ export async function DELETE(request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'אינך מורשה' }, { status: 401 });
 
+  // Freeze permanent deletion until the database history trigger is installed
+  // and explicitly enabled. Clearing an assignment still preserves its row.
+  if (process.env.REGISTRATION_DELETE_AUDIT_READY !== 'true') {
+    return NextResponse.json({ error: 'מחיקת שיעורים מושהית זמנית עד הפעלת יומן שינויים. ניתן לבטל שיבוץ בלי למחוק את הרישום.' }, { status: 503 });
+  }
+
   try {
     const { id, ids } = await request.json();
     if (ids !== undefined || typeof id !== 'string' || !id) {

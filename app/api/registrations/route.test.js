@@ -55,6 +55,17 @@ beforeEach(() => {
 });
 
 describe('DELETE /api/registrations', () => {
+  beforeEach(() => { process.env.REGISTRATION_DELETE_AUDIT_READY = 'true'; });
+  afterEach(() => { delete process.env.REGISTRATION_DELETE_AUDIT_READY; });
+
+  test('temporarily blocks permanent deletion until the history trigger is active', async () => {
+    delete process.env.REGISTRATION_DELETE_AUDIT_READY;
+    getSupabaseClient.mockClear();
+    const res = await DELETE(makeRequest({ id: 'r1' }));
+    expect(res.status).toBe(503);
+    expect(getSupabaseClient).not.toHaveBeenCalled();
+  });
+
   test('rejects deleting multiple lessons in one request', async () => {
     getSupabaseClient.mockClear();
     const res = await DELETE(makeRequest({ ids: ['r1', 'r2'] }));
