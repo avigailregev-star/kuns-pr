@@ -30,10 +30,11 @@ function createMockSupabase(responses) {
   }
   const calls = [];
   function builder(table) {
-    const record = { table, eqCalls: [] };
+    const record = { table, eqCalls: [], inCalls: [] };
     const self = {
       select: () => self,
       eq: (...args) => { record.eqCalls.push(args); return self; },
+      in: (...args) => { record.inCalls.push(args); return self; },
       delete: () => { record.method = 'delete'; return self; },
       update: (payload) => { record.method = 'update'; record.payload = payload; return self; },
       maybeSingle: () => { calls.push({ ...record, eqCalls: [...record.eqCalls] }); return Promise.resolve(nextResponse(table)); },
@@ -57,8 +58,9 @@ describe('DELETE /api/registrations', () => {
   test('scopes the students deactivation to the deleted registration\'s own group_id', async () => {
     const mockSupabase = createMockSupabase({
       registrations: [
-        { data: { student_name: 'דני כהן', group_id: 'g1' }, error: null }, // fetch before delete
+        { data: [{ student_name: 'דני כהן', group_id: 'g1' }], error: null }, // fetch before delete
         { error: null }, // delete
+        { data: [], error: null }, // no other registration in the same group
       ],
       students: [
         { data: [{ id: 1, name: 'דני כהן' }], error: null }, // deactivate
@@ -80,14 +82,11 @@ describe('DELETE /api/registrations', () => {
     expect(mockSupabase.calls.some(c => c.table === 'message_log')).toBe(false);
   });
 
-  test('falls back to a name-only match when the deleted registration has no group_id', async () => {
+  test('does not deactivate other lessons when the deleted registration has no group_id', async () => {
     const mockSupabase = createMockSupabase({
       registrations: [
-        { data: { student_name: 'דני כהן', group_id: null }, error: null }, // fetch before delete
+        { data: [{ student_name: 'דני כהן', group_id: null }], error: null }, // fetch before delete
         { error: null }, // delete
-      ],
-      students: [
-        { data: [], error: null }, // deactivate
       ],
     });
     getSupabaseClient.mockReturnValue(mockSupabase);
@@ -95,10 +94,22 @@ describe('DELETE /api/registrations', () => {
     const res = await DELETE(makeRequest({ id: 'r1' }));
     expect(res.status).toBe(200);
 
-    const studentUpdate = mockSupabase.calls.find(c => c.table === 'students' && c.method === 'update');
-    expect(studentUpdate).toBeDefined();
-    expect(studentUpdate.eqCalls).toContainEqual(['name', 'דני כהן']);
-    expect(studentUpdate.eqCalls.some(c => c[0] === 'group_id')).toBe(false);
+    expect(mockSupabase.calls.some(c => c.table === 'students' && c.method === 'update')).toBe(false);
+  });
+
+  test('keeps attendance active when another registration still uses the same group', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [
+        { data: [{ student_name: 'דני כהן', group_id: 'g1' }], error: null },
+        { error: null },
+        { data: [{ id: 'r2', status: 'שובץ', registration_status: 'Pending' }], error: null },
+      ],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+
+    const res = await DELETE(makeRequest({ id: 'r1' }));
+    expect(res.status).toBe(200);
+    expect(mockSupabase.calls.some(c => c.table === 'students' && c.method === 'update')).toBe(false);
   });
 });
 

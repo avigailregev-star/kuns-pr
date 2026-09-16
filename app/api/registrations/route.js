@@ -51,17 +51,24 @@ export async function DELETE(request) {
 
     // הסר תלמיד מאפליקציית הנוכחות
     for (const reg of registrations || []) {
-      if (!reg?.student_name) continue;
-      // מחיקה לפי שם + group_id ביחד, כדי לא להשבית את התלמיד/ה בקבוצות אחרות
-      // (למשל תוספת אנסמבל/תיאוריה) כשמוחקים רק רישום אחד שלהם
-      let query = supabase
+      // A registration without a group has no attendance membership to remove.
+      // Matching by name alone would deactivate every other lesson for this student.
+      if (!reg?.student_name || !reg.group_id) continue;
+      const { data: remaining, error: remainingError } = await supabase
+        .from('registrations')
+        .select('id, status, registration_status')
+        .eq('student_name', reg.student_name)
+        .eq('group_id', reg.group_id);
+      if (remainingError) {
+        console.error('student deactivate lookup:', remainingError.message);
+        continue;
+      }
+      if (remaining?.some(row => row.status !== 'בוטל' && row.registration_status !== 'Cancelled')) continue;
+      const query = supabase
         .from('students')
         .update({ is_active: false })
-        .eq('name', reg.student_name.trim());
-
-      if (reg.group_id) {
-        query = query.eq('group_id', reg.group_id);
-      }
+        .eq('name', reg.student_name.trim())
+        .eq('group_id', reg.group_id);
 
       const { data: updated, error: studErr } = await query.select('id, name');
       console.log('student deactivate:', JSON.stringify(updated), studErr?.message);
