@@ -45,7 +45,6 @@ BEGIN
 END;
 $$;
 
-DROP TRIGGER IF EXISTS registration_history_trigger ON registrations;
 CREATE TRIGGER registration_history_trigger
 BEFORE UPDATE OR DELETE ON registrations
 FOR EACH ROW EXECUTE FUNCTION archive_registration_change();
