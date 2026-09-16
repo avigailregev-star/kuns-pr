@@ -5,6 +5,8 @@ import { getSupabaseClient } from '../../../../lib/supabase';
 import { matchesGroupLabel, groupBaseLabel } from '../../../../lib/groupNaming';
 
 const EXCLUDED_STATUSES = ['נדחה', 'בוטל'];
+const normalizeName = value => (value || '').replace(/\s+/g, ' ').trim();
+const normalizePhone = value => (value || '').replace(/\D/g, '');
 
 export async function POST(request) {
   const session = await getServerSession(authOptions);
@@ -62,12 +64,33 @@ export async function POST(request) {
     }
 
     if (String(source.group_id || '') === String(group.id)) {
-      return NextResponse.json({ error: 'לתלמיד/ה כבר יש שיבוץ פעיל בקבוצה זו' }, { status: 409 });
+      return NextResponse.json({ error: 'לתלמיד/ה כבר יש רישום בקבוצה זו' }, { status: 409 });
     }
 
     const allowedTypes = kind === 'theory' ? ['theory'] : kind === 'ensemble' ? ['orchestra', 'choir'] : ['theory', 'orchestra', 'choir'];
     if (!allowedTypes.includes(group.lesson_type)) {
       return NextResponse.json({ error: 'יש לבחור שיבוץ מהתחום המתאים בלבד' }, { status: 400 });
+    }
+
+    // The source can be a different lesson. Check every registration already
+    // linked to this group before creating another row for the same student.
+    const { data: groupRegistrations, error: groupRegsErr } = await supabase
+      .from('registrations')
+      .select('id, student_name, parent_phone')
+      .eq('group_id', group.id);
+    if (groupRegsErr) {
+      console.error('addon: group registrations check error', groupRegsErr.message);
+      return NextResponse.json({ error: 'לא ניתן לבדוק רישומים קיימים בקבוצה כרגע' }, { status: 503 });
+    }
+    const sourceName = normalizeName(source.student_name);
+    const sourcePhone = normalizePhone(source.parent_phone);
+    const alreadyRegistered = (groupRegistrations || []).some(row => {
+      if (!sourceName || normalizeName(row.student_name) !== sourceName) return false;
+      const rowPhone = normalizePhone(row.parent_phone);
+      return !sourcePhone || !rowPhone || sourcePhone === rowPhone;
+    });
+    if (alreadyRegistered) {
+      return NextResponse.json({ error: 'לתלמיד/ה כבר יש רישום בקבוצה זו. יש לערוך את הרישום הקיים במקום להוסיף חדש.' }, { status: 409 });
     }
 
     if (group.lesson_type === 'theory') {

@@ -16,7 +16,7 @@ function makeRequest(body) {
 }
 
 // Same queue-per-table mock pattern as app/api/groups/route.test.js.
-function createMockSupabase(responses) {
+function createMockSupabase(responses, groupRegistrationResponse = { data: [], error: null }) {
   const queues = {};
   const inserts = [];
   const updates = [];
@@ -29,14 +29,15 @@ function createMockSupabase(responses) {
     return q.shift();
   }
   function builder(table) {
+    let groupRegistrationLookup = false;
     const self = {
       select: () => self,
-      eq: () => self,
+      eq: field => { if (table === 'registrations' && field === 'group_id') groupRegistrationLookup = true; return self; },
       insert: data => { inserts.push({ table, data }); return self; },
       update: data => { updates.push({ table, data }); return self; },
       single: () => Promise.resolve(nextResponse(table)),
       maybeSingle: () => Promise.resolve(nextResponse(table)),
-      then: (resolve, reject) => Promise.resolve(nextResponse(table)).then(resolve, reject),
+      then: (resolve, reject) => Promise.resolve(groupRegistrationLookup ? groupRegistrationResponse : nextResponse(table)).then(resolve, reject),
     };
     return self;
   }
@@ -103,6 +104,32 @@ test('a second individual lesson starts without the source lesson group', async 
 });
 
 describe('POST /api/registrations/addon — attach to an existing group', () => {
+  test('rejects a second registration for the same student and group even when the source is another lesson', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [{ data: { ...sourceReg, group_id: 'ensemble-group' }, error: null }],
+      groups: [{ data: { id: 'g1', name: 'תורת המקאם ב׳', lesson_type: 'theory', group_schedules: [] }, error: null }],
+    }, { data: [{ id: 'existing-theory', student_name: ' דני  כהן ', parent_phone: '0507654321' }], error: null });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+
+    const res = await POST(makeRequest({ sourceId: 'r1', groupId: 'g1', kind: 'theory' }));
+
+    expect(res.status).toBe(409);
+    expect(mockSupabase.inserts).toHaveLength(0);
+  });
+
+  test('stops adding a group when the existing-registration check fails', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [{ data: sourceReg, error: null }],
+      groups: [{ data: { id: 'g1', name: 'תזמורת כלי קשת', lesson_type: 'orchestra', group_schedules: [] }, error: null }],
+    }, { data: null, error: { message: 'unavailable' } });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+
+    const res = await POST(makeRequest({ sourceId: 'r1', groupId: 'g1', kind: 'ensemble' }));
+
+    expect(res.status).toBe(503);
+    expect(mockSupabase.inserts).toHaveLength(0);
+  });
+
   test('reactivates an existing inactive attendance member when assigning the group again', async () => {
     const mockSupabase = createMockSupabase({
       registrations: [
@@ -244,7 +271,7 @@ describe('POST /api/registrations/addon — per-label duplicate guard', () => {
     expect(res.status).toBe(409);
 
     // No insert was attempted.
-    expect(mockSupabase.from.mock.calls.map(c => c[0])).toEqual(['registrations', 'groups', 'registrations']);
+    expect(mockSupabase.from.mock.calls.map(c => c[0])).toEqual(['registrations', 'groups', 'registrations', 'registrations']);
   });
 
   test('allows joining a different theory label even with an existing active theory add-on', async () => {

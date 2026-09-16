@@ -21,6 +21,9 @@ function courseCategory(course) {
   return null;
 }
 
+const normalizeName = value => (value || '').replace(/\s+/g, ' ').trim();
+const normalizePhone = value => (value || '').replace(/\D/g, '');
+
 export async function POST(request) {
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -38,7 +41,7 @@ export async function POST(request) {
     const supabase = getSupabaseClient();
     if (groupId && body.scheduleMode !== 'clear' && body.scheduleMode !== 'individual') {
       const [{ data: current, error: currentError }, { data: target, error: targetError }] = await Promise.all([
-        supabase.from('registrations').select('id, selected_course, group_id').eq('id', id).maybeSingle(),
+        supabase.from('registrations').select('id, student_name, parent_phone, selected_course, group_id').eq('id', id).maybeSingle(),
         supabase.from('groups').select('id, lesson_type').eq('id', groupId).maybeSingle(),
       ]);
       if (currentError || targetError) return NextResponse.json({ error: 'לא ניתן לאמת את סוגי השיעורים' }, { status: 503 });
@@ -53,6 +56,20 @@ export async function POST(request) {
       const targetCategory = lessonCategory(target.lesson_type);
       if (!sourceCategory || !targetCategory || sourceCategory !== targetCategory) {
         return NextResponse.json({ error: 'לא ניתן להחליף שיעור מסוג אחד בשיעור מסוג אחר. יש להשתמש בהוסף שיבוץ.' }, { status: 409 });
+      }
+      const { data: groupRegistrations, error: groupRegsError } = await supabase
+        .from('registrations')
+        .select('id, student_name, parent_phone')
+        .eq('group_id', groupId);
+      if (groupRegsError) return NextResponse.json({ error: 'לא ניתן לבדוק רישומים קיימים בקבוצה כרגע' }, { status: 503 });
+      const currentName = normalizeName(current.student_name);
+      const currentPhone = normalizePhone(current.parent_phone);
+      if ((groupRegistrations || []).some(row => {
+        if (row.id === id || !currentName || normalizeName(row.student_name) !== currentName) return false;
+        const rowPhone = normalizePhone(row.parent_phone);
+        return !currentPhone || !rowPhone || currentPhone === rowPhone;
+      })) {
+        return NextResponse.json({ error: 'לתלמיד/ה כבר יש רישום בקבוצה זו. יש לערוך את הרישום הקיים במקום להוסיף חדש.' }, { status: 409 });
       }
     }
     if (body.scheduleMode === 'clear') {

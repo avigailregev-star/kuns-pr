@@ -76,6 +76,22 @@ describe('POST /api/update-status — lesson identity', () => {
     expect(res.status).toBe(409);
     expect(mockSupabase.calls.some(c => c.table === 'registrations' && c.method === 'update')).toBe(false);
   });
+
+  test('refuses to assign a second row of the same student to an existing group', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [
+        { data: { id: 'r1', student_name: 'הלל נמן', parent_phone: '050-1234567', selected_course: 'מנגינות שנה ג׳', group_id: null }, error: null },
+        { data: [{ id: 'r2', student_name: 'הלל  נמן ', parent_phone: '0501234567' }], error: null },
+      ],
+      groups: [{ data: { id: 'ensemble', lesson_type: 'orchestra' }, error: null }],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+
+    const res = await POST(makeRequest({ id: 'r1', newStatus: 'שובץ', groupId: 'ensemble' }));
+
+    expect(res.status).toBe(409);
+    expect(mockSupabase.calls.some(c => c.table === 'registrations' && c.method === 'update')).toBe(false);
+  });
 });
 
 describe('POST /api/update-status — clear one assignment', () => {
