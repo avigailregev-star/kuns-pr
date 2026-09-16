@@ -4,7 +4,7 @@ import StatusSelect from './StatusSelect';
 import { needsAttention } from '../lib/registrationWorkflow';
 import { categoryGroups, WEEK_DAYS } from '../lib/teacherSchedulePicker';
 
-export default function AssignmentPanel({ row, kind = 'individual', teachers, groups, updateStatus, updatePaymentStatus, clearAssignment, updatingIds, savedIds, onSave, onShowSchedule }) {
+export default function AssignmentPanel({ row, kind = 'individual', teachers, groups, updateStatus, updatePaymentStatus, clearAssignment, deleteRegistration, updatingIds, savedIds, onSave, onShowSchedule }) {
   const [showOptions, setShowOptions] = useState(false);
   const [groupId, setGroupId] = useState(row.group_id || '');
   const fixed = kind === 'theory' || kind === 'ensemble';
@@ -42,6 +42,7 @@ export default function AssignmentPanel({ row, kind = 'individual', teachers, gr
             <button type="button" onClick={() => updatePaymentStatus(row.id, 'Cancelled')} disabled={saving || row.registration_status === 'Cancelled'} className="text-xs px-3 py-2 rounded-lg bg-gray-100 disabled:opacity-40">בטל</button>
           </>}
           <button type="button" onClick={() => clearAssignment(row.id, row.student_name)} disabled={saving || row.status !== 'שובץ'} className="text-xs px-3 py-2 rounded-lg text-red-700 disabled:opacity-40">בטל שיבוץ</button>
+          {kind !== 'individual' && <button type="button" onClick={() => deleteRegistration(row)} disabled={saving} className="text-xs px-3 py-2 rounded-lg border border-red-200 text-red-700 disabled:opacity-40">מחק שיעור</button>}
         </div>
       </details>
       {savedIds.includes(row.id) && <p className="text-sm text-green-700 mt-2">נשמר בהצלחה</p>}

@@ -5,7 +5,7 @@ import { getLessonDuration } from '../lib/lessonDuration';
 import { LESSON_TYPE_OPTIONS } from '../lib/groupNaming';
 import { teacherCalendar, slotProblem, minutes, clockTime, dayNumber, WEEK_DAYS, PRIVATE_TYPES } from '../lib/teacherSchedulePicker';
 
-export default function TeacherSchedulePicker({ row, rows, teachers, groups, onClose, onSave, onDelete, onUpdateStatus, onUpdatePaymentStatus }) {
+export default function TeacherSchedulePicker({ row, rows, teachers, groups, onClose, onSave, onClear, onDelete, onUpdateStatus, onUpdatePaymentStatus }) {
   const linked = groups.find(g => String(g.id) === String(row.group_id));
   const schedule = linked?.group_schedules?.find(s => s.start_time);
   const initialStart = row.assigned_time || schedule?.start_time || '';
@@ -39,6 +39,15 @@ export default function TeacherSchedulePicker({ row, rows, teachers, groups, onC
     setDeleting(true); setError('');
     try {
       if (await onDelete(row)) onClose();
+      else setError('מחיקת השיעור לא הושלמה. נסי שוב.');
+    } catch { setError('שגיאה במחיקת השיעור. נסי שוב.'); }
+    finally { setDeleting(false); }
+  }
+  async function clearLesson() {
+    if (saving || deleting || !onClear) return;
+    setDeleting(true); setError('');
+    try {
+      if (await onClear(row)) onClose();
       else setError('ביטול השיבוץ לא הושלם. נסי שוב.');
     } catch { setError('שגיאה בביטול השיבוץ. נסי שוב.'); }
     finally { setDeleting(false); }
@@ -132,7 +141,8 @@ export default function TeacherSchedulePicker({ row, rows, teachers, groups, onC
       <div className="p-4 flex flex-wrap items-center justify-between gap-4">
         <div aria-live="polite" className={`text-sm ${problem || error ? 'text-red-700' : 'text-gray-700'}`}>{error || problem || `זמין — יום ${WEEK_DAYS[draft.assigned_day]} ${clockTime(start)}–${clockTime(end)}`}</div>
         <div className="flex items-center gap-2">
-          {onDelete && <button type="button" onClick={removeLesson} disabled={saving || deleting} className="px-4 py-2 rounded-lg border border-red-300 bg-white text-red-700 font-semibold disabled:opacity-40">{deleting ? 'מבטל…' : 'בטל שיבוץ'}</button>}
+          {onClear && <button type="button" onClick={clearLesson} disabled={saving || deleting || row.status !== 'שובץ'} className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-semibold disabled:opacity-40">בטל שיבוץ</button>}
+          {onDelete && <button type="button" onClick={removeLesson} disabled={saving || deleting} className="px-4 py-2 rounded-lg border border-red-300 bg-white text-red-700 font-semibold disabled:opacity-40">{deleting ? 'מוחק…' : 'מחק שיעור'}</button>}
           <button type="button" onClick={save} disabled={!!problem || saving || deleting} className="btn-primary px-8 disabled:opacity-40 shrink-0">{saving ? 'שומר…' : 'שמור'}</button>
         </div>
       </div>

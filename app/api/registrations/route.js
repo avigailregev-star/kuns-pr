@@ -31,9 +31,48 @@ export async function GET() {
 export async function DELETE(request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'אינך מורשה' }, { status: 401 });
-  // Suspend irreversible deletion until registrations can be archived and audited.
-  // This protects even older open browser tabs that still send DELETE requests.
-  return NextResponse.json({ error: 'מחיקת רישומים הושבתה כדי להגן על נתוני התלמידים. ניתן לבטל שיבוץ בלי למחוק רישום.' }, { status: 409 });
+
+  try {
+    const { id, ids } = await request.json();
+    if (ids !== undefined || typeof id !== 'string' || !id) {
+      return NextResponse.json({ error: 'יש לבחור שיעור אחד למחיקה' }, { status: 400 });
+    }
+
+    const supabase = getSupabaseClient();
+    const { data: reg, error: lookupError } = await supabase
+      .from('registrations')
+      .select('id, student_name, group_id')
+      .eq('id', id)
+      .maybeSingle();
+    if (lookupError) return NextResponse.json({ error: 'שגיאה באיתור השיעור' }, { status: 500 });
+    if (!reg) return NextResponse.json({ error: 'השיעור לא נמצא' }, { status: 404 });
+
+    const { error: deleteError } = await supabase.from('registrations').delete().eq('id', reg.id);
+    if (deleteError) return NextResponse.json({ error: 'מחיקת השיעור לא הושלמה' }, { status: 500 });
+
+    // Attendance is shared by group. Keep it active when another registration
+    // for this student still uses the same group. Never update by name alone.
+    if (reg.group_id && reg.student_name) {
+      const { data: remaining, error: remainingError } = await supabase
+        .from('registrations')
+        .select('id, status, registration_status')
+        .eq('student_name', reg.student_name)
+        .eq('group_id', reg.group_id);
+      if (remainingError) console.error('Delete lesson attendance check:', remainingError.message);
+      else if (!remaining?.some(row => row.status === 'שובץ' && row.registration_status !== 'Cancelled')) {
+        const { error: attendanceError } = await supabase.from('students')
+          .update({ is_active: false })
+          .eq('name', reg.student_name.trim())
+          .eq('group_id', reg.group_id);
+        if (attendanceError) console.error('Delete lesson attendance update:', attendanceError.message);
+      }
+    }
+
+    return NextResponse.json({ success: true, deletedId: reg.id });
+  } catch (err) {
+    console.error('Delete lesson error:', err);
+    return NextResponse.json({ error: 'שגיאת שרת פנימית' }, { status: 500 });
+  }
 }
 
 export async function PATCH(request) {

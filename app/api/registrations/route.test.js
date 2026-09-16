@@ -55,11 +55,52 @@ beforeEach(() => {
 });
 
 describe('DELETE /api/registrations', () => {
-  test.each([{ id: 'r1' }, { ids: ['r1', 'r2'] }])('blocks irreversible deletion for %j', async body => {
+  test('rejects deleting multiple lessons in one request', async () => {
     getSupabaseClient.mockClear();
-    const res = await DELETE(makeRequest(body));
-    expect(res.status).toBe(409);
+    const res = await DELETE(makeRequest({ ids: ['r1', 'r2'] }));
+    expect(res.status).toBe(400);
     expect(getSupabaseClient).not.toHaveBeenCalled();
+  });
+
+  test('deletes only the selected lesson and leaves other groups untouched', async () => {
+    const mockSupabase = createMockSupabase({ registrations: [
+      { data: { id: 'r1', student_name: 'דני כהן', group_id: 'g-theory' }, error: null },
+      { error: null },
+      { data: [], error: null },
+    ], students: [{ error: null }] });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+    const res = await DELETE(makeRequest({ id: 'r1' }));
+    expect(res.status).toBe(200);
+    const deletes = mockSupabase.calls.filter(c => c.method === 'delete');
+    expect(deletes).toHaveLength(1);
+    expect(deletes[0].table).toBe('registrations');
+    expect(deletes[0].eqCalls).toEqual([['id', 'r1']]);
+    const attendance = mockSupabase.calls.find(c => c.table === 'students' && c.method === 'update');
+    expect(attendance.eqCalls).toContainEqual(['group_id', 'g-theory']);
+    expect(attendance.eqCalls).toContainEqual(['name', 'דני כהן']);
+  });
+
+  test('a theory lesson without a group cannot deactivate private or ensemble lessons', async () => {
+    const mockSupabase = createMockSupabase({ registrations: [
+      { data: { id: 'r1', student_name: 'דני כהן', group_id: null }, error: null },
+      { error: null },
+    ] });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+    const res = await DELETE(makeRequest({ id: 'r1' }));
+    expect(res.status).toBe(200);
+    expect(mockSupabase.calls.some(c => c.table === 'students')).toBe(false);
+  });
+
+  test('keeps group attendance active when another lesson still uses that group', async () => {
+    const mockSupabase = createMockSupabase({ registrations: [
+      { data: { id: 'r1', student_name: 'דני כהן', group_id: 'g1' }, error: null },
+      { error: null },
+      { data: [{ id: 'r2', status: 'שובץ', registration_status: 'Pending' }], error: null },
+    ] });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+    const res = await DELETE(makeRequest({ id: 'r1' }));
+    expect(res.status).toBe(200);
+    expect(mockSupabase.calls.some(c => c.table === 'students')).toBe(false);
   });
 });
 
