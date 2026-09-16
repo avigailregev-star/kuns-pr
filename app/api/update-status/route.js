@@ -44,8 +44,16 @@ export async function POST(request) {
       if (clearError) return NextResponse.json({ error: 'ביטול השיבוץ לא נשמר' }, { status: 500 });
 
       if (current.group_id && current.student_name) {
-        await supabase.from('students').update({ is_active: false })
-          .eq('group_id', current.group_id).eq('name', current.student_name.trim());
+        const { data: remaining, error: remainingError } = await supabase
+          .from('registrations')
+          .select('id, status, registration_status')
+          .eq('group_id', current.group_id)
+          .eq('student_name', current.student_name);
+        if (remainingError) console.error('Clear assignment attendance check:', remainingError.message);
+        else if (!remaining?.some(reg => reg.status === 'שובץ' && reg.registration_status !== 'Cancelled')) {
+          await supabase.from('students').update({ is_active: false })
+            .eq('group_id', current.group_id).eq('name', current.student_name.trim());
+        }
       }
       return NextResponse.json({ success: true });
     }

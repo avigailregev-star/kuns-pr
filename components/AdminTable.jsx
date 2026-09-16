@@ -591,58 +591,6 @@ export default function AdminTable({ view = 'registrations' }) {
     }
   }
 
-  async function deleteRegistration(row) {
-    if (!confirm(`למחוק את השיעור "${row.selected_course || 'ללא שם'}" של ${row.student_name}?\nהשיעורים האחרים ופרטי התלמיד/ה יישמרו.`)) return false;
-    setUpdatingIds(prev => [...prev, row.id]);
-    try {
-      const res = await fetch('/api/registrations', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: row.id }),
-      });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        alert(json.error || 'מחיקת השיעור לא הושלמה — נסי שוב');
-        return false;
-      }
-      setRows(prev => prev.filter(item => item.id !== row.id));
-      await fetchData();
-      return true;
-    } catch {
-      alert('שגיאת רשת — בדקי את החיבור ונסי שוב');
-      return false;
-    } finally {
-      setUpdatingIds(prev => prev.filter(id => id !== row.id));
-    }
-  }
-
-  async function deleteStudentRecord(group) {
-    const name = group.contactRow.student_name || 'התלמיד/ה';
-    if (!confirm(`למחוק את ${name} לגמרי מהמערכת?\nכל הרישומים, השיעורים והשיבוצים של תלמיד/ה זה יימחקו. לא ניתן לבטל פעולה זו.`)) return false;
-    const ids = group.members.map(member => member.id);
-    setUpdatingIds(prev => [...prev, ...ids]);
-    try {
-      const res = await fetch('/api/registrations', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids }),
-      });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        alert(json.error || 'מחיקת הרשומה לא הושלמה — נסי שוב');
-        return false;
-      }
-      setRows(prev => prev.filter(row => !ids.includes(row.id)));
-      await fetchData();
-      return true;
-    } catch {
-      alert('שגיאת רשת — בדקי את החיבור ונסי שוב');
-      return false;
-    } finally {
-      setUpdatingIds(prev => prev.filter(id => !ids.includes(id)));
-    }
-  }
-
   async function markAttendedOpenDay(id) {
     setUpdatingIds(prev => [...prev, id]);
     try {
@@ -830,8 +778,8 @@ export default function AdminTable({ view = 'registrations' }) {
                               </div>
                             )}
                           </button>
-                          {kind !== 'individual' && (
-                            <button type="button" onClick={() => deleteRegistration(r)} disabled={updatingIds.includes(r.id)} className="absolute left-2 top-2 text-red-600 hover:text-red-800 disabled:opacity-40" aria-label={`מחק ${r.selected_course || emptyLabel}`}>מחק</button>
+                          {kind !== 'individual' && r.status === 'שובץ' && (
+                            <button type="button" onClick={() => clearAssignment(r.id, r.student_name)} disabled={updatingIds.includes(r.id)} className="absolute left-2 top-2 text-red-600 hover:text-red-800 disabled:opacity-40" aria-label={`בטל שיבוץ ${r.selected_course || emptyLabel}`}>בטל שיבוץ</button>
                           )}
                           </div>
                           );
@@ -1053,7 +1001,6 @@ export default function AdminTable({ view = 'registrations' }) {
                                         updateStatus={updateStatus}
                                         updatePaymentStatus={updatePaymentStatus}
                                         clearAssignment={clearAssignment}
-                                        deleteRegistration={deleteRegistration}
                                         updatingIds={updatingIds}
                                         savedIds={savedIds}
                                         onSave={(draft, options) => saveAssignment(draft || lesson, options)}
@@ -1189,11 +1136,7 @@ export default function AdminTable({ view = 'registrations' }) {
         </div>
       </div>
 
-      {scheduleRow && <TeacherSchedulePicker key={scheduleRow.id} row={scheduleRow} rows={rows} teachers={teachers} groups={groups} onClose={() => setScheduleRow(null)} onSave={draft => saveAssignment(draft, { individualSchedule: true })} onDelete={deleteRegistration} onDeleteStudent={async lesson => {
-        const studentGroup = allGroups.find(group => group.members.some(member => member.id === lesson.id));
-        if (!studentGroup) return false;
-        return deleteStudentRecord(studentGroup);
-      }} onUpdateStatus={updateStatus} onUpdatePaymentStatus={updatePaymentStatus} />}
+      {scheduleRow && <TeacherSchedulePicker key={scheduleRow.id} row={scheduleRow} rows={rows} teachers={teachers} groups={groups} onClose={() => setScheduleRow(null)} onSave={draft => saveAssignment(draft, { individualSchedule: true })} onDelete={lesson => clearAssignment(lesson.id, lesson.student_name)} onUpdateStatus={updateStatus} onUpdatePaymentStatus={updatePaymentStatus} />}
       {addonPickerFor && (() => {
         const pickerRow = rows.find(row => row.id === addonPickerFor.rowId);
         if (!pickerRow) return null;

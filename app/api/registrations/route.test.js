@@ -55,61 +55,11 @@ beforeEach(() => {
 });
 
 describe('DELETE /api/registrations', () => {
-  test('scopes the students deactivation to the deleted registration\'s own group_id', async () => {
-    const mockSupabase = createMockSupabase({
-      registrations: [
-        { data: [{ student_name: 'דני כהן', group_id: 'g1' }], error: null }, // fetch before delete
-        { error: null }, // delete
-        { data: [], error: null }, // no other registration in the same group
-      ],
-      students: [
-        { data: [{ id: 1, name: 'דני כהן' }], error: null }, // deactivate
-      ],
-    });
-    getSupabaseClient.mockReturnValue(mockSupabase);
-
-    const res = await DELETE(makeRequest({ id: 'r1' }));
-    expect(res.status).toBe(200);
-
-    const studentUpdate = mockSupabase.calls.find(c => c.table === 'students' && c.method === 'update');
-    expect(studentUpdate).toBeDefined();
-    expect(studentUpdate.payload).toEqual({ is_active: false });
-    expect(studentUpdate.eqCalls).toContainEqual(['name', 'דני כהן']);
-    expect(studentUpdate.eqCalls).toContainEqual(['group_id', 'g1']);
-
-    // message_log is never touched manually — its ON DELETE CASCADE on
-    // registration_id handles cleanup atomically as part of the registrations delete.
-    expect(mockSupabase.calls.some(c => c.table === 'message_log')).toBe(false);
-  });
-
-  test('does not deactivate other lessons when the deleted registration has no group_id', async () => {
-    const mockSupabase = createMockSupabase({
-      registrations: [
-        { data: [{ student_name: 'דני כהן', group_id: null }], error: null }, // fetch before delete
-        { error: null }, // delete
-      ],
-    });
-    getSupabaseClient.mockReturnValue(mockSupabase);
-
-    const res = await DELETE(makeRequest({ id: 'r1' }));
-    expect(res.status).toBe(200);
-
-    expect(mockSupabase.calls.some(c => c.table === 'students' && c.method === 'update')).toBe(false);
-  });
-
-  test('keeps attendance active when another registration still uses the same group', async () => {
-    const mockSupabase = createMockSupabase({
-      registrations: [
-        { data: [{ student_name: 'דני כהן', group_id: 'g1' }], error: null },
-        { error: null },
-        { data: [{ id: 'r2', status: 'שובץ', registration_status: 'Pending' }], error: null },
-      ],
-    });
-    getSupabaseClient.mockReturnValue(mockSupabase);
-
-    const res = await DELETE(makeRequest({ id: 'r1' }));
-    expect(res.status).toBe(200);
-    expect(mockSupabase.calls.some(c => c.table === 'students' && c.method === 'update')).toBe(false);
+  test.each([{ id: 'r1' }, { ids: ['r1', 'r2'] }])('blocks irreversible deletion for %j', async body => {
+    getSupabaseClient.mockClear();
+    const res = await DELETE(makeRequest(body));
+    expect(res.status).toBe(409);
+    expect(getSupabaseClient).not.toHaveBeenCalled();
   });
 });
 

@@ -63,6 +63,37 @@ beforeEach(() => {
   getServerSession.mockResolvedValue({ user: { name: 'admin' } });
 });
 
+describe('POST /api/update-status — clear one assignment', () => {
+  test('keeps another registration in the same group active', async () => {
+    const mockSupabase = createMockSupabase({ registrations: [
+      { data: { id: 'r1', student_name: 'דני כהן', group_id: 'g1' }, error: null },
+      { error: null },
+      { data: [{ id: 'r2', status: 'שובץ', registration_status: 'Pending' }], error: null },
+    ] });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+    const res = await POST(makeRequest({ id: 'r1', newStatus: 'חדש', scheduleMode: 'clear' }));
+    expect(res.status).toBe(200);
+    expect(mockSupabase.calls.some(c => c.table === 'students' && c.method === 'update')).toBe(false);
+  });
+
+  test('deactivates attendance only in the cleared registration group', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [
+        { data: { id: 'r1', student_name: 'דני כהן', group_id: 'g1' }, error: null },
+        { error: null },
+        { data: [], error: null },
+      ],
+      students: [{ error: null }],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+    const res = await POST(makeRequest({ id: 'r1', newStatus: 'חדש', scheduleMode: 'clear' }));
+    expect(res.status).toBe(200);
+    const update = mockSupabase.calls.find(c => c.table === 'students' && c.method === 'update');
+    expect(update.eqCalls).toContainEqual(['group_id', 'g1']);
+    expect(update.eqCalls).toContainEqual(['name', 'דני כהן']);
+  });
+});
+
 describe('POST /api/update-status — cancellation attendance scope', () => {
   test('does not deactivate another lesson when the cancelled registration has no group', async () => {
     const mockSupabase = createMockSupabase({

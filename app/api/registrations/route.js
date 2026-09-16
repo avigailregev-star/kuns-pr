@@ -31,53 +31,9 @@ export async function GET() {
 export async function DELETE(request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'אינך מורשה' }, { status: 401 });
-
-  try {
-    const { id, ids } = await request.json();
-    const registrationIds = Array.isArray(ids) ? [...new Set(ids.filter(Boolean))] : (id ? [id] : []);
-    if (registrationIds.length === 0) return NextResponse.json({ error: 'מזהה חסר' }, { status: 400 });
-
-    const supabase = getSupabaseClient();
-
-    // Keep the attendance references before deleting the registrations.
-    const { data: registrations, error: lookupError } = await supabase
-      .from('registrations').select('student_name, group_id').in('id', registrationIds);
-    if (lookupError) return NextResponse.json({ error: 'שגיאה באיתור הרשומה' }, { status: 500 });
-
-    // message_log.registration_id has ON DELETE CASCADE — deleting the
-    // registration removes its message_log rows automatically, atomically.
-    const { error } = await supabase.from('registrations').delete().in('id', registrationIds);
-    if (error) return NextResponse.json({ error: 'שגיאה במחיקה' }, { status: 500 });
-
-    // הסר תלמיד מאפליקציית הנוכחות
-    for (const reg of registrations || []) {
-      // A registration without a group has no attendance membership to remove.
-      // Matching by name alone would deactivate every other lesson for this student.
-      if (!reg?.student_name || !reg.group_id) continue;
-      const { data: remaining, error: remainingError } = await supabase
-        .from('registrations')
-        .select('id, status, registration_status')
-        .eq('student_name', reg.student_name)
-        .eq('group_id', reg.group_id);
-      if (remainingError) {
-        console.error('student deactivate lookup:', remainingError.message);
-        continue;
-      }
-      if (remaining?.some(row => row.status !== 'בוטל' && row.registration_status !== 'Cancelled')) continue;
-      const query = supabase
-        .from('students')
-        .update({ is_active: false })
-        .eq('name', reg.student_name.trim())
-        .eq('group_id', reg.group_id);
-
-      const { data: updated, error: studErr } = await query.select('id, name');
-      console.log('student deactivate:', JSON.stringify(updated), studErr?.message);
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    return NextResponse.json({ error: 'שגיאת שרת פנימית' }, { status: 500 });
-  }
+  // Suspend irreversible deletion until registrations can be archived and audited.
+  // This protects even older open browser tabs that still send DELETE requests.
+  return NextResponse.json({ error: 'מחיקת רישומים הושבתה כדי להגן על נתוני התלמידים. ניתן לבטל שיבוץ בלי למחוק רישום.' }, { status: 409 });
 }
 
 export async function PATCH(request) {

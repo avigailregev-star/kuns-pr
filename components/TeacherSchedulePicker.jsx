@@ -5,7 +5,7 @@ import { getLessonDuration } from '../lib/lessonDuration';
 import { LESSON_TYPE_OPTIONS } from '../lib/groupNaming';
 import { teacherCalendar, slotProblem, minutes, clockTime, dayNumber, WEEK_DAYS, PRIVATE_TYPES } from '../lib/teacherSchedulePicker';
 
-export default function TeacherSchedulePicker({ row, rows, teachers, groups, onClose, onSave, onDelete, onDeleteStudent, onUpdateStatus, onUpdatePaymentStatus }) {
+export default function TeacherSchedulePicker({ row, rows, teachers, groups, onClose, onSave, onDelete, onUpdateStatus, onUpdatePaymentStatus }) {
   const linked = groups.find(g => String(g.id) === String(row.group_id));
   const schedule = linked?.group_schedules?.find(s => s.start_time);
   const initialStart = row.assigned_time || schedule?.start_time || '';
@@ -14,7 +14,6 @@ export default function TeacherSchedulePicker({ row, rows, teachers, groups, onC
   const [draft, setDraft] = useState({ ...row, assigned_day: dayNumber(row.assigned_day ?? schedule?.day_of_week), assigned_time: initialStart, assigned_end_time: initialEnd });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [deletingStudent, setDeletingStudent] = useState(false);
   const [updatingAction, setUpdatingAction] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState(row.registration_status || 'Pending');
   const [error, setError] = useState('');
@@ -40,18 +39,9 @@ export default function TeacherSchedulePicker({ row, rows, teachers, groups, onC
     setDeleting(true); setError('');
     try {
       if (await onDelete(row)) onClose();
-      else setError('מחיקת השיעור לא הושלמה. נסי שוב.');
-    } catch { setError('שגיאה במחיקת השיעור. נסי שוב.'); }
+      else setError('ביטול השיבוץ לא הושלם. נסי שוב.');
+    } catch { setError('שגיאה בביטול השיבוץ. נסי שוב.'); }
     finally { setDeleting(false); }
-  }
-  async function removeStudent() {
-    if (saving || deleting || deletingStudent || !onDeleteStudent) return;
-    setDeletingStudent(true); setError('');
-    try {
-      if (await onDeleteStudent(row)) onClose();
-      else setError('מחיקת התלמיד/ה מהמערכת לא הושלמה. נסי שוב.');
-    } catch { setError('שגיאה במחיקת התלמיד/ה מהמערכת. נסי שוב.'); }
-    finally { setDeletingStudent(false); }
   }
   async function changeStatus(value) {
     if (!onUpdateStatus || updatingAction) return;
@@ -73,7 +63,7 @@ export default function TeacherSchedulePicker({ row, rows, teachers, groups, onC
     <dialog ref={dialog} onCancel={e => { if (saving) e.preventDefault(); else onClose(); }} dir="rtl" className="w-[96vw] max-w-7xl max-h-[94vh] rounded-2xl p-0 shadow-2xl backdrop:bg-black/40">
       <div className="p-4 border-b flex justify-between items-center">
         <div><h2 className="text-xl font-bold">מערכת השעות של {draft.teacher || 'המורה'}</h2><p className="text-sm text-gray-500">{row.student_name} · בחירת שיבוץ</p></div>
-        <button type="button" disabled={saving || deleting || deletingStudent} onClick={onClose} aria-label="סגור מערכת שעות" className="px-3 py-2 rounded-lg border">סגור ×</button>
+        <button type="button" disabled={saving || deleting} onClick={onClose} aria-label="סגור מערכת שעות" className="px-3 py-2 rounded-lg border">סגור ×</button>
       </div>
       <div className="mx-4 mt-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
         <h3 className="font-semibold text-gray-800 mb-2">פרטי תלמיד/ה</h3>
@@ -142,8 +132,7 @@ export default function TeacherSchedulePicker({ row, rows, teachers, groups, onC
       <div className="p-4 flex flex-wrap items-center justify-between gap-4">
         <div aria-live="polite" className={`text-sm ${problem || error ? 'text-red-700' : 'text-gray-700'}`}>{error || problem || `זמין — יום ${WEEK_DAYS[draft.assigned_day]} ${clockTime(start)}–${clockTime(end)}`}</div>
         <div className="flex items-center gap-2">
-          {onDelete && <button type="button" onClick={removeLesson} disabled={saving || deleting} className="px-4 py-2 rounded-lg border border-red-300 bg-white text-red-700 font-semibold disabled:opacity-40">{deleting ? 'מוחק…' : '🗑 מחק שיעור'}</button>}
-          {onDeleteStudent && <button type="button" onClick={removeStudent} disabled={saving || deleting || deletingStudent} className="px-4 py-2 rounded-lg border border-red-700 bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-40">{deletingStudent ? 'מוחק…' : '🗑 מחק תלמיד מהמערכת'}</button>}
+          {onDelete && <button type="button" onClick={removeLesson} disabled={saving || deleting} className="px-4 py-2 rounded-lg border border-red-300 bg-white text-red-700 font-semibold disabled:opacity-40">{deleting ? 'מבטל…' : 'בטל שיבוץ'}</button>}
           <button type="button" onClick={save} disabled={!!problem || saving || deleting} className="btn-primary px-8 disabled:opacity-40 shrink-0">{saving ? 'שומר…' : 'שמור'}</button>
         </div>
       </div>
