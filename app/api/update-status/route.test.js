@@ -64,6 +64,19 @@ beforeEach(() => {
 });
 
 describe('POST /api/update-status — lesson identity', () => {
+  test('refuses to replace a melodies private lesson with an ensemble', async () => {
+    const mockSupabase = createMockSupabase({
+      registrations: [{ data: { id: 'melodies', selected_course: "מנגינות שנה ב' - עוד", group_id: null }, error: null }],
+      groups: [{ data: { id: 'ensemble', lesson_type: 'orchestra' }, error: null }],
+    });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+
+    const res = await POST(makeRequest({ id: 'melodies', newStatus: 'שובץ', groupId: 'ensemble' }));
+
+    expect(res.status).toBe(409);
+    expect(mockSupabase.calls.some(c => c.table === 'registrations' && c.method === 'update')).toBe(false);
+  });
+
   test('refuses to replace a private lesson with a theory assignment', async () => {
     const mockSupabase = createMockSupabase({
       registrations: [{ data: { id: 'private', selected_course: 'פרטני 45 דקות', group_id: null }, error: null }],

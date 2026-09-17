@@ -3,6 +3,7 @@ import { useState } from 'react';
 import StatusSelect from './StatusSelect';
 import { needsAttention } from '../lib/registrationWorkflow';
 import { categoryGroups, WEEK_DAYS } from '../lib/teacherSchedulePicker';
+import { displayLessonTitle } from '../lib/lessonDisplay';
 
 export default function AssignmentPanel({ row, kind = 'individual', teachers, groups, updateStatus, updatePaymentStatus, clearAssignment, deleteRegistration, updatingIds, savedIds, onSave, onShowSchedule }) {
   const [showOptions, setShowOptions] = useState(false);
@@ -20,7 +21,7 @@ export default function AssignmentPanel({ row, kind = 'individual', teachers, gr
   return (
     <div className={`border rounded-xl p-3 ${needsAttention(row) ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><div className="font-semibold text-gray-800">{row.teacher || 'לא נבחר מורה'}</div><div className="text-sm text-gray-600">{row.selected_course || 'שיעור פרטני'}</div></div>
+        <div><div className="font-semibold text-gray-800">{row.teacher || 'לא נבחר מורה'}</div><div className="text-sm text-gray-600">{displayLessonTitle(row.selected_course, teachers.map(t => t.name)) || 'שיעור פרטני'}</div></div>
         <button type="button" onClick={() => fixed ? setShowOptions(v => !v) : onShowSchedule(row)} className="border border-purple-300 text-purple-700 bg-white rounded-lg px-4 py-2 text-sm font-semibold">{fixed ? 'הוסף שיבוץ' : 'הצג'}</button>
       </div>
       {fixed && showOptions && <div className="mt-3 space-y-2">

@@ -15,9 +15,10 @@ import { filterRegistrations } from '../lib/registrationFilters';
 import { assignmentStatusLabel, needsAttention, isStudentHandled, missingStatusLabels, registrationStudentStats } from '../lib/registrationWorkflow';
 import { groupStudentRows } from '../lib/groupStudentRows';
 import { labelsForCategories, mergeFixedLessonTypes } from '../lib/fixedLessonTypes';
+import { displayLessonTitle } from '../lib/lessonDisplay';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
-const INDIVIDUAL_LESSON_TYPES = new Set(['individual_45', 'individual_60', 'melodies_individual']);
+const INDIVIDUAL_LESSON_TYPES = new Set(['individual_45', 'individual_60', 'melodies_individual', 'melodies_group']);
 const LOCKED_ASSIGNMENT_STATUSES = ['נדחה', 'בוטל', 'רשימת המתנה'];
 
 function timeToMins(t) {
@@ -539,6 +540,9 @@ export default function AdminTable({ view = 'registrations' }) {
   }
 
   async function handleAddIndividual(row) {
+    const studentGroup = groupStudentRows(rows, groups).find(group => group.members.some(member => member.id === row.id));
+    if (studentGroup?.categories.individual.some(lesson => lesson.status === 'שובץ') &&
+        !confirm('כבר יש לתלמיד/ה שיעור פרטני משובץ. ליצור שיעור פרטני נוסף?')) return;
     setAddonSaving(true);
     try {
       const res = await fetch('/api/registrations/addon', {
@@ -797,7 +801,7 @@ export default function AdminTable({ view = 'registrations' }) {
                           <div key={r.id} className="relative">
                           <button type="button" onClick={kind === 'individual' ? () => setScheduleRow(r) : undefined} className={`block w-full text-right text-xs border rounded-lg px-2 py-1.5 ${kind !== 'individual' ? 'pl-14' : ''} ${categoryNeedsAttention ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-100'} ${kind === 'individual' ? 'cursor-pointer hover:border-purple-400 hover:shadow-sm focus:ring-2 focus:ring-purple-300' : ''}`}>
                             <div className="font-semibold text-gray-800">{r.teacher || 'לא נבחר מורה'}</div>
-                            <div className="font-medium text-gray-600">{r.selected_course || emptyLabel}</div>
+                            <div className="font-medium text-gray-600">{displayLessonTitle(r.selected_course, teacherNames) || emptyLabel}</div>
                             {r.teacher && displayDay != null && (
                               <div className="text-green-700">
                                 יום {DAY_NAMES[displayDay]}

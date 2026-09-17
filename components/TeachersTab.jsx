@@ -9,7 +9,7 @@ import { getLessonDuration } from '../lib/lessonDuration';
 
 const DAY_NAMES_TEACHER = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const HEBREW_TO_NUM = { 'א': 0, 'ב': 1, 'ג': 2, 'ד': 3, 'ה': 4, 'ו': 5, 'ז': 6 };
-const PRIVATE_GROUP_TYPES = new Set(['individual_45', 'individual_60', 'melodies_individual']);
+const PRIVATE_GROUP_TYPES = new Set(['individual_45', 'individual_60', 'melodies_individual', 'melodies_group']);
 function formatDayTeacher(assignedDay) {
   if (assignedDay == null || assignedDay === '') return null;
   const num = Number(assignedDay);
@@ -42,7 +42,7 @@ function getEffectiveSchedule(s, groupsById) {
 // attendance sync, but that group has no independent schedule of its own —
 // only a real shared group (theory/choir/orchestra/etc) can supply a time on
 // the student's behalf.
-const INDIVIDUAL_LESSON_TYPES_TEACHER = new Set(['individual_45', 'individual_60', 'melodies_individual']);
+const INDIVIDUAL_LESSON_TYPES_TEACHER = PRIVATE_GROUP_TYPES;
 function hasSharedGroupSchedule(s, groupsById) {
   const group = s.group_id != null ? groupsById[s.group_id] : null;
   if (!group || INDIVIDUAL_LESSON_TYPES_TEACHER.has(group.lesson_type)) return false;

@@ -33,7 +33,7 @@ export async function POST(request) {
         .eq('teacher_id', teacher_id);
 
       const toM = t => { const [h, m] = t.split(':').map(Number); return h * 60 + (m || 0); };
-      const ltDur = lt => (lt === 'individual_45' || lt === 'melodies_individual') ? 45 : 60;
+      const ltDur = lt => (lt === 'individual_45' || lt === 'melodies_individual' || lt === 'melodies_group') ? 45 : 60;
       const newStart = toM(assigned_time);
       const newEnd = assigned_end_time ? toM(assigned_end_time) : newStart + ltDur(lesson_type);
       const dayNum = Number(assigned_day);
@@ -167,7 +167,7 @@ export async function PATCH(request) {
       for (const schedule of (other.group_schedules || [])) {
         if (Number(schedule.day_of_week) !== Number(assigned_day) || !schedule.start_time) continue;
         const otherStart = toMins(schedule.start_time);
-        const otherDuration = ['individual_45', 'melodies_individual'].includes(other.lesson_type) ? 45 : 60;
+        const otherDuration = ['individual_45', 'melodies_individual', 'melodies_group'].includes(other.lesson_type) ? 45 : 60;
         const otherEnd = schedule.end_time ? toMins(schedule.end_time) : otherStart + otherDuration;
         if (start < otherEnd && otherStart < end) {
           return NextResponse.json({ error: `חפיפה עם שיעור קיים בשעה ${schedule.start_time.slice(0, 5)}` }, { status: 409 });

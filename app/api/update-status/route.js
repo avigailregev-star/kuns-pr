@@ -9,15 +9,15 @@ import { getLessonDuration } from '../../../lib/lessonDuration';
 import { saveIndividualSchedule } from '../../../lib/saveIndividualSchedule';
 
 const lessonCategory = type => type === 'theory' ? 'theory'
-  : ['orchestra', 'choir', 'melodies_group', 'group'].includes(type) ? 'group'
-  : ['individual_45', 'individual_60', 'melodies_individual', 'elite_duet'].includes(type) ? 'individual'
+  : ['orchestra', 'choir', 'group'].includes(type) ? 'group'
+  : ['individual_45', 'individual_60', 'melodies_individual', 'melodies_group', 'elite_duet'].includes(type) ? 'individual'
   : null;
 
 function courseCategory(course) {
   if (!course) return null;
-  if (/פרטני|45 דקות|60 דקות|45 דק|60 דק/.test(course)) return 'individual';
+  if (/פרטני|45 דקות|60 דקות|45 דק|60 דק|מנגינות/.test(course)) return 'individual';
   if (/ת[יא]אוריה|פיתוח קשב|קומפוזיציה|פיתוח שמיעה|קצב לכולם/.test(course)) return 'theory';
-  if (/אנסמבל|הרכב|תזמורת|מקהלה|מנגינות/.test(course)) return 'group';
+  if (/אנסמבל|הרכב|תזמורת|מקהלה/.test(course)) return 'group';
   return null;
 }
 
