@@ -56,7 +56,9 @@ function getTypeLabel(row) {
 // (a row can have its own day but still be missing its own time, or vice versa).
 function resolveAssignment(r, groups) {
   const ownDay = r.assigned_day != null && r.assigned_day !== '' ? Number(r.assigned_day) : null;
-  const linkedGroup = r.group_id ? groups.find(g => String(g.id) === String(r.group_id)) : null;
+  // A stale group link on an unassigned row must not supply a false day/time.
+  const linkedGroup = r.status === 'שובץ' && r.group_id
+    ? groups.find(g => String(g.id) === String(r.group_id)) : null;
   const groupScheds = (linkedGroup?.group_schedules || [])
     .filter(s => s.start_time)
     .sort((a, b) => a.day_of_week - b.day_of_week);

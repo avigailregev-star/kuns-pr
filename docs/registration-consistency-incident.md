@@ -20,4 +20,6 @@
 
 The 2026-09-17 scan covered 357 registration rows and found: one title containing a different teacher's name, one blank individual lesson, one registration pointing to a missing group, and three registration/group title mismatches. These are review candidates, not automatically correctable records. No other student's data was changed during the scan.
 
+Follow-up review found that an unassigned melodies registration was incorrectly linked to its student's theory group. That link was removed while preserving the real theory registration. Legacy melodies titles now take precedence over a contradictory group type in the dashboard, and unassigned rows no longer borrow a linked group's schedule. The remaining missing-group link and unrelated title differences require separate review.
+
 Before correcting a candidate, confirm the intended teacher, day, time and lesson with the administrator; then update only the specific row/group and recheck siblings. For any deletion, take a recoverable snapshot and verify every related assignment afterward. Never use a direct database delete as a workaround for the application guard.
