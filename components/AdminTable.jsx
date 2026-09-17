@@ -768,7 +768,7 @@ export default function AdminTable({ view = 'registrations' }) {
                   const notRequired = kind !== 'individual' && contactRow[`${kind}_not_required`] === true;
                   return (
                   <td className="px-4 py-3">
-                    {notRequired ? (
+                    {notRequired && categoryRows.length === 0 ? (
                       <span className="inline-block text-xs rounded-lg border px-2 py-1.5 bg-gray-50 border-gray-200 text-gray-600">✓ לא נדרש</span>
                     ) : categoryRows.length === 0 ? (
                       kind === 'individual' ? (
@@ -787,9 +787,12 @@ export default function AdminTable({ view = 'registrations' }) {
                           const { day: displayDay, time: displayTime } = resolveAssignment(r, groups);
                           const hasAssignment = !!r.teacher && displayDay != null && !!displayTime;
                           const missingLabels = missingStatusLabels(r, hasAssignment).filter(label => kind === 'individual' || label !== 'לא שולם');
-                          const categoryNeedsAttention = kind === 'individual'
+                          if (r.status === 'שובץ' && !hasAssignment && r.registration_status !== 'Cancelled') {
+                            missingLabels.push('חסרים פרטי שיבוץ');
+                          }
+                          const categoryNeedsAttention = (r.status === 'שובץ' && !hasAssignment && r.registration_status !== 'Cancelled') || (kind === 'individual'
                             ? needsAttention(r, hasAssignment)
-                            : r.status !== 'שובץ' && r.status !== 'בוטל' && r.registration_status !== 'Cancelled';
+                            : r.status !== 'שובץ' && r.status !== 'בוטל' && r.registration_status !== 'Cancelled');
                           return (
                           <div key={r.id} className="relative">
                           <button type="button" onClick={kind === 'individual' ? () => setScheduleRow(r) : undefined} className={`block w-full text-right text-xs border rounded-lg px-2 py-1.5 ${kind !== 'individual' ? 'pl-14' : ''} ${categoryNeedsAttention ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-100'} ${kind === 'individual' ? 'cursor-pointer hover:border-purple-400 hover:shadow-sm focus:ring-2 focus:ring-purple-300' : ''}`}>
