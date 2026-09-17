@@ -53,6 +53,19 @@ export async function DELETE(request) {
     if (lookupError) return NextResponse.json({ error: 'שגיאה באיתור השיעור' }, { status: 500 });
     if (!reg) return NextResponse.json({ error: 'השיעור לא נמצא' }, { status: 404 });
 
+    // A linked lesson survives in the database when its source is deleted,
+    // but its student grouping can change. Require that link to be corrected
+    // first so deleting one lesson cannot make another appear to disappear.
+    const { data: linkedLessons, error: linkedError } = await supabase
+      .from('registrations')
+      .select('id')
+      .eq('linked_registration_id', reg.id)
+      .limit(1);
+    if (linkedError) return NextResponse.json({ error: 'לא ניתן לבדוק שיעורים קשורים כרגע' }, { status: 503 });
+    if (linkedLessons?.length) {
+      return NextResponse.json({ error: 'לשיעור הזה קשורים שיעורים נוספים. יש להסדיר את הקישור לפני המחיקה.' }, { status: 409 });
+    }
+
     const { error: deleteError } = await supabase.from('registrations').delete().eq('id', reg.id);
     if (deleteError) return NextResponse.json({ error: 'מחיקת השיעור לא הושלמה' }, { status: 500 });
 

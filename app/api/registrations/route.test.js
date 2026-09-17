@@ -34,6 +34,7 @@ function createMockSupabase(responses) {
     const self = {
       select: () => self,
       eq: (...args) => { record.eqCalls.push(args); return self; },
+      limit: () => self,
       in: (...args) => { record.inCalls.push(args); return self; },
       delete: () => { record.method = 'delete'; return self; },
       update: (payload) => { record.method = 'update'; record.payload = payload; return self; },
@@ -76,6 +77,7 @@ describe('DELETE /api/registrations', () => {
   test('deletes only the selected lesson and leaves other groups untouched', async () => {
     const mockSupabase = createMockSupabase({ registrations: [
       { data: { id: 'r1', student_name: 'דני כהן', group_id: 'g-theory' }, error: null },
+      { data: [], error: null },
       { error: null },
       { data: [], error: null },
     ], students: [{ error: null }] });
@@ -94,6 +96,7 @@ describe('DELETE /api/registrations', () => {
   test('a theory lesson without a group cannot deactivate private or ensemble lessons', async () => {
     const mockSupabase = createMockSupabase({ registrations: [
       { data: { id: 'r1', student_name: 'דני כהן', group_id: null }, error: null },
+      { data: [], error: null },
       { error: null },
     ] });
     getSupabaseClient.mockReturnValue(mockSupabase);
@@ -105,12 +108,25 @@ describe('DELETE /api/registrations', () => {
   test('keeps group attendance active when another lesson still uses that group', async () => {
     const mockSupabase = createMockSupabase({ registrations: [
       { data: { id: 'r1', student_name: 'דני כהן', group_id: 'g1' }, error: null },
+      { data: [], error: null },
       { error: null },
       { data: [{ id: 'r2', status: 'שובץ', registration_status: 'Pending' }], error: null },
     ] });
     getSupabaseClient.mockReturnValue(mockSupabase);
     const res = await DELETE(makeRequest({ id: 'r1' }));
     expect(res.status).toBe(200);
+    expect(mockSupabase.calls.some(c => c.table === 'students')).toBe(false);
+  });
+
+  test('keeps a source lesson when theory or ensemble still links to it', async () => {
+    const mockSupabase = createMockSupabase({ registrations: [
+      { data: { id: 'r1', student_name: 'דני כהן', group_id: null }, error: null },
+      { data: [{ id: 'addon' }], error: null },
+    ] });
+    getSupabaseClient.mockReturnValue(mockSupabase);
+    const res = await DELETE(makeRequest({ id: 'r1' }));
+    expect(res.status).toBe(409);
+    expect(mockSupabase.calls.some(c => c.method === 'delete')).toBe(false);
     expect(mockSupabase.calls.some(c => c.table === 'students')).toBe(false);
   });
 });
